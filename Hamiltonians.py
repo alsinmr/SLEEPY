@@ -8,7 +8,7 @@ Created on Wed Jun 30 10:54:04 2021
 
 import numpy as np
 from types import MethodType
-from pyRelaxSim.DRtools import NucInfo
+from pyRelaxSim.Tools import NucInfo
 
 #%% Functions to generate spin operators
 
@@ -103,12 +103,25 @@ class SpinOp:
     
         self.__Mult=(2*self.__S+1).astype(int)
         self.__N=len(self.S)
+        self.__index=-1
     
         for k in globals().keys():
             if 'so_' in k:
-                Type=k[4:]
+                Type=k[3:]
                 setattr(self,'__'+Type,[None for _ in range(self.__N)])
                 setattr(self,Type,MethodType(Op_fun(Type),self))
+    def __getitem__(self,n):
+        "Returns the single spins of the spin system"
+        return OneSpin(self,n)
+    def __next__(self):
+        self.__index+=1
+        if self.__index==self.__N:
+            self.__index==-1
+            raise StopIteration
+        else:
+            return OneSpin(self,self.__index)
+    def __iter__(self):
+        return self
         
     @property
     def S(self):
@@ -119,18 +132,6 @@ class SpinOp:
     @property
     def Mult(self):
         return self.__Mult
-    
-    
-    def export(self,n=None):
-        """
-        Creates spin operators for the individual spins. A specific spin can
-        be requested (set n to desired index), or all spins can be returned 
-        in a list
-        """
-        if n is None:
-            return [OneSpin(self,n) for n in range(self.N)]
-        else:
-            return OneSpin(self,n)
         
 class OneSpin:
     """Object for containing spin matrices just for one spin (but of a larger
@@ -174,6 +175,8 @@ class SpinSys():
         "Set the parameters for a given interaction"
         for Type,value in kwargs.items():
             self.inter['Type'][n1,n2]=value
+
+#%%
 
 #%% Class to store Hamiltonians
 class Hamiltonian():
