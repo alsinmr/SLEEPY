@@ -8,7 +8,7 @@ Created on Mon Jul  5 10:14:04 2021
 
 import numpy as np
 import os
-from pyRelaxSim.Tools import D2,d2
+from .Tools import D2,d2
 
 
 
@@ -22,6 +22,10 @@ class PowderAvg():
         self._pwdpath=os.path.join(os.path.dirname(os.path.realpath(__file__)),'PowderFiles')
         self._inter=list()
         if PwdType is not None:self.set_powder_type(PwdType,**kwargs)
+        
+        self.__Types=list()
+        
+        self.__index=-1
         
                 
     def set_powder_type(self,PwdType,**kwargs):
@@ -61,17 +65,38 @@ class PowderAvg():
                 if 'pwd_' in fname:
                     fun=globals()[fname]
                     print(fname[4:]+' with args:',fun.__code__.co_varnames[:fun.__code__.co_argcount])
-        
-    def new_inter(self,Type=None,index=None,iso=0,delta=0,eta=0,euler=[0,0,0]):
+    
+    def __next__(self):
+        self.__index+=1
+        if self.__index==len(self._inter)-1:
+            self.__index==-1
+            raise StopIteration
+            return self.__getitem__(len(self._inter)-1)
+        else:
+            return self.__getitem__(self.__index)
+    def __iter__(self):
+        return self
+    
+    def __getitem__(self,n):
+        assert n<len(self._inter),"n exceeds number of defined interactions"
+        return self._inter[n]
+    
+    def clear_inter(self):
+        self._inter=list()
+        for t in self.__Types:
+            delattr(self,t)
+        self.__Types=list()
+    
+    def new_inter(self,Type=None,index=None,delta=0,eta=0,euler=[0,0,0]):
         if not(hasattr(self,Type)):
             setattr(self,Type,list())
+            self.__Types.append(Type)
         
-        self._inter.append({'Type':Type,'index':index,'delta':delta,'eta':eta,'euler':euler,\
-                            'RotObj':RotInter(iso=iso,delta=delta,eta=eta,euler=euler,pwdavg=self)})
+        self._inter.append(RotInter(delta=delta,eta=eta,euler=euler,pwdavg=self))
     
         at=getattr(self,Type)
         at.append({'index':index,'delta':delta,'eta':eta,'euler':euler,\
-                   'RotObj':self._inter[-1]['RotObj']})
+                   'RotObj':self._inter[-1]})
                     
 class RotInter():
     """
@@ -84,7 +109,7 @@ class RotInter():
         PAS: Principle axis system, without any rotations. Diagonal in the Cartesian system
         
     """
-    def __init__(self,iso=0,delta=0,eta=0,euler=[0,0,0],pwdavg=None):
+    def __init__(self,pwdavg,delta=0,eta=0,euler=[0,0,0],rotor_angle=np.arccos(np.sqrt(1/3))):
         """
         Initialize the interaction with its isotropic value, delta, eta, and euler
         angles. Note, euler angles should be of the form [alpha,beta,gamma], 
@@ -92,11 +117,16 @@ class RotInter():
         case the angles will be executed in sequence (may be useful for setting
         multiple interactions)
         """
-        self.setPAS(iso,delta,eta)
-        self.PAS2MOL(euler)
+        self.delta=delta
+        self.eta=eta
+        self.euler=euler
+        self.setPAS()
+        self.PAS2MOL()
         self.pwdavg=pwdavg
+        self.rotor_angle=rotor_angle
+
         
-    def setPAS(self,iso=0,delta=0,eta=0):
+    def setPAS(self):
         """
         Stores the isotropic value of an interaction, and converts the delta and
         eta values of the interaction into spherical tensor components in the 
@@ -105,29 +135,33 @@ class RotInter():
         Note that this class only stores the isotropic value, and does not 
         include it in any computations.
         """
-        self.iso=iso
-        self.delta=delta
-        self.eta=eta
-        self.PAS=np.array([-0.5*delta*eta,0,np.sqrt(3/2)*delta,0,-0.5*delta*eta])
+        delta=self.delta
+        eta=self.eta
+        self.__PAS=np.array([-0.5*delta*eta,0,np.sqrt(3/2)*delta,0,-0.5*delta*eta])
         
-        return self.PAS
+    @property
+    def PAS(self):
+        return self.__PAS.copy()
         
-    def PAS2MOL(self,euler=[0,0,0]):
+    def PAS2MOL(self):
         """
         Takes a list of Euler angles (give as a three element list: [alpha, beta,gamma]), 
         and applies these Euler angles to the tensor in the PAS. Multiple 
         sets of Euler angles may be applied, just include more than one list.
         """
         
+        euler=self.euler
         if not(hasattr(euler[0],'__len__')):euler=[euler]
         A=self.PAS.copy()
         for alpha,beta,gamma in euler:
             A=np.array([(A*D2(alpha,beta,gamma,mp=None,m=m)).sum() for m in range(-2,3)])
-        self.MOL=A
+        self.__MOL=A
+    
+    @property
+    def MOL(self):
+        return self.__MOL.copy()
         
-        return self.MOL
-        
-    def MOL2LAB_Azz(self,pwdavg=None,rotor_angle=np.arccos(np.sqrt(1/3))):
+    def MOL2LAB_Azz(self):
         """
         Applies the powder average to the tensor stored in the molecular frame.
         One may provide the powder average, although usually this will already
@@ -138,29 +172,31 @@ class RotInter():
         component). Note, the off-diagonal terms of the tensors are omitted in 
         this case (the A-2,A-1,A1,A2 componets). 
 
-        Output of this term sould be multiplied by T_{2,0}*sqrt(3/2),
+        Output of this term sould be multiplied by T_{2,0},
         which we give for a few interactions:
-            Heteronuclear dipole:   Iz*Sz
-            Homonuclear dipole:     (Iz*Sz-1/2*(Ix*Sx+Iy*Sy))
-            CSA:                    Iz
+            Heteronuclear dipole:   sqrt(2/3)*Iz*Sz
+            Homonuclear dipole:     sqrt(2/3)*(Iz*Sz-1/2*(Ix*Sx+Iy*Sy))
+            CSA:                    sqrt(2/3)*Iz
             
         Note that the isotropic part of the interaction is added to the n=0
         (non-rotating) component
         """
-        
-        if pwdavg is not None:self.pwdavg=pwdavg
-        assert self.pwdavg is not None,"If pwdavg is not previously defined, then it must bet provided"
-        self.rotor_angle=rotor_angle
+        pwdavg=self.pwdavg
+        rotor_angle=self.rotor_angle
         A=self.MOL.copy()
         alpha,beta,gamma=[getattr(self.pwdavg,x) for x in ['alpha','beta','gamma']]
         
         A=np.array([(D2(alpha,beta,gamma,mp=None,m=m)*A).sum(1) for m in range(-2,3)]).T
-        A=2/np.sqrt(6)*d2(rotor_angle,mp=None,m=0)*A
+        A=d2(rotor_angle,mp=None,m=0)*A
         
-        self.Azz=A
-        return A
+        self.__Azz=A
     
-    def MOL2LAB_A(self,pwdavg=None):
+    @property
+    def Azz(self):
+        if not(hasattr(self,'.__Azz')):self.MOL2LAB_Azz()
+        return self.__Azz.copy()
+    
+    def MOL2LAB_A(self):
         """
         Applies the powder average to the tensor stored in the molecular frame.
         One may provide the powder average, although usually this will already
@@ -185,16 +221,19 @@ class RotInter():
         Note that the isotropic component is scaled and added to   
         """
         
-        if pwdavg is not None:self.pwdavg=pwdavg
-        assert self.pwdavg is not None,"If pwdavg is not previously defined, then it must bet provided"
-        self.rotor_angle=rotor_angle
-        A=self.MOL.copy()
+        self.pwdavg=pwdavg
+        rotor_angle=self.rotor_angle
+        A=self.MOL
         alpha,beta,gamma=[getattr(self.pwdavg,x) for x in ['alpha','beta','gamma']]
         
         A=np.array([(D2(alpha,beta,gamma,mp=None,m=m)*A).sum(1) for m in range(-2,3)]).T
         
-        self.A=A
-        return A
+        self.__A=A
+    
+    @property
+    def A(self):
+        if not(hasattr(self,'.__A')):self.MOL2LAB_A()
+        return self.__A.copy()
     
     def MOL2LAB_Afull(self,pwdavg=None,rotor_angle=np.arccos(np.sqrt(1/3))):
         """
@@ -223,10 +262,9 @@ class RotInter():
         and the final axis is the rotating component for the rotor.
         """
         
-        if pwdavg is not None:self.pwdavg=pwdavg
-        assert self.pwdavg is not None,"If pwdavg is not previously defined, then it must bet provided"
-        self.rotor_angle=rotor_angle
-        A=self.MOL.copy()
+        pwdavg=self.pwdavg
+        rotor_angle=self.rotor_angle
+        A=self.MOL
         alpha,beta,gamma=[getattr(self.pwdavg,x) for x in ['alpha','beta','gamma']]
         
         "Now the rotor frame"
@@ -234,9 +272,12 @@ class RotInter():
         
         A=np.array([(d2(rotor_angle,mp=None,m=0)*A.T).T for m in range(-2,3)]).T
         
-        self.Afull=A
-        return A
+        self.__Afull=A
     
+    @property
+    def Afull(self):
+        if not(hasattr(self,'.__Afull')):self.MOL2LAB_Afull()
+        return self.__Afull.copy()
     
 #%% Functions for powder averaging    
 def pwd_JCP59(q=3):

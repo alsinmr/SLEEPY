@@ -1,5 +1,4 @@
 # __init__.py
-
-import pyRelaxSim.Tools
-import pyRelaxSim.Powder
-import pyRelaxSim.Hamiltonians
+import pyRelaxSim.Tools as Tools
+import pyRelaxSim.Powder as Powder
+import pyRelaxSim.Hamiltonians as Hamiltonians

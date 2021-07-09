@@ -7,8 +7,10 @@ Created on Wed Jun 30 10:54:04 2021
 """
 
 import numpy as np
+import copy
 from types import MethodType
-from pyRelaxSim.Tools import NucInfo
+from .Tools import NucInfo
+from .Powder import RotInter
 
 #%% Functions to generate spin operators
 
@@ -110,16 +112,20 @@ class SpinOp:
                 Type=k[3:]
                 setattr(self,'__'+Type,[None for _ in range(self.__N)])
                 setattr(self,Type,MethodType(Op_fun(Type),self))
+                
+        self.__Op=[OneSpin(self,n) for n in range(self.__N)]
+        
     def __getitem__(self,n):
         "Returns the single spins of the spin system"
         return OneSpin(self,n)
     def __next__(self):
         self.__index+=1
-        if self.__index==self.__N:
+        if self.__index==self.__N-1:
             self.__index==-1
             raise StopIteration
+            return self.__Op[self.__N-1]
         else:
-            return OneSpin(self,self.__index)
+            return self.__Op[self.__index]
     def __iter__(self):
         return self
         
@@ -150,50 +156,254 @@ for Type in dir(SpinOp(N=1)):
 #%% Class to store the information about the spin system
 
         
-class SpinSys():
+class ExperSys():
     """
     Stores various information about the spin system. Initialize with a list of
     all nuclei in the spin system.
     """
-    def __init__(self,*Nucs):
+    def __init__(self,v0H,Nucs):
+        self.v0H=v0H
+        self.B0=self.v0H*1e6/NucInfo('1H')
         self.Nucs=np.atleast_1d(Nucs).squeeze()
         self.N=len(self.Nucs)
         self.S=np.array([NucInfo(nuc,'spin') for nuc in self.Nucs])
         self.gamma=np.array([NucInfo(nuc,'gyro') for nuc in self.Nucs])
         self.Op=SpinOp(self.S)
-        self.inter=dict()
+        self.__index=-1
+        self.__Ninter=0
         
+        
+        self.inter_types=dict()
         for k in globals().keys():
-            if 'int_' in k:
-                code=globals()[k].__code__
-                args=code.co_varnames[:code.co_argcount]  
-                self.inter[k[4:]]={a:np.zeros([self.N,self.N]) for a in args[2:]} \
-                    if ('S2' in args) else {a:np.zeros(self.N) for a in args[1:]}
+            if hasattr(globals()[k],'__code__'):
+                setattr(self,k[6:],list())
+                if 'int1i_' in k:
+                    self.inter_types[k[6:]]=['int1i',['i1','value']]
+                elif 'int2i_' in k:
+                    self.inter_types[k[6:]]=['int2i',['i1','i1','value']]
+                elif 'int1a_' in k:
+                    self.inter_types[k[6:]]=['int1a',['i1','delta','eta','euler']]
+                elif 'int2a_' in k:
+                    self.inter_types[k[6:]]=['int2a',['i1','i2','delta','eta','euler']]
+    
+    @property
+    def Ninter(self):
+        return self.__Ninter
                 
+    def set_inter(self,Type,i1,i2=None,value=None,delta=None,eta=None,euler=None):
+        """
+        Adds an interaction to the total Hamiltonian. We list the required arguments
+        for each type of interaction
         
-    def set_inter(self,Type,n1,n2=None,**kwargs):
-        "Set the parameters for a given interaction"
-        for Type,value in kwargs.items():
-            self.inter['Type'][n1,n2]=value
+        Spin-Field:
+            Isotropic: i1 (spin index) and value (chemical shift in ppm)
+            Anisotropic: i1 (spin index) and anisotropy (delta, in ppm). Asymmetry
+                and Euler angles also optional
+        Spin-Spin:
+            Isotropic: i1,i2 (spin indices) and value (J coupling gin Hz)
+            Anisotropic: i1,i2 (spin indices) and anisotropy (delta, in Hz. Asymmetry
+                and Euler angles also optional
+        """
+        
+        assert Type in self.inter_types.keys(),"Unknown interaction type"
+        
+        if 'a' in self.inter_types[Type][0]:
+            assert delta is not None,'delta required for anisotropic interactions'
+            assert value is None,'value only used for isotropic interactions'
+        if 'i' in self.inter_types[Type][0][-1]:
+            assert delta is None and eta is None and euler is None,'delta, eta, and euler only used for anisotropic interactions'
+            assert value is not None,'value required for isotropic interactions'
+        if '2' in self.inter_types[Type][0]:
+            assert i1 is not None and i2 is not None,'i1 and i2 required for 2-spin interactions'
+        if '1' in self.inter_types[Type][0]:
+            assert i1 is not None and i2 is None,'Only use i1 (and not i2) for spin-field interactions'
+        assert i1<self.N,'i1 cannot exceed {0} ({1} spins in system)'.format(self.N+1,self.N)
+        if i2 is not None:
+            assert i2<self.N,'i2 cannot exceed {0} ({1} spins in system)'.format(self.N+1,self.N)
+        
+        if i2 is not None:
+            i1,i2=np.sort([i1,i2])
+        
+        args={'Type':Type}
+        for k in ['i1','i2','value','delta','eta','euler']:
+            if locals()[k] is not None:
+                args[k]=locals()[k]
+        
+        inter=getattr(self,Type)
+        
+        for k,i in enumerate(inter):
+            if i2 is None:
+                if i1==i['i1']:
+                    print('Warning: Overwriting existing interaction')
+                    inter[k]=args
+                    break
+            else:
+                if i1==i['i1'] and i2==i['i2']:
+                    print('Warning: Overwriting existing interaction')
+                    inter[k]=args
+                    break
+        else:
+            inter.append(args)
+            self.__Ninter+=1
+                             
+    def get_inter(self,n=None,Type=None,i1=None,i2=None):
+        """
+        Get an interaction, for a given index of the powder average (if isotropic,
+        then this argument is ignored).
+        
+        There are several indexing options:
+            1) Absolute index. Get the nth interaction, sweeping through all 
+            interaction types (provide n)
+            2) Type and index. Get the nth interaction of give Type (provide Type and n)
+            3) Type and spin index. Get the index for Type between spin(s) i1 (and i2)
+            (provide Type and i1 and optionally i2)
+            
+        """
+        if Type is None:
+            assert n<self.__Ninter,'Index exceeds number of defined interactions'
+            i=0
+            Types=[k for k in self.inter_types.keys()]
+            while n>=len(getattr(self,Types[i])):
+                n+=-len(getattr(self,Types[i]))
+                i+=1
+            return getattr(self,Types[i])[n]
+        else:        
+            assert Type in self.inter_types.keys(),"Unknown interaction type"
+            if n is not None:
+                assert n<len(getattr(self,Type)),"Only {0} interactions have been defined for type {1}"\
+                    .format(len(getattr(self,Type)),Type)
+                return getattr(self,Type)[n]        
+            else:
+                if i1 is not None and i2 is not None:i1,i2=np.sort([i1,i2])
+                if self.inter_types[Type][0][3]=='2':
+                    assert i1 is not None and i2 is not None,"i1 and i2 required for interactions of type {0}".format(Type)
+                    for i in getattr(self,Type):
+                        if i1==i['i1'] and i2==i['i2']:
+                            return i
+                    else:
+                        assert False,'Could not find interaction {0} with indices {1} and {2}'.format(Type,i1,i2)
+                else:
+                    assert i1 is not None and i2 is None,"Only one index (i1) for interactions of type {0}".format(Type)
+                    for i in getattr(self,Type):
+                        if i1==i['i1']:
+                            return i
+                    else:
+                        assert False,'Could not find interaction {0} with indices {1} and {2}'.format(Type,i1,i2)
 
-#%%
+    def get_abs_index(self,n=None,Type=None,i1=None,i2=None):
+        """
+        Get the absolute index of a given interaction
+        """
+        
+        if Type is None:
+            assert n<self.__Ninter,"n must be less than the number of defined interactions ({0})".format(self.__Ninter)
+            return n
+        else:
+            assert Type in self.inter_types.keys(),'Interaction {0} is not defined'.format(Type)
+            n0=0
+            for t in self.inter_types.keys():
+                if Type==t:
+                    break
+                else:
+                    n0+=len(getattr(self,t))
+            if n is None:
+                if i2 is not None:i1,i2=np.sort([i1,i2])
+                for k,m in enumerate(getattr(self,Type)):
+                    if ('i2' in m.keys() and i1==m['i1'] and i2==m['i2']) or i1==m['i1']:
+                        return n0+k
+                else:
+                    assert False,"Interaction {0} with given indices not defined"
+            else:
+                assert n0+n<self.__Ninter,""
+                return n0+n
+                    
+    
+    def __getitem__(self,n):
+        """
+        Returns parameters for the nth interaction. Indexing sweeps through 
+        each interaction type sequentially
+        """
+        
+        return self.get_inter(n=n)
+            
+
+    
+    def __next__(self):
+        self.__index+=1
+        if self.__index==self.__Ninter-1:
+            self.__index==-1
+            raise StopIteration
+            return self.__getitem__(self.__Ninter-1)
+        else:
+            return self.__getitem__(self.__index)
+    def __iter__(self):
+        return self
+   
 
 #%% Class to store Hamiltonians
 class Hamiltonian():
     """
     Stores a Hamiltonian, and returns its value for a particular orientation
     """
-    def __init__(self,H,channels=None):
+    def __init__(self,exp_sys,channels=None,pwdavg=None,rotor_angle=np.arccos(np.sqrt(1/3))):
         """
         Initializes the Hamiltonian. requirements are A, a matrix containing
         the rotating components of the Hamiltonizn (Nx3), and Op, the spin
         operator corresponding to the interaction.
         """
+        self.__exp_sys=copy.copy(exp_sys)   
+        self.channels=np.array(channels)
+        self.__pwdavg=copy.copy(pwdavg)
+        self.__pwdavg.clear_inter()
+        self.__rotor_angle=np.array(rotor_angle)
         
-        self.channels=channels
-        self.H=H
+        "Save orientation dependence"        
+        for i in self.__exp_sys:
+            i=copy.deepcopy(i)
+            Type=i.pop('Type')
+            i0=self.__exp_sys.inter_types[Type][0]
+            if i0[-1]=='a':
+                assert pwdavg is not None,"pwdavg object required for anisotropic interations"
+                index=[i.pop('i1'),i.pop('i2')] if i0[-2]=='2' else i.pop('i1')
+                self.__pwdavg.new_inter(Type=Type,index=index,**i)
+    
+    @property                
+    def exp_sys(self):
+        return copy.copy(self.__exp_sys)
+    
+    @property
+    def pwdavg(self):
+        return copy.copy(self.__pwdavg)
+    
+    @property
+    def rotor_angle(self):
+        return self.__rotor_angle.copy()
+    
+    def get_inter(self,n=None,Type=None,i1=None,i2=None,pwd_ind=0):
+        """
+        Get an interaction, for a given index of the powder average (if isotropic,
+        then this argument is ignored).
         
-    def __call__(self,q,gamma=0,v1=None,offset=None):
+        There are several indexing options:
+            1) Absolute index. Get the nth interaction, sweeping through all 
+            interaction types (provide n)
+            2) Type and index. Get the nth interaction of give Type (provide Type and n)
+            3) Type and spin index. Get the index for Type between spin(s) i1 (and i2)
+            (provide Type and i1 and optionally i2)
+            
+        """
+        
+        args=self.__exp_sys.get_inter(Type=Type,n=n,i1=i1,i2=i2)
+        Type,i1,i2=[args[k] for k in ['Type','i1','i2']]
+        
+        fun=globals()[self.__exp_sys.inter_types[Type][0]+'_'+Type]
+        t0=self.__exp_sys.inter_types[Type][0]
+        if t0=='int1i':return fun(self,i1)
+        if t0=='int2i':return fun(self,i1,i2)
+        if t0=='int1a':return fun(self,i1,pwd_ind)
+        if t0=='int2a':return fun(self,i1,i2,pwd_ind)        
+    
+    def __call__(self,ind_pwd,in_gamma,v1=None,phase=None,offset=None):
         """
         Returns the Hamiltonian for the qth element of the powder average, 
         including an additional gamma rotation
@@ -201,14 +411,94 @@ class Hamiltonian():
         
         
         return 
+    
+class Ham_pwd_n():
+    """
+    Container for a Hamiltonian for a particular orientation of the powder average
+    """
+    def __init__(self,H):
+        """
+        Provide the 5 rotating components of the Hamiltonian
+        """
+        self.__H=H
+        self.__index=-3
+        
+    def __getitem__(self,n):
+        """
+        Returns the requested rotating component (note: list from -2 to 2, not 
+        0 to 4) 
+        """
+        return self.__H[n+2]
+    
+    def __next__(self):
+        self.__index+=1
+        if self.__index==2:
+            self.__index=-3           
+            raise StopIteration
+            return self.__getitem__(2)
+        else:
+            return self.__getitem__(self.__index)
+    def __iter__(self):
+        return self
+    
+    def __call__(self,gamma):
+        """
+        Return the Hamiltonian for a particular gamma angle (in radians)
+        """
+        H=np.sum([np.exp(-1j*gamma*m)*self[m] for m in range(-2,3)],axis=0)
+        return H
 #%% Calculate rotating components of interactions 
-def int_dipolar(S1,S2,delta,*euler):
+"""Each function should be preceded by int1a, int2a, int1i, or int2i. The number
+is if it is a 1 spin (spin-field) or 2 spin (spin-spin) interaction. The letter
+refers to if the interaction is isotropic (i, for no orientation dependence) or
+anisotropic (a, for orientational dependence). The first argument should always
+be an instance of the ExperSys class. Subsequent arguments depend on the 
+interaction type
+
+int1i_*(exp_sys,i1,...)
+int12_*(exp_sys,i1,i2,...)
+int1a_*(exp_sys,i1,pwd_ind,gamma,...)
+int2a_*(exp_sys,i1,i2,pwd_ind,gamma,...)
+
+
+
+"""
+def int2a_dipole(ham,i1,i2,pwd_ind):
     """
     Calculates the dipolar interaction
     """
-    pass
+    
+    es=ham.exp_sys
+    i=es.get_abs_index(Type='dipole',i1=i1,i2=i2)
+    
+    A=ham.pwdavg[i].Azz[pwd_ind]
+    
+    S,I=es.Op[i1],es.Op[i2]
+    
+    if es.Nucs[i1]==es.Nucs[i2]:
+        H0=np.sqrt(2/3)*(S.z*I.z-0.5*(S.x*I.x+S.y*I.y))
+    else:
+        H0=np.sqrt(2/3)*S.z*I.z
+    
+    H=[A0*H0 for A0 in A]
+    
+    return Ham_pwd_n(H)
+    
 
-def int_J(S1,S2,J):
+def int2i_J(ham,i1,i2):
     """
     Calucates the J interaction
     """
+    pass
+
+def int1i_CS(ham,i1):
+    """
+    Calculates the chemical shift interaction
+    """
+    pass
+
+def int1a_CSA(ham,i1,pwd_ind):
+    """
+    Calculates the chemical shift anisotropy
+    """
+    pass
