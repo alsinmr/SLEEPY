@@ -341,6 +341,12 @@ class ExperSys():
    
 
 #%% Class to store Hamiltonians
+# Probably we will replace this Hamiltonian class with something simpler. 
+# I think a good idea is to make the Hamiltonian iterable. The outer loop is
+# over the powder average. The inner loop should return a time step in the
+# rotor cycle. Then, for a given element of the powder average, we should
+# have the attribute inter, which will contain each of the interactions, and
+# secondly, each interaction should contain its components for rotation.
 class Hamiltonian():
     """
     Stores a Hamiltonian, and returns its value for a particular orientation
