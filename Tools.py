@@ -8,11 +8,11 @@ Created on Fri Nov  8 13:44:13 2019
 
 import os
 import numpy as np
-import pandas as pd
 import re
+from Info import Info
 
 #%% Some useful tools (Gyromagnetic ratios, spins, dipole couplings)
-def NucInfo(Nuc=None,info='gyro'):
+class NucInfo(Info):
     """ Returns the gyromagnetic ratio for a given nucleus. Usually, should be 
     called with the nucleus and mass number, although will default first to 
     spin 1/2 nuclei if mass not specified, and second to the most abundant 
@@ -23,72 +23,66 @@ def NucInfo(Nuc=None,info='gyro'):
     object is returned containing all nuclear info ('nuc','mass','spin','gyro',
     'abund')
     """
+    def __init__(self):
+        h=6.6260693e-34
+        muen=5.05078369931e-27
+        super().__init__()
+        dir_path = os.path.dirname(os.path.realpath(__file__))    
+        with open(dir_path+'/GyroRatio.txt','r') as f:
+            for line in f:
+                line=line.strip().split()
+                self.new_exper(Nuc=line[3],mass=float(line[1]),spin=float(line[5]),\
+                               gyro=float(line[6])*muen/h,abundance=float(line[7])/100)
     
-    Nucs=[]
-    MassNum=[]
-    spin=[]
-    g=[]
-    Abund=[]
-
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    
-    with open(os.path.join(dir_path,"GyroRatio.txt")) as f:
-        data=f.readlines()
-        for line in data:
-            line=line.strip().split()
-            MassNum.append(int(line[1]))
-            Nucs.append(line[3])
-            spin.append(float(line[5]))
-            g.append(float(line[6]))
-            Abund.append(float(line[7]))
-    
-    NucData=pd.DataFrame({'nuc':Nucs,'mass':MassNum,'spin':spin,'gyro':g,'abund':Abund})
-    
-    
-    if Nuc==None:
-        return NucData
-    else:
+    def __call__(self,Nuc=None,info='gyro'):
+        if Nuc is None:
+            return self
         
         if Nuc=='D':
             Nuc='2H'
-        
+ 
+        #Separate the mass number from the nucleus type       
         mass=re.findall(r'\d+',Nuc)
         if not mass==[]:
             mass=int(mass[0])
-            
-        
+                   
         Nuc=re.findall(r'[A-Z]',Nuc.upper())
         
+        #Make first letter capital
         if np.size(Nuc)>1:
             Nuc=Nuc[0].upper()+Nuc[1].lower()
         else:
             Nuc=Nuc[0]
-            
-            
-            
-        NucData=NucData[NucData['nuc']==Nuc]
-       
+                        
+        ftd=self[self['Nuc']==Nuc]  #Filtered by nucleus input
+        
+        "Now select which nucleus to return"
         if not mass==[]:    #Use the given mass number
-            NucData=NucData[NucData['mass']==mass]
-        elif any(NucData['spin']==0.5): #Ambiguous input, take spin 1/2 nucleus if exists
-            NucData=NucData[NucData['spin']==0.5] #Ambiguous input, take most abundant nucleus
-        elif any(NucData['spin']>0):
-            NucData=NucData[NucData['spin']>0]
-        
-        NucData=NucData[NucData['abund']==max(NucData['abund'])]
+           ftd=ftd[ftd['mass']==mass]
+        elif any(ftd['spin']==0.5): #Ambiguous input, take spin 1/2 nucleus if exists
+            ftd=ftd[ftd['spin']==0.5] #Ambiguous input, take most abundant nucleus
+        elif any(ftd['spin']>0):
+            ftd=ftd[ftd['spin']>0]
             
+        ftd=ftd[np.argmax(ftd['abundance'])]
         
-        h=6.6260693e-34
-        muen=5.05078369931e-27
-        
-        NucData['gyro']=float(NucData['gyro'])*muen/h
-#        spin=float(NucData['spin'])
-#        abund=float(NucData['abund'])
-#        mass=float(NucData['spin'])
-        if info[:3]=='all':
-            return NucData
+        if info is None or info=='all':
+            return ftd
         else:
-            return float(NucData[info])
+            assert info in self.keys,"info must be 'gyro','mass','spin','abundance', or 'Nuc'"
+            return ftd[info]
+    
+    def __repr__(self):
+        out=''
+        for k in self.keys:out+='{:7s}'.format(k)+'\t'
+        out=out[:-1]
+        fstring=['{:7s}','{:<7.0f}','{:<7.0f}','{:<3.4f}','{:<4.3f}']
+        for nucs in self:
+            out+='\n'
+            for k,(v,fs) in enumerate(zip(nucs.values(),fstring)):
+                out+=fs.format(v*(1e-6 if k==3 else 1))+'\t'
+        return out
+NucInfo=NucInfo()
 
 def dipole_coupling(r,Nuc1,Nuc2):
     """ Returns the dipole coupling between two nuclei ('Nuc1','Nuc2') 
@@ -234,4 +228,30 @@ def D2(ca=0,sa=0,cb=0,sb=None,cg=None,sg=None,m=None,mp=0):
         phase=((ca-1j*sa*np.sign(mp))**np.abs(mp))*((cg-1j*sg*np.sign(m))**np.abs(m))
         
     return (d2(cb,sb,m,mp)*phase).T
+
+def Ham2Super(H):
+    """
+    Calculates
+    kron(H,eye(H.shape))-kron(eye(H.shape),H.T), while avoiding actually
+    calculating the full Kronecker product
+
+    Parameters
+    ----------
+    H : np.array
+        Hamiltonian.
+
+    Returns
+    -------
+    None.
+
+    """
+    n=H.shape[0]
+    Lp=np.zeros([n**2,n**2],dtype=H.dtype)
+    Lm=np.zeros([n**2,n**2],dtype=H.dtype)
+    for k in range(n):
+        Lp[k::n][:,k::n]=H
+        Lm[k*n:(k+1)*n][:,k*n:(k+1)*n]=H.T
+    return Lp-Lm
+    
+    
        
