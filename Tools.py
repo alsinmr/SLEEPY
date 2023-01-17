@@ -254,4 +254,45 @@ def Ham2Super(H):
     return Lp-Lm
     
     
+def BlockDiagonal(M):
+    """
+    Determines connectivity of a matrix, allowing us to represent a large
+    matrix as several smaller matrices. Speeds up matrix exponential, matrix
+    multiplication
+
+    Parameters
+    ----------
+    M : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    assert M.shape[0]==M.shape[1],'Matrix should be square for BlockDiagonal calculation'
+    
+    X=M.astype(bool)+M.astype(bool).T
+    
+    Blks=list()
+    unchecked=np.ones(X.shape[0],dtype=bool)
+
+    while np.any(unchecked):
+        bl=np.zeros(X.shape[0],dtype=bool)
+        bl[np.argwhere(unchecked)[0,0]]=True
+        while np.any(np.logical_and(bl,unchecked)):
+            i=np.argwhere(np.logical_and(unchecked,bl))[0,0]
+            unchecked[i]=False
+            m=np.logical_and(X[i],unchecked)
+            bl[m]=True
+        Blks.append(bl)
+    
+    return Blks
+            
+    
+            
+    
+    
+    
        

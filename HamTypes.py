@@ -7,7 +7,7 @@ Created on Tue Jan 17 11:49:36 2023
 """
 
 import numpy as np
-from Powder import RotInter
+from PowderAvg import RotInter
 from copy import copy
 
 class Ham1inter():

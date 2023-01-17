@@ -9,6 +9,7 @@ Created on Tue Jan 17 15:06:02 2023
 import numpy as np
 from copy import copy
 from scipy.linalg import expm
+from Propagator import Propagator
 
 dtype=np.complex64
 
@@ -254,36 +255,44 @@ class Liouvillian():
 
         """
         
-        assert self.sub,"Calling L.U requires indexing to a specific element of the powder average"
+        # assert self.sub,"Calling L.U requires indexing to a specific element of the powder average"
+    
     
         if tf is None:tf=self.taur
         
-        Ln=[self.Ln(n) for n in range(-2,3)]
-        
-        dt=self.dt
-        n0=int(t0//dt)
-        nf=int(tf//dt)
-        
-        n_gamma=self.expsys.n_gamma
-        
-        tm1=t0-n0*dt
-        tp1=tf-nf*dt
-        
-        if tm1<=0:tm1=dt
-        
-        ph=np.exp(1j*2*np.pi*n0/n_gamma)
-        L=np.sum([Ln0*ph**(-m) for Ln0,m in zip(Ln,range(-2,3))],axis=0)
-        U=expm(L*tm1)
+        if self.sub:
             
-        for n in range(n0+1,nf):
-            ph=np.exp(1j*2*np.pi*n/n_gamma)
+            Ln=[self.Ln(n) for n in range(-2,3)]
+            
+            dt=self.dt
+            n0=int(t0//dt)
+            nf=int(tf//dt)
+            
+            n_gamma=self.expsys.n_gamma
+            
+            tm1=t0-n0*dt
+            tp1=tf-nf*dt
+            
+            if tm1<=0:tm1=dt
+            
+            ph=np.exp(1j*2*np.pi*n0/n_gamma)
             L=np.sum([Ln0*ph**(-m) for Ln0,m in zip(Ln,range(-2,3))],axis=0)
-            U=expm(L*dt)@U
-        if tp1>1e-10:
-            ph=np.exp(1j*2*np.pi*nf/n_gamma)
-            L=np.sum([Ln0*ph**(-m) for Ln0,m in zip(Ln,range(-2,3))],axis=0)
-            U=expm(L*tp1)@U
-        return U
+            U=expm(L*tm1)
+                
+            for n in range(n0+1,nf):
+                ph=np.exp(1j*2*np.pi*n/n_gamma)
+                L=np.sum([Ln0*ph**(-m) for Ln0,m in zip(Ln,range(-2,3))],axis=0)
+                U=expm(L*dt)@U
+            if tp1>1e-10:
+                ph=np.exp(1j*2*np.pi*nf/n_gamma)
+                L=np.sum([Ln0*ph**(-m) for Ln0,m in zip(Ln,range(-2,3))],axis=0)
+                U=expm(L*tp1)@U
+            return Propagator(U,t0=t0,tf=tf,taur=self.taur)
+        else:
+            U=[L0.U(t0=t0,tf=tf).U for L0 in self]
+            return Propagator(U=U,t0=t0,tf=tf,taur=self.taur)
+
+    
 
     def Ueig(self):
         """
@@ -296,6 +305,7 @@ class Liouvillian():
 
         """
         
+        # d,v=eig(self.U(),k=self.shape[0]-1)
         d,v=np.linalg.eig(self.U())
         i=np.abs(d)>1
         d[i]/=np.abs(d[i])
