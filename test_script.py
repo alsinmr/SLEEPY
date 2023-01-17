@@ -3,11 +3,13 @@
 """
 Created on Tue Jan 17 10:37:37 2023
 
+
 @author: albertsmith
 """
 
 import pyRelaxSim as RS
 import numpy as np
+
 
 expsys=RS.ExpSys(600,['13C','1H'],vr=5000)
 expsys.set_inter('dipole',delta=22000,i1=0,i2=1)

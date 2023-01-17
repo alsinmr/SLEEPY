@@ -128,6 +128,9 @@ class SpinOp:
             return self.__Op[self.__index]
     def __iter__(self):
         return self
+    
+    def __len__(self):
+        return self.N
         
     @property
     def S(self):
@@ -161,10 +164,11 @@ class ExperSys():
     Stores various information about the spin system. Initialize with a list of
     all nuclei in the spin system.
     """
-    def __init__(self,v0H,Nucs):
+    def __init__(self,v0H,Nucs,vr=10000):
         self.v0H=v0H
         self.B0=self.v0H*1e6/NucInfo('1H')
         self.Nucs=np.atleast_1d(Nucs).squeeze()
+        self.vr=vr
         self.N=len(self.Nucs)
         self.S=np.array([NucInfo(nuc,'spin') for nuc in self.Nucs])
         self.gamma=np.array([NucInfo(nuc,'gyro') for nuc in self.Nucs])
@@ -189,7 +193,10 @@ class ExperSys():
     @property
     def Ninter(self):
         return self.__Ninter
-                
+    
+    def __len__(self):
+        return self.Ninter
+            
     def set_inter(self,Type,i1,i2=None,value=None,delta=None,eta=None,euler=None):
         """
         Adds an interaction to the total Hamiltonian. We list the required arguments
@@ -324,7 +331,7 @@ class ExperSys():
         each interaction type sequentially
         """
         
-        return self.get_inter(n=n)
+        return self.get_inter(n=n%len(self))
             
 
     
@@ -341,21 +348,31 @@ class ExperSys():
    
 
 #%% Class to store Hamiltonians
+# Probably we will replace this Hamiltonian class with something simpler. 
+# I think a good idea is to make the Hamiltonian iterable. The outer loop is
+# over the powder average. The inner loop should return a time step in the
+# rotor cycle. Then, for a given element of the powder average, we should
+# have the attribute inter, which will contain each of the interactions, and
+# secondly, each interaction should contain its components for rotation.
 class Hamiltonian():
     """
     Stores a Hamiltonian, and returns its value for a particular orientation
     """
-    def __init__(self,exp_sys,channels=None,pwdavg=None,rotor_angle=np.arccos(np.sqrt(1/3))):
+    def __init__(self,exp_sys,channels=None,pwdavg=None,n_gamma=100,rotor_angle=np.arccos(np.sqrt(1/3))):
         """
         Initializes the Hamiltonian. requirements are A, a matrix containing
         the rotating components of the Hamiltonizn (Nx3), and Op, the spin
         operator corresponding to the interaction.
         """
-        self.__exp_sys=copy.copy(exp_sys)   
+        self.__exp_sys=copy.copy(exp_sys) 
         self.channels=np.array(channels)
         self.__pwdavg=copy.copy(pwdavg)
         self.__pwdavg.clear_inter()
         self.__rotor_angle=np.array(rotor_angle)
+        self.n_gamma=n_gamma
+        
+        self.pwd_index=None
+        self.Hn=None
         
         "Save orientation dependence"        
         for i in self.__exp_sys:
@@ -378,6 +395,15 @@ class Hamiltonian():
     @property
     def rotor_angle(self):
         return self.__rotor_angle.copy()
+    
+    @property
+    def Ninter(self):
+        return self.exp_sys.Ninter
+    
+    @property
+    def dim(self):
+        return np.prod(self.exp_sys.Op.Mult)
+        
     
     def get_inter(self,n=None,Type=None,i1=None,i2=None,pwd_ind=0):
         """
@@ -403,32 +429,143 @@ class Hamiltonian():
         if t0=='int1a':return fun(self,i1,pwd_ind)
         if t0=='int2a':return fun(self,i1,i2,pwd_ind)        
     
-    def __call__(self,ind_pwd,in_gamma,v1=None,phase=None,offset=None):
+    def __len__(self):
+        if self.pwd_index is None:
+            return self.pwdavg.N
+        else:
+            return self.n_gamma
+    
+    def __getitem__(self,index):
+        if self.pwd_index is None:
+            out=copy.copy(self)
+            assert index<len(self),f"Cannot get item {index} from Hamiltonian with powder average of length {len(self)}"
+            out.pwd_index=index%len(self)
+            
+            H=[np.zeros([self.dim,self.dim],dtype=complex) for _ in range(5)]
+            for k in range(self.Ninter):
+                i=self.get_inter(k,pwd_ind=out.pwd_index)
+                for H0,Hint in zip(H,i.Hn()):
+                    H0+=Hint
+                    
+            out.Hn=H
+            return out
+        else:
+            theta=index*2*np.pi/self.n_gamma
+            return np.sum([Hn*np.exp(-1j*theta*m) for Hn,m in zip(self.Hn,range(-2,3))],axis=0)
+    
+    def __iter__(self):
+        def fun():
+            for k in range(len(self)):
+                yield self[k]
+        return fun()
+    
+    @property
+    def isotropic(self):
+        return len(self.pwdavg._inter)==0
+        
+    
+    @property
+    def U(self):
+        if self.pwd_index is None:
+            return None
+        return Propagator(self)
+
+            
+from scipy.linalg import expm
+
+class Propagator():
+    def __init__(self,H):
+        self.H=H
+        self.L=[np.kron(Hn,np.eye(Hn.shape[0]))-np.kron(np.eye(Hn.shape[0]),Hn.T) for Hn in H.Hn]
+        
+    @property
+    def pwd_index(self):
+        return self.H.pwd_index
+    
+    @property
+    def n_gamma(self):
+        return self.H.n_gamma
+    
+    @property
+    def isotropic(self):
+        return self.H.isotropic
+    
+    @property
+    def dt(self):
+        return 1/(self.n_gamma*self.H.exp_sys.vr)
+    
+    def Li(self,index):
         """
-        Returns the Hamiltonian for the qth element of the powder average, 
-        including an additional gamma rotation
+        Returns the ith Liouville matrix of the rotor period
+
+        Parameters
+        ----------
+        i : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
         """
         
+        theta=index*2*np.pi/self.n_gamma
+        return np.sum([Ln*np.exp(-1j*theta*m) for Ln,m in zip(self.L,range(-2,3))],axis=0)
         
-        return 
+    
+    def __getitem__(self,i):
+        if isinstance(i,int):
+            return expm(1j*2*np.pi*self.Li(i)*self.dt)
+        elif isinstance(i,slice):
+            start=0 if i.start is None else i.start
+            stop=self.n_gamma if i.stop is None else i.stop
+            step=1 if i.step is None else i.step
+
+            if stop<start:stop%=self.n_gamma
+            
+            U=np.eye(self.H.dim**2)
+            for k in range(start,stop,step):
+                U=self[k]@U
+                
+            return U
+
     
 class Ham_pwd_n():
     """
     Container for a Hamiltonian for a particular orientation of the powder average
     """
-    def __init__(self,H):
+    def __init__(self,H=None,M=None,A=None):
         """
         Provide the 5 rotating components of the Hamiltonian
         """
-        self.__H=H
+        if H is None:
+            self._M=M
+            self._A=A
+            self._H=None
+        else:
+            self._H=H
+            self._A=None
+            self._M=None
         self.__index=-3
-        
+    
+    def Hn(self):
+        def Hn_gen():
+            for k in range(5):
+                if self._H is None:
+                    yield self._M*self._A[k]
+                else:
+                    yield self._H[k]
+        return Hn_gen()
+    
     def __getitem__(self,n):
         """
         Returns the requested rotating component (note: list from -2 to 2, not 
         0 to 4) 
         """
-        return self.__H[n+2]
+        if self._H is None:
+            return self._A[n+2]*self._M
+        else:
+            return self._H[n+2]
     
     def __next__(self):
         self.__index+=1
@@ -476,20 +613,30 @@ def int2a_dipole(ham,i1,i2,pwd_ind):
     S,I=es.Op[i1],es.Op[i2]
     
     if es.Nucs[i1]==es.Nucs[i2]:
-        H0=np.sqrt(2/3)*(S.z*I.z-0.5*(S.x*I.x+S.y*I.y))
+        M=np.sqrt(2/3)*(S.z*I.z-0.5*(S.x@I.x+S.y@I.y))
     else:
-        H0=np.sqrt(2/3)*S.z*I.z
+        M=np.sqrt(2/3)*S.z*I.z
     
-    H=[A0*H0 for A0 in A]
-    
-    return Ham_pwd_n(H)
+    return Ham_pwd_n(M=M,A=A)
     
 
 def int2i_J(ham,i1,i2):
     """
-    Calucates the J interaction
+    Calculates the J interaction
     """
-    pass
+    es=ham.exp_sys
+    i=es.get_abs_index(Type='J',i1=i1,i2=i2)
+    J=es[i]['value']
+    
+    S,I=es.Op[i1],es.Op[i2]
+    
+    if es.Nucs[i1]==es.Nucs[i2]:
+        M=S.z*S.z+S.x@I.x+S.y@I.y
+    else:
+        M=S.z*S.z
+        
+    return Ham_pwd_n(M=M,A=[0,0,J,0,0])
+    
 
 def int1i_CS(ham,i1):
     """
