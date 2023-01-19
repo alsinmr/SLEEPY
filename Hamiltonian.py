@@ -16,7 +16,7 @@ dtype=np.complex64
 
 class Hamiltonian():
     def __init__(self,expsys,pwdavg=PowderAvg(),rf=None):
-        self._expsys=copy(expsys)
+        self._expsys=expsys
         self.pwdavg=pwdavg
         self.rf=rf
         if rf is not None:self.rf.expsys=expsys
@@ -219,6 +219,9 @@ class RF():
                 for x,S in zip(self.expsys.Nucs==name,self.expsys.Op):
                     if x:
                         out+=(np.cos(value[1])*S.x+np.sin(value[1])*S.y)*value[0]+value[2]*S.z
+            else:
+                S=self.expsys.Op[name]
+                out+=(np.cos(value[1])*S.x+np.sin(value[1])*S.y)*value[0]+value[2]*S.z
         return out
                         
                 

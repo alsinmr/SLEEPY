@@ -31,4 +31,17 @@ H1=RS.Hamiltonian(expsys=expsys,rf=rf,pwdavg=RS.PowderAvg(q=3))
 kex=np.array([[-1e6,1e6],[1e6,-1e6]])
 L=RS.Liouvillian((H0,H1),kex=kex)
 
+
+seq=RS.Sequence(L)
+
+t=[seq.taur/2-2.5e-6,seq.taur/2+2.5e-6]
+seq.add_channel('1H',t=t,v1=[100000,0])
+t=[seq.taur/2-5e-6,seq.taur/2+5e-6]
+seq.add_channel('13C',t=t,v1=[50000,0])
+
+
+
+from time import time
+t0=time()
 U=L.U()
+print(time()-t0)
