@@ -8,6 +8,9 @@ Created on Tue Jan 17 21:29:29 2023
 
 from Tools import BlockDiagonal
 import numpy as np
+from fractions import Fraction
+
+
 
 dtype=np.complex64
 
@@ -51,6 +54,23 @@ class Propagator():
         if not(self.pwdavg):Uout=Uout[0]
         return Propagator(Uout,t0=U.t0,tf=U.tf+self.Dt,taur=self.taur)
     
+    @property
+    def rotor_fraction(self):
+        """
+        Determines how we may divide the propagator into the rotor cycle. For
+        example, if the propagator has a length of 0.4 rotor cycles, then 
+        every 2 rotor cycles, corresponding to 5 propagator steps, we may then
+        recycle the propagator. Then, this function would return a 2 and a 5
+
+        Returns
+        -------
+        tuple
+
+        """
+        out=Fraction(self.Dt/self.taur).limit_denominator(100000)
+        return out.numerator,out.denominator
+        
+    
     def __pow__(self,n):
         """
         Raise the operator to a given power
@@ -83,7 +103,8 @@ class Propagator():
         if not(self.pwdavg):Uout=Uout[0]
         return Propagator(Uout,t0=self.t0,tf=self.t0+self.Dt*n,taur=self.taur)
             
-            
+    
+    
             
     
     def __getitem__(self,i:int):

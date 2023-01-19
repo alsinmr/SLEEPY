@@ -177,14 +177,12 @@ class Sequence():
                 
             setattr(self,name,new)
             
-    def plot(self):
+    def plot(self,fig=None):
         """
         Plots the pulse sequence
 
         Parameters
         ----------
-        t : TYPE
-            DESCRIPTION.
 
         Returns
         -------
@@ -196,8 +194,9 @@ class Sequence():
             spins=np.arange(self.nspins)
         else:
             spins=[np.argwhere(chn==self.expsys.Nucs)[0,0] for chn in np.unique(self.expsys.Nucs)]
-            
-        _,ax=plt.subplots(len(spins),1)
+        
+        if fig is None:fig=plt.figure()
+        ax=[fig.add_subplot(2,1,k+1) for k in range(2)]
         
         tf=(self.t[-2]//self.taur+1)*self.taur  #Plot until end of next rotor period
         
@@ -207,8 +206,8 @@ class Sequence():
         for a,s in zip(ax,spins):
             # v1=np.concatenate((self.v1[s,:-2].repeat(2)))
             v1=self.v1[s,:-1].repeat(2)/1e3
-            a.plot(t/1e6,v1,color=cmap(3))
-            a.plot(t/1e6,np.zeros(t.shape),color='black',linewidth=1.5)
+            a.plot(t*1e6,v1,color=cmap(3))
+            a.plot(t*1e6,np.zeros(t.shape),color='black',linewidth=1.5)
             a.text(0,0.5*self.v1.max()/1e3,s if self._spin_specific else self.expsys.Nucs[s])
             a.set_ylabel(r'$v_1$ / kHz')
             a.set_ylim([0,self.v1.max()*1.1/1e3])

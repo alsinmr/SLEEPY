@@ -39,6 +39,8 @@ seq.add_channel('1H',t=t,v1=[100000,0])
 t=[seq.taur/2-5e-6,seq.taur/2+5e-6]
 seq.add_channel('13C',t=t,v1=[50000,0])
 
+seq.plot()
+
 
 
 from time import time
