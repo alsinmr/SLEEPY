@@ -32,8 +32,15 @@ class Liouvillian():
 
         """
         
-        if hasattr(H,'shape'):H=(H,)
+        if hasattr(H,'shape'):H=[H]
         self.H=H
+        
+        for H in self.H:
+            if H.rf is not self.rf:
+                H.rf=self.rf
+                print('Warning: Not all Hamiltonians have the same rf object. Replacing mismatched rf objects')
+
+        
         self.pwdavg=self.H[0].pwdavg
         self.kex=kex
         self.sub=False
@@ -41,6 +48,8 @@ class Liouvillian():
         self._Lex=None
         self._index=-1
         self.Lrelax=None
+    
+
     
     @property
     def expsys(self):
@@ -91,7 +100,10 @@ class Liouvillian():
 
         """
         return np.prod(self.H[0].shape)*len(self.H),np.prod(self.H[0].shape)*len(self.H)
-        
+    
+    @property
+    def rf(self):
+        return self.H[0].rf
     
     def __setattr__(self,name,value):
         """

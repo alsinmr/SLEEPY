@@ -41,9 +41,5 @@ seq.add_channel('13C',t=t,v1=[50000,0])
 
 seq.plot()
 
+U=seq.U()
 
-
-from time import time
-t0=time()
-U=L.U()
-print(time()-t0)

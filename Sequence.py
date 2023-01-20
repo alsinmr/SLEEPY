@@ -29,16 +29,11 @@ class Sequence():
 
         """
         self.L=L
-        self.rf=L.H[0].rf
-        for H in self.L.H:
-            if H.rf is not self.rf:
-                H.rf=self.rf
-                print('Warning: Not all Hamiltonians have the same rf object. Replacing mismatched rf objects')
         
         
         ns=self.nspins
-        self.fields={k:(0,0,0) for k in range(ns)} #Current field values for each spin
-        self.rf.fields=self.fields
+        self.fields.clear()
+        self.fields.update({k:(0,0,0) for k in range(ns)}) #Current field values for each spin
         
         self._t=np.array([0,np.inf])
         self._v1=np.zeros([ns,2])
@@ -46,7 +41,15 @@ class Sequence():
         self._phase=np.zeros([ns,2])
         
         self._spin_specific=False
-        
+    
+    @property
+    def rf(self):
+        return self.L.H[0].rf
+    
+    @property
+    def fields(self):
+        return self.rf.fields
+    
     @property
     def t(self):
         return self._t
@@ -212,4 +215,51 @@ class Sequence():
             a.set_ylabel(r'$v_1$ / kHz')
             a.set_ylim([0,self.v1.max()*1.1/1e3])
         ax[-1].set_xlabel(r't/ $\mu$s')
+            
+        
+    def U(self,t0=0,tf=None):
+        """
+        Returns the propagator corresponding to the stored sequence. Note that
+        the t0 and tf refer to position in the rotor cycle, as do the t values
+        stored within the sequence. 
+        
+        If t0 and tf are not specified, then t0 will default to 0 and tf
+        will be an integer multiple of rotor cycles, sufficiently long to
+        contain all specified pulses
+
+        Parameters
+        ----------
+        t0 : TYPE, optional
+            DESCRIPTION. The default is 0.
+        tf : TYPE, optional
+            DESCRIPTION. The default is None.
+
+        Returns
+        -------
+        Propagator
+
+        """
+        
+        if tf is None:
+            tf=(self.t[-2]//self.taur+1)*self.taur
+        
+        i0=np.argwhere(self.t<=t0)[-1,0]  #Last time point before t0
+        i1=np.argwhere(self.t>=tf)[0,0]  #First time after tf
+        
+        t=np.concatenate(([t0],self.t[i0+1:i1],[tf]))
+        
+        U=None
+        
+        for m,(ta,tb) in enumerate(zip(t[:-1],t[1:])):
+            for k,(v1,phase,voff) in enumerate(zip(self.v1,self.phase,self.voff)):
+                self.fields[k]=(v1[i0+m],phase[i0+m],voff[i0+m])
+            U0=self.L.U(t0=ta,tf=tb)
+            
+            if U is None:
+                U=U0
+            else:
+                U=U0*U
+                
+        return U
+                
             
