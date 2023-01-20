@@ -10,8 +10,11 @@ from copy import copy
 import numpy as np
 import warnings
 import matplotlib.pyplot as plt
+from pyRelaxSim import Defaults
 
-dtype=np.dtype
+
+dtype=Defaults['dtype']
+tol=1e-6
 
 class Rho():
     def __init__(self,rho0,detect,L):
@@ -177,7 +180,7 @@ class Rho():
         if U.L is not self.L:
             warnings.warn('Propagating using a system with a different Liouvillian than the initial Liouvillian')
             
-        if self.t%self.taur!=U.t0%U.taur:
+        if np.abs((self.t-U.t0)%self.taur)>tol and np.abs((U.t0-self.t)%self.taur)>tol:
             warnings.warn('The initial time of the propagator is not equal to the current time of the density matrix')
             
         self._rho=[U0@rho for U0,rho in zip(U,self._rho)]
@@ -350,7 +353,7 @@ class Rho():
         nHam=len(self.L.H)
         if detect:
             Op=Op.T.conj()
-            Op/=np.trace(Op.T.conj()@Op)
+            Op/=np.trace(Op.T.conj()@Op)*nHam
         return np.tile(Op.reshape(Op.size),nHam)
             
     
@@ -391,7 +394,7 @@ class Rho():
         self._taxis=list()
         self._rho=list() #Storage for numerical rho
         
-    def plot(self,fig=None):
+    def plot(self,det_num=0,ax=None):
         """
         Plots the amplitudes as a function of time
 
@@ -405,14 +408,18 @@ class Rho():
         None.
 
         """
-        if fig is None:fig=plt.figure()
+        if ax is None:ax=plt.figure().add_subplot(111)
         
-        ax=[fig.add_subplot(1,self.n_det,k+1) for k in range(self.n_det)]
+        # for a,I in zip(ax,self.I):
+            # a.plot(self.t_axis*1e3,I.real)
+            # a.plot(self.t_axis*1e3,I.imag)
+            # a.set_ylabel('I [a.u.]')
+        # ax[-1].set_xlabel('t / ms')
+        ax.plot(self.t_axis*1e3,self.I[det_num].real)
+        if not(isinstance(self.detect[det_num],str)) or self.detect[det_num][-1] in ['p','m']:
+            ax.plot(self.t_axis*1e3,self.I[det_num].imag)
+        ax.set_ylabel('<'+self.detect[det_num]+'>')
+        ax.set_xlabel('t / ms')
         
-        for a,I in zip(ax,self.I):
-            a.plot(self.t_axis*1e3,I.real)
-            a.plot(self.t_axis*1e3,I.imag)
-            a.set_ylabel('I [a.u.]')
-        ax[-1].set_xlabel('t / ms')
             
         

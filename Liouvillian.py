@@ -10,8 +10,10 @@ import numpy as np
 from copy import copy
 from scipy.linalg import expm
 from Propagator import Propagator
+from pyRelaxSim import Defaults
 
-dtype=np.complex64
+
+dtype=Defaults['dtype']
 
 class Liouvillian():
     def __init__(self,H:list,kex=None):
@@ -142,7 +144,7 @@ class Liouvillian():
         
         if self._Lex is None:
             if self.kex is None:
-                self.kex=np.eye(len(self.H),dtype=dtype)
+                self.kex=np.zeros([len(self.H),len(self.H)],dtype=dtype)
                 if len(self.H)>1:print('Warning: Exchange matrix was not defined')
             self._Lex=np.kron(self.kex,np.eye(np.prod(self.H[0].shape)))
             
@@ -195,6 +197,25 @@ class Liouvillian():
             out[k*q:(k+1)*q][:,k*q:(k+1)*q]=H0.Ln(n)
         out*=-1j*2*np.pi
         return out
+    
+    def L(self,step):
+        """
+        Returns the Liouvillian for a given step in the rotor cycle (t=step*L.dt)
+
+        Parameters
+        ----------
+        step : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        """
+        Ln=[self.Ln(n) for n in range(-2,3)]
+        n_gamma=self.expsys.n_gamma
+        ph=np.exp(1j*2*np.pi*step/n_gamma)
+        return np.sum([Ln0*ph**(-m) for Ln0,m in zip(Ln,range(-2,3))],axis=0)
     
     def add_relax(self,M=None):
         """

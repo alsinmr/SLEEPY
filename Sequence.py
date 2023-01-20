@@ -175,6 +175,7 @@ class Sequence():
         for x,name in zip((self._v1,self._voff,self._phase),('_v1','_voff','_phase')):  #Loop over v1,voff,phase
             new=np.zeros([self.nspins,self.t.size])
             for k,t0 in enumerate(self.t):
+                
                 i=np.argwhere(t_old<=t0)[-1,0]
                 new[:,k]=x[:,i]
                 
@@ -201,7 +202,10 @@ class Sequence():
         if fig is None:fig=plt.figure()
         ax=[fig.add_subplot(2,1,k+1) for k in range(2)]
         
-        tf=(self.t[-2]//self.taur+1)*self.taur  #Plot until end of next rotor period
+        if self.t[-2]%self.taur==0:
+            tf=self.t[-2]
+        else:
+            tf=(self.t[-2]//self.taur+1)*self.taur  #Plot until end of next rotor period
         
         t=np.concatenate(([0],self.t[1:-1].repeat(2),[tf]))
         
@@ -214,7 +218,7 @@ class Sequence():
             a.text(0,0.5*self.v1.max()/1e3,s if self._spin_specific else self.expsys.Nucs[s])
             a.set_ylabel(r'$v_1$ / kHz')
             a.set_ylim([0,self.v1.max()*1.1/1e3])
-        ax[-1].set_xlabel(r't/ $\mu$s')
+        ax[-1].set_xlabel(r't / $\mu$s')
             
         
     def U(self,t0=0,tf=None):
@@ -241,7 +245,10 @@ class Sequence():
         """
         
         if tf is None:
-            tf=(self.t[-2]//self.taur+1)*self.taur
+            if self.t[-2]%self.taur<1e-10:
+                tf=self.t[-2]
+            else:
+                tf=(self.t[-2]//self.taur+1)*self.taur
         
         i0=np.argwhere(self.t<=t0)[-1,0]  #Last time point before t0
         i1=np.argwhere(self.t>=tf)[0,0]  #First time after tf
@@ -251,7 +258,6 @@ class Sequence():
         U=None
         
         for m,(ta,tb) in enumerate(zip(t[:-1],t[1:])):
-            
             for k,(v1,phase,voff) in enumerate(zip(self.v1,self.phase,self.voff)):
                 self.fields[k]=(v1[i0+m],phase[i0+m],voff[i0+m])
             U0=self.L.U(t0=ta,tf=tb)

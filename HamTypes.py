@@ -10,6 +10,8 @@ import numpy as np
 from PowderAvg import RotInter
 from copy import copy
 
+dtype=np.complex64
+
 class Ham1inter():
     def __init__(self,M=None,H=None,isotropic=False,delta=0,eta=0,euler=[0,0,0],
                  rotor_angle=np.arccos(np.sqrt(1/3)),info={}):
@@ -77,7 +79,7 @@ class Ham1inter():
             if n==0:
                 return self.H
             else:
-                return np.zeros(self.H.shape)
+                return np.zeros(self.H.shape,dtype=dtype)
             
         if self.A is None:
             return None

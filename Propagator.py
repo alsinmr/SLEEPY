@@ -9,8 +9,11 @@ Created on Tue Jan 17 21:29:29 2023
 import numpy as np
 from fractions import Fraction
 import warnings
+from pyRelaxSim import Defaults
 
-dtype=np.complex64
+
+dtype=Defaults['dtype']
+tol=1e-6
 
 class Propagator():
     def __init__(self,U,t0,tf,taur,L):
@@ -39,7 +42,7 @@ class Propagator():
         if str(U.__class__)!=str(self.__class__):
             return NotImplemented
         
-        if self.t0%self.taur!=U.tf%U.taur:
+        if np.abs((self.t0-U.tf)%self.taur)>tol and np.abs((U.tf-self.t0)%self.taur)>tol:
             warnings.warn(f'\nFirst propagator ends at {U.tf%self.taur} but second propagator starts at {self.t0%U.taur}')
             # print(f'Warning: First propagator ends at {U.tf%self.taur} but second propagator starts at {self.t0%U.taur}')
         
@@ -98,7 +101,7 @@ class Propagator():
 
         """
 
-        if self.t0%self.taur!=self.tf%self.taur:
+        if self.Dt%self.taur>tol:
             print('Power of a propagator should only be used if the propagator is exactly one rotor period')
 
         if not(isinstance(n,int)):

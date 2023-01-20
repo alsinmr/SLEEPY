@@ -10,8 +10,9 @@ import HamTypes
 from copy import copy
 from Tools import Ham2Super
 import numpy as np
+from pyRelaxSim import Defaults
 
-dtype=np.complex64
+dtype=Defaults['dtype']
 
 class Hamiltonian():
     def __init__(self,expsys):
@@ -26,7 +27,7 @@ class Hamiltonian():
             isotropic&=Ham.isotropic
             self.Hinter.append(Ham)
         if isotropic:
-            self.pwdavg=expsys._iso_powder #set powder average to isotropic average if un-used
+            self.expsys.pwdavg=expsys._iso_powder #set powder average to isotropic average if un-used
             self._isotropic=True
         else:
             self._isotropic=False
@@ -53,6 +54,7 @@ class Hamiltonian():
     @property
     def pwdavg(self):
         return self.expsys.pwdavg
+
     
     def __setattr__(self,name,value):
         if hasattr(self,'_initialized') and self._initialized and \
@@ -118,12 +120,9 @@ class Hamiltonian():
         assert self.sub or self.pwdavg is None,'Calling Hn requires indexing to a specific element of the powder average'
         
         
-        out=None
+        out=np.zeros(self.shape,dtype=dtype)
         for Hinter in self.Hinter:
-            if out is None:
-                out=Hinter.Hn(n)
-            else:
-                out+=Hinter.Hn(n)
+            out+=Hinter.Hn(n)
                 
         if n==0 and self.rf is not None:
             out+=self.rf()
