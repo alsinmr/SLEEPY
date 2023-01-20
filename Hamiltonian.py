@@ -8,21 +8,15 @@ Created on Tue Jan 17 11:49:00 2023
 
 import HamTypes
 from copy import copy
-from PowderAvg import PowderAvg
 from Tools import Ham2Super
 import numpy as np
 
 dtype=np.complex64
 
 class Hamiltonian():
-    def __init__(self,expsys,pwdavg=PowderAvg(),rf=None):
+    def __init__(self,expsys):
         self._expsys=expsys
-        self.pwdavg=pwdavg
-        self.rf=rf
-        if rf is not None:self.rf.expsys=expsys
 
-        
-        
         #Attach Hamiltonians for each interaction
         self.Hinter=list()
         isotropic=True
@@ -32,7 +26,10 @@ class Hamiltonian():
             isotropic&=Ham.isotropic
             self.Hinter.append(Ham)
         if isotropic:
-            self.pwdavg=None #Delete the powder average if unused
+            self.pwdavg=expsys._iso_powder #set powder average to isotropic average if un-used
+            self._isotropic=True
+        else:
+            self._isotropic=False
         for Ham in self.Hinter:Ham.pwdavg=self.pwdavg #Share the powder average
             
             
@@ -42,16 +39,24 @@ class Hamiltonian():
         self._initialized=True
     
     @property
+    def rf(self):
+        return self.expsys._rf
+    
+    @property
     def isotropic(self):
-        return self.pwdavg is None
+        return self._isotropic
     
     @property
     def expsys(self):
         return self._expsys
     
+    @property
+    def pwdavg(self):
+        return self.expsys.pwdavg
+    
     def __setattr__(self,name,value):
         if hasattr(self,'_initialized') and self._initialized and \
-            name not in ['_initialized','_index','sub']:
+            name not in ['_initialized','_index','sub','rf']:
             print('Hamiltonian cannot be edited after initialization!')
         else:
             super().__setattr__(name,value)
@@ -157,7 +162,7 @@ class Hamiltonian():
     
     
 class RF():
-    def __init__(self,fields,expsys=None):
+    def __init__(self,expsys=None):
         """
         Generates an RF Hamiltonian for a given expsys. Expsys can be provided
         after initialization, noting that RF will not be callable until it is
@@ -196,7 +201,7 @@ class RF():
 
         """
         
-        self.fields=fields
+        self.fields={}
         self.expsys=expsys
         
     def __call__(self):
@@ -223,7 +228,29 @@ class RF():
                 S=self.expsys.Op[name]
                 out+=(np.cos(value[1])*S.x+np.sin(value[1])*S.y)*value[0]+value[2]*S.z
         return out
-                        
+    
+    def add_field(self,channel,v1:float=0,voff:float=0,phase:float=0):
+        """
+        Add a field by channel (1H,13C,etc.) or by index (0,1,etc).
+
+        Parameters
+        ----------
+        channel : TYPE
+            DESCRIPTION.
+        v1 : float, optional
+            Field strength. The default is 0.
+        voff : float, optional
+            Offset frequence. The default is 0.
+        phase : float, optional
+            Phase (in radians). The default is 0.
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        self.fields.update({channel:(v1,phase,voff)})
                 
         
         

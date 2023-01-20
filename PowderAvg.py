@@ -9,7 +9,7 @@ Created on Mon Jul  5 10:14:04 2021
 import numpy as np
 import os
 from Tools import D2,d2
-
+import PwdAvgFuns
 
 
 class PowderAvg():
@@ -47,8 +47,8 @@ class PowderAvg():
             self.N=len(alpha)
             self.alpha,self.beta,self.gamma=np.array(alpha),np.array(beta),np.zeros(self.N)
             self.weight=np.array(weight)
-        elif 'pwd_'+PwdType in globals().keys():
-            out=globals()['pwd_'+PwdType](**kwargs)
+        elif hasattr(PwdAvgFuns,'pwd_'+PwdType):
+            out=getattr(PwdAvgFuns,'pwd_'+PwdType)(**kwargs)
             self.N=len(out[0])
             if len(out)==4:
                 self.alpha,self.beta,self.gamma,self.weight=np.array(out)
@@ -61,10 +61,30 @@ class PowderAvg():
             for f in np.sort(os.listdir(self._pwdpath)):
                 if '.txt' in f:
                     print(f.split('.')[0])
-            for fname in globals().keys():
+            for fname in dir('PwdAvgFuns'):
                 if 'pwd_' in fname:
-                    fun=globals()[fname]
+                    fun=getattr('PwdAvgFuns','pwd_'+fname)
                     print(fname[4:]+' with args:',fun.__code__.co_varnames[:fun.__code__.co_argcount])
+    
+    @property
+    def list_powder_types(self):
+        pwd=list()
+        for file in os.listdir(os.path.join(os.path.dirname(os.path.abspath(__file__)),'PowderFiles')):
+            if len(file)>4 and file[-4:]=='.txt':
+                pwd.append(file[:-4])
+        for fname in dir(PwdAvgFuns):
+            if 'pwd_' in fname:
+                pwd.append(fname[4:])
+        return pwd
+        
+    
+    def __eq__(self,pwdavg):
+        if pwdavg is self:return True
+        for key in ['N','alpha','beta','gamma']:
+            if not(np.all(getattr(pwdavg,key)==getattr(self,key))):return False
+        return True
+            
+        
     
                     
 class RotInter():
@@ -150,10 +170,10 @@ class RotInter():
         Note that the isotropic part of the interaction is added to the n=0
         (non-rotating) component
         """
-        pwdavg=self.pwdavg
+        # pwdavg=self.pwdavg
         rotor_angle=self.rotor_angle
         A=self.MOL.copy()
-        alpha,beta,gamma=[getattr(self.pwdavg,x) for x in ['alpha','beta','gamma']]
+        alpha,beta,gamma=self.pwdavg.alpha,self.pwdavg.beta,self.pwdavg.gamma
         
         A=np.array([(D2(alpha,beta,gamma,mp=None,m=m)*A).sum(1) for m in range(-2,3)]).T
         A=d2(rotor_angle,mp=None,m=0)*A
@@ -190,8 +210,8 @@ class RotInter():
         Note that the isotropic component is scaled and added to   
         """
         
-        self.pwdavg=pwdavg
-        rotor_angle=self.rotor_angle
+        # self.pwdavg=pwdavg
+        # rotor_angle=self.rotor_angle
         A=self.MOL
         alpha,beta,gamma=[getattr(self.pwdavg,x) for x in ['alpha','beta','gamma']]
         
@@ -248,27 +268,3 @@ class RotInter():
         if not(hasattr(self,'.__Afull')):self.MOL2LAB_Afull()
         return self.__Afull.copy()
     
-#%% Functions for powder averaging    
-def pwd_JCP59(q=3):
-    """
-    Generates a powder average with quality quality q (1 to 12). 
-    According to JCP 59 (8) 3992 (1973) (copied from Matthias Ernst's Gamma
-    scripts).
-    """
-    
-    q+=-1   #We use q as an index, switch to python indexing
-    
-    value1=[2,50,100,144,200,300,538,1154,3000,5000,7000,10000];
-    value2=[1,7,27,11,29,37,55,107,637,1197,1083,1759];
-    value3=[1,11,41,53,79,61,229,271,933,1715,1787,3763];
-
-    count=np.arange(1,value1[q])
-
-    alpha=2*np.pi*np.mod(value2[q]*count,value1[q])/value1[q];
-    beta=np.pi*count/value1[q];
-    gamma=2*np.pi*np.mod(value3[q]*count,value1[q])/value1[q];
-
-    weight=np.sin(beta);
-    weight*=1/weight.sum();
-
-    return alpha,beta,gamma,weight

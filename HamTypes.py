@@ -87,7 +87,7 @@ class Ham1inter():
         else:
             return self.H[n+2]
 
-def dipole(es,i1:int,i2:int,delta:float,eta:float=0,euler=[0,0,0]):
+def dipole(es,i0:int,i1:int,delta:float,eta:float=0,euler=[0,0,0]):
     """
     Dipole Hamiltonian
 
@@ -95,9 +95,9 @@ def dipole(es,i1:int,i2:int,delta:float,eta:float=0,euler=[0,0,0]):
     ----------
     es : exp_sys
         Experimental system object.
-    i1 : int
+    i0 : int
         index of the first spin.
-    i2 : int
+    i1 : int
         index of the second spin.
     delta : float
         anisotropy of the dipole coupling
@@ -113,17 +113,17 @@ def dipole(es,i1:int,i2:int,delta:float,eta:float=0,euler=[0,0,0]):
 
     """
     
-    S,I=es.Op[i1],es.Op[i2]
-    if es.Nucs[i1]==es.Nucs[i2]:
+    S,I=es.Op[i0],es.Op[i1]
+    if es.Nucs[i0]==es.Nucs[i1]:
         M=np.sqrt(2/3)*(S.z*I.z-0.5*(S.x@I.x+S.y@I.y))     #Be careful. S.z*I.z is ok, but S.x*I.x is not (diag vs. non-diag)
     else:
         M=np.sqrt(2/3)*S.z*I.z
         
-    info={'Type':'dipole','i1':i1,'i2':i2,'delta':delta,'eta':eta,'euler':euler}
+    info={'Type':'dipole','i0':i0,'i1':i1,'delta':delta,'eta':eta,'euler':euler}
     
     return Ham1inter(M=M,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info)
 
-def J(es,i1:int,i2:int,J:float):
+def J(es,i0:int,i1:int,J:float):
     """
     J-coupling Hamiltonian
 
@@ -131,9 +131,9 @@ def J(es,i1:int,i2:int,J:float):
     ----------
     es : exp_sys
         Experimental system object.
-    i1 : int
+    i0 : int
         index of the first spin.
-    i2 : int
+    i1 : int
         index of the second spin.
     J : float
         Size of the J-coupled Hamiltonian.
@@ -143,11 +143,11 @@ def J(es,i1:int,i2:int,J:float):
     None.
 
     """
-    S,I=es.Op[i1],es.Op[i2]
-    if es.Nucs[i1]==es.Nucs[i2]:
+    S,I=es.Op[i0],es.Op[i1]
+    if es.Nucs[i0]==es.Nucs[i1]:
         H=J*(S.x@I.x+S.y@I.y+S.z*I.z)
         
-    info={'Type':'J','i1':i1,'i2':i2,'J':J}
+    info={'Type':'J','i0':i0,'i1':i1,'J':J}
     
     return Ham1inter(H=H,isotropic=True,info=info)
 

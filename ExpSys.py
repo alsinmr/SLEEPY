@@ -8,16 +8,21 @@ Created on Tue Jan 17 11:22:59 2023
 
 import numpy as np
 from Tools import NucInfo
-from SpinOperator import SpinOp
+from SpinOp import SpinOp
+from PowderAvg import PowderAvg
 import HamTypes
-
+from copy import deepcopy as DC
+from copy import copy
+from Hamiltonian import RF
 
 class ExpSys():
     """
     Stores various information about the spin system. Initialize with a list of
     all nuclei in the spin system.
     """
-    def __init__(self,v0H,Nucs,vr=10000,rotor_angle=np.arccos(np.sqrt(1/3)),n_gamma=100):
+    _iso_powder=PowderAvg('alpha0beta0')
+    def __init__(self,v0H,Nucs,vr=10000,rotor_angle=np.arccos(np.sqrt(1/3)),n_gamma=100,pwdavg=PowderAvg()):
+        
         self.v0H=v0H
         self.B0=self.v0H*1e6/NucInfo('1H')
         self.Nucs=np.atleast_1d(Nucs).squeeze()
@@ -29,7 +34,9 @@ class ExpSys():
         self.vr=vr
         self.rotor_angle=rotor_angle
         self.n_gamma=n_gamma
+        self.pwdavg=pwdavg
         self.inter=[]
+        self._rf=RF(expsys=self)
         
         self.inter_types=dict()
                     
@@ -44,56 +51,73 @@ class ExpSys():
     def v0(self):
         return self.B0*self.gamma
     
+    @property
+    def taur(self):
+        return 1/self.vr
+    
+    @property
+    def nspins(self):
+        return len(self.Op)
+    
+    
+    def __copy__(self):
+        return self.copy()
+                
+    def copy(self,deepcopy:bool=False):
+        """
+        Return a copy of the ExpSys object. This copy method will use a 
+        shallow copy on parameters expect the interactions, which will be 
+        deep-copied. This is the ideal behavior for creating a Liouvillian, where
+        exchange will leave the field, spin system, gamma, etc. fixed, but 
+        will change the interactions.
+        
+        Setting deepcopy to True will perform a deep copy of all attributes
+
+
+        Parameters
+        ----------
+        deepcopy : bool, optional
+            Return a deep copy. The default is False.
+
+        Returns
+        -------
+        ExpSys
+            Copy of the Expsys.
+
+        """
+        
+        if deepcopy:return DC(self)
+        
+        cls = self.__class__
+        out = cls.__new__(cls)
+        out.__dict__.update(self.__dict__)
+        out.inter=[copy(i) for i in self.inter]
+        return out
                 
     def set_inter(self,Type,**kwargs):
         """
-        Adds an interaction to the total Hamiltonian. We list the required arguments
-        for each type of interaction
-        
-        Spin-Field:
-            Isotropic: i1 (spin index) and value (chemical shift in ppm)
-            Anisotropic: i1 (spin index) and anisotropy (delta, in ppm). Asymmetry
-                and Euler angles also optional
-        Spin-Spin:
-            Isotropic: i1,i2 (spin indices) and value (J coupling gin Hz)
-            Anisotropic: i1,i2 (spin indices) and anisotropy (delta, in Hz. Asymmetry
-                and Euler angles also optional
+        Adds an interaction to the total Hamiltonian. 
         """
+        
+        self.remove_inter(Type=Type,**kwargs)
+        
+        assert 'i' in kwargs or ('i0' in kwargs and 'i1' in kwargs),"Either i must be provided or both i0 and i1 must be provided"
+        
+        if 'i0' in kwargs and 'i1' in kwargs:
+            i0,i1=kwargs['i0'],kwargs['i1']
+            if i0>i1:kwargs['i0'],kwargs['i1']=i1,i0
+            assert i0<self.nspins,'i0 must be less than expsys.nspins'
+            assert i1<self.nspins,'i1 must be less than expsys.nspins'
+            assert i0!=i1,'i0 and i1 cannot be equal'
+        else:
+            assert kwargs['i']<self.nspins,'i must be less than expsys.nspins'
+        
         
         assert Type in self.inter_types.keys(),"Unknown interaction type"
         
         getattr(self,Type).append(kwargs)
         self.inter.append({'Type':Type,**kwargs})
         
-
-    def get_abs_index(self,n=None,Type=None,i1=None,i2=None):
-        """
-        Get the absolute index of a given interaction
-        """
-        
-        if Type is None:
-            assert n<self.__Ninter,"n must be less than the number of defined interactions ({0})".format(self.__Ninter)
-            return n
-        else:
-            assert Type in self.inter_types.keys(),'Interaction {0} is not defined'.format(Type)
-            n0=0
-            for t in self.inter_types.keys():
-                if Type==t:
-                    break
-                else:
-                    n0+=len(getattr(self,t))
-            if n is None:
-                if i2 is not None:i1,i2=np.sort([i1,i2])
-                for k,m in enumerate(getattr(self,Type)):
-                    if ('i2' in m.keys() and i1==m['i1'] and i2==m['i2']) or i1==m['i1']:
-                        return n0+k
-                else:
-                    assert False,"Interaction {0} with given indices not defined"
-            else:
-                assert n0+n<self.__Ninter,""
-                return n0+n
-                    
-    
     def __getitem__(self,n):
         """
         Returns parameters for the nth interaction. Indexing sweeps through 
@@ -116,32 +140,21 @@ class ExpSys():
         self._index=-1
         return self
     
-    def remove_inter(self,i=None,**kwargs):
+    def remove_inter(self,i=None,Type=None,i0=None,i1=None,**kwargs):
         """
         Removes interaction index "i"
         
         --or--
         
-        Removes all interactions for which the arguments given in kwargs match
-        the values stored for the interactions. For example,
-        
-        expsys.remove_inter(Type='dipole') 
-        
-        will remove all dipole interactions.
-        
-        expsys.remove_inter(Type='dipole',i1=0) 
-        
-        will remove all dipole interactions where the i1 index is 0, and
-        
-        expsys.remove_inter(Type='dipole',i1=0,i2=1)
-        
-        will remove the specific dipole interation between spins 1 and 2.
-        Note that if i1 and i2 are switches for the stored interaction, then
-        this will not be removed.
+        Removes all interactions by type or by type+index.
         
         
-        If remove_inter is called without arguments, then all interactions will
-        be removed
+        expsys.remove_inter(i=0)   #Removes the first interaction
+        expsys.remove_inter(Type='dipole')  #Removes all dipole couplings
+        expsys.remove_inter(Type='dipole',i0=0,i1=1) #Removes dipole coupling between spin 0 and 1
+        expsys.remove_inter(Type='CS',i=0)  #Removes CS on spin 0 (note that i is used differently here)
+        
+        
 
         Parameters
         ----------
@@ -153,17 +166,38 @@ class ExpSys():
         None.
 
         """
-   
-        if i is not None:
+        
+        if Type is None:
             self.inter.pop(i)
             return
+           
+        if i0 is not None and i1 is not None and i0>i1:  #Make i0<i1
+            i0,i1=i1,i0
         
-        index=np.ones(len(self),dtype=bool)
-        for k,v in kwargs.items():
-            index&=[k in i and i[k]==v for i in self.inter]
-            
-        for i in np.argwhere(index)[0][::-1]:
-            self.inter.pop(i)
+        index=list()
+        if i0 is not None and i1 is not None:
+            for inter in self:
+                if 'i0' in inter and 'i1' in inter and inter['Type']==Type \
+                    and inter['i0']==i0 and inter['i1']==i1:
+                    index.append(True)
+                else:
+                    index.append(False)
+        elif i is not None:
+            for inter in self:
+                if 'i' in inter and inter['Type']==Type and inter['i']==i:
+                    index.append(True)
+                else:
+                    index.append(False)
+        else:
+            for inter in self:
+                if inter['Type']==Type:
+                    index.append(True)
+                else:
+                    index.append(False)
+                    
+        if np.any(index):
+            for i in np.argwhere(index)[0][::-1]:
+                self.inter.pop(i)
             
         
             

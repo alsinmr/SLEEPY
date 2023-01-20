@@ -6,21 +6,20 @@ Created on Tue Jan 17 21:29:29 2023
 @author: albertsmith
 """
 
-from Tools import BlockDiagonal
 import numpy as np
 from fractions import Fraction
-
-
+import warnings
 
 dtype=np.complex64
 
 class Propagator():
-    def __init__(self,U,t0,tf,taur):
+    def __init__(self,U,t0,tf,taur,L):
         self.U=U
         self.pwdavg=False if hasattr(U,'shape') else True
         self.t0=t0
         self.tf=tf
         self.taur=taur
+        self.L=L
         self._index=-1
         
         
@@ -28,9 +27,21 @@ class Propagator():
     def Dt(self):
         return self.tf-self.t0
     
+    @property
+    def expsys(self):
+        return self.L.expsys
+    
+    @property
+    def shape(self):
+        return self.L.shape
+    
     def __mul__(self,U):
+        if str(U.__class__)!=str(self.__class__):
+            return NotImplemented
+        
         if self.t0%self.taur!=U.tf%U.taur:
-            print(f'Warning: First propagator ends at {U.tf%self.taur} but second propagator starts at {self.t0%U.taur}')
+            warnings.warn(f'\nFirst propagator ends at {U.tf%self.taur} but second propagator starts at {self.t0%U.taur}')
+            # print(f'Warning: First propagator ends at {U.tf%self.taur} but second propagator starts at {self.t0%U.taur}')
         
         if self.pwdavg:
             assert U.pwdavg,"Both propagators should have a powder average or bot not"
@@ -39,20 +50,12 @@ class Propagator():
         
 
         Uout=[U1@U2 for U1,U2 in zip(self,U)]
-        # Uout=list()
-        # for U1,U2 in zip(self,U):
-        #     # Blks=BlockDiagonal(np.logical_or(np.abs(U1)>1e-6,np.abs(U2)>1e-6))
-        #     # # Blks=[np.ones(U1.shape[0],dtype=bool)]
-        #     # U12=np.zeros(U1.shape,dtype=dtype)
-        #     # for blk in Blks:
-        #     #     temp=U1[blk][:,blk]@U2[blk][:,blk]
-        #     #     for k,m in enumerate(np.argwhere(blk)[:,0]):
-        #     #         U12[blk,m]=temp[:,k]
-        #     # Uout.append(U12)
-        #     Uout.append(U1@U2)
         
         if not(self.pwdavg):Uout=Uout[0]
-        return Propagator(Uout,t0=U.t0,tf=U.tf+self.Dt,taur=self.taur)
+        return Propagator(Uout,t0=U.t0,tf=U.tf+self.Dt,taur=self.taur,L=self.L)
+    
+    def __or__(self,U):
+        return self.__mul__(U)
     
     @property
     def rotor_fraction(self):
@@ -74,6 +77,15 @@ class Propagator():
     def __pow__(self,n):
         """
         Raise the operator to a given power
+        
+        Probably, we should consider when to use eigenvalues and when to do
+        a direct calculation. Currently always uses eigenvalues, which always
+        takes about the same amount of time regardless of n. For a 32x32 matrix,
+        n=100 is roughly equally as fast for both operations.  
+        
+        But, this is the rule for a 32x32 L matrix. Scaling is supposedly
+        O(n^3) for matrix multiplication
+        O(n^2) for eigenvalue decomposition.
 
         Parameters
         ----------
@@ -92,6 +104,8 @@ class Propagator():
         if not(isinstance(n,int)):
             print('Warning: non-integer powers may not accurately reflect state of propagator in the middle of a rotor period')
 
+    
+
         Uout=list()
         for U in self:
             d,v=np.linalg.eig(U)
@@ -101,7 +115,7 @@ class Propagator():
             Uout.append(v@np.diag(D)@np.linalg.pinv(v))
             
         if not(self.pwdavg):Uout=Uout[0]
-        return Propagator(Uout,t0=self.t0,tf=self.t0+self.Dt*n,taur=self.taur)
+        return Propagator(Uout,t0=self.t0,tf=self.t0+self.Dt*n,taur=self.taur,L=self.L)
             
     
     

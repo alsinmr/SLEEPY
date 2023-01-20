@@ -44,7 +44,7 @@ class Sequence():
     
     @property
     def rf(self):
-        return self.L.H[0].rf
+        return self.expsys._rf
     
     @property
     def fields(self):
@@ -251,6 +251,7 @@ class Sequence():
         U=None
         
         for m,(ta,tb) in enumerate(zip(t[:-1],t[1:])):
+            
             for k,(v1,phase,voff) in enumerate(zip(self.v1,self.phase,self.voff)):
                 self.fields[k]=(v1[i0+m],phase[i0+m],voff[i0+m])
             U0=self.L.U(t0=ta,tf=tb)

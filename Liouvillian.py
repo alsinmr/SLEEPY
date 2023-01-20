@@ -36,12 +36,11 @@ class Liouvillian():
         self.H=H
         
         for H in self.H:
+            assert H.pwdavg==self.pwdavg,"All Hamiltonians must have the same powder average"
             if H.rf is not self.rf:
                 H.rf=self.rf
-                print('Warning: Not all Hamiltonians have the same rf object. Replacing mismatched rf objects')
 
         
-        self.pwdavg=self.H[0].pwdavg
         self.kex=kex
         self.sub=False
         
@@ -50,6 +49,9 @@ class Liouvillian():
         self.Lrelax=None
     
 
+    @property
+    def pwdavg(self):
+        return self.H[0].pwdavg
     
     @property
     def expsys(self):
@@ -299,10 +301,10 @@ class Liouvillian():
                 ph=np.exp(1j*2*np.pi*nf/n_gamma)
                 L=np.sum([Ln0*ph**(-m) for Ln0,m in zip(Ln,range(-2,3))],axis=0)
                 U=expm(L*tp1)@U
-            return Propagator(U,t0=t0,tf=tf,taur=self.taur)
+            return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self)
         else:
             U=[L0.U(t0=t0,tf=tf).U for L0 in self]
-            return Propagator(U=U,t0=t0,tf=tf,taur=self.taur)
+            return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self)
 
     
 
