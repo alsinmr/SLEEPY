@@ -276,7 +276,7 @@ class Rho():
                     det_d=det@v
                     self._Ipwd[k][m].extend((det_d*rho_d[:-1]).sum(-1))
             
-            self._taxis.extend([self.t+k*U.Dt for k in range(n-1)])
+            self._taxis.extend([self.t+k*U.Dt for k in range(1,n)])
             self._t+=n*U.Dt
                 
         else:

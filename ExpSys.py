@@ -25,7 +25,7 @@ class ExpSys():
         
         self.v0H=v0H
         self.B0=self.v0H*1e6/NucInfo('1H')
-        self.Nucs=np.atleast_1d(Nucs).squeeze()
+        self.Nucs=np.atleast_1d(Nucs)
         self.N=len(self.Nucs)
         self.S=np.array([NucInfo(nuc,'spin') for nuc in self.Nucs])
         self.gamma=np.array([NucInfo(nuc,'gyro') for nuc in self.Nucs])
