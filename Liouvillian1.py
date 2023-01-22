@@ -1,14 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sun Jan 22 15:46:57 2023
-
-@author: albertsmith
-"""
-
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
 Created on Tue Jan 17 15:06:02 2023
 
 @author: albertsmith
@@ -21,11 +13,10 @@ from Propagator import Propagator
 from pyRelaxSim import Defaults
 from Tools import Ham2Super
 
-
 dtype=Defaults['dtype']
 
 class Liouvillian():
-    def __init__(self,H:list,kex=None):
+    def __init__(self,H:list,kex=None,save_mem:int=0):
         """
         Creates the full Liouvillian, and provides some functions for 
         propagation of the Liouvillian
@@ -36,7 +27,12 @@ class Liouvillian():
             List of Hamiltonians.
         kex : np.array, optional
             Exchange Matrix. The default is None.
-
+        save_mem: Determines whether to optimize for speed or memory usage
+            0:  Pre-calculate matrices for all powder elements and time steps in 
+                rotor period
+            1:  Pre-calculate Ln for all powder elements
+            2:  No pre-calculation
+        
         Returns
         -------
         None.
@@ -50,23 +46,48 @@ class Liouvillian():
             assert H.pwdavg==self.pwdavg,"All Hamiltonians must have the same powder average"
             if H.rf is not self.rf:
                 H.rf=self.rf
-
+                
+        assert save_mem in [0,1,2],"save_mem must be 0, 1, or 2"
+        self._save_mem=save_mem
         
         self.kex=kex
+        self._kex=copy(kex)
         self.sub=False
         
         self._Lex=None
         self._index=-1
         self._Lrelax=None
-        self._Lrf=None
-        self._Ln=None
-        self._fields=self.fields
+
         
+        self._Ln=None
+        self._L=None
+        self._Lrf=None
+        self._fields=None  #Stored field when self.Lrf is called
+        self.setup()
     
+    def setup(self):
+        """
+        Performs initial calculation of the Liouville matrix, depending on
+        the save_mem setting
+
+        Returns
+        -------
+        None.
+
+        """
+        if self.save_mem==2:return
+        
+        if self.save_mem==1:
+            self._Ln=[None for _ in range(len(self))]
+        elif self.save_mem==0:
+            self._L=[None for _ in range(len(self))]
+
+        
+
     @property
-    def saveL(self):
-        return self._saveL
-    
+    def save_mem(self):
+        return self._save_mem
+
     @property
     def pwdavg(self):
         return self.H[0].pwdavg
@@ -146,16 +167,15 @@ class Liouvillian():
 
         """
         
-        if name=='kex':
-            self._Lex=None
-        
         super().__setattr__(name,value)
+    
+
     
     def __getitem__(self,i:int):
         """
         Goes to a particular item of the powder average
 
-        Parameters
+        Parameters 
         ----------
         i : int
             Element of the powder average to go to.
@@ -171,7 +191,7 @@ class Liouvillian():
         out.sub=True
         return out
     
-    def add_relax(self,M=None,i=None,T1=None,T2=None):
+    def add_relax(self,M=None):
         """
         Add explicit relaxation to the Liouvillian. This is provided by a matrix,
         M, directly. The matrix itself can be produced with the RelaxationMatrix
@@ -191,21 +211,6 @@ class Liouvillian():
         None.
 
         """
-        if M is None:
-            n=self.H[0].shape[0]**2
-            M=np.zeros([n,n],dtype=dtype)
-            if T1 is not None:
-                for key in ['x','y','z']:
-                    L=Ham2Super(getattr(self.expsys.Op[i],key))
-                    M+=-(L@L)
-                M/=T1
-                
-            if T2 is not None:
-                L=Ham2Super(self.expsys.Op[i].z)
-                M+=-(L@L)/T2
-                
-                
-        
         q=np.prod(self.H[0].shape)
         if M.shape[0]==q:
             self._Lrelax=np.zeros(self.shape)
@@ -214,13 +219,15 @@ class Liouvillian():
         elif M.shape[0]==self.shape[0]:
             self._Lrelax=M
         else:
-            assert False,f"M needs to have size ({q},{q}) or {self.shape}"   
+            assert False,f"M needs to have size ({q},{q}) or {self.shape}"
+        self.setup()
     
-    @property
+    @property        
     def Lrelax(self):
         if self._Lrelax is None:
+            self.shape
             self._Lrelax=np.zeros(self.shape,dtype=dtype)
-        return self._Lrelax 
+        return self._Lrelax
     
     @property
     def Lex(self):
@@ -233,23 +240,28 @@ class Liouvillian():
 
         """
         
+        if not(np.all(self.kex==self._kex)):
+            if self._Lex is not None:
+                self.setup()
+                self._Lex=None
+        
         if self._Lex is None:
             if self.kex is None:
                 self.kex=np.zeros([len(self.H),len(self.H)],dtype=dtype)
                 if len(self.H)>1:print('Warning: Exchange matrix was not defined')
-            self._Lex=np.kron(self.kex.astype(dtype),np.eye(np.prod(self.H[0].shape),dtype=dtype))
+            self._Lex=np.kron(self.kex,np.eye(np.prod(self.H[0].shape)))
             
         return self._Lex
     
     def Ln_H(self,n:int):
         """
         Returns the nth rotating component of the Liouvillian resulting from
-        the Hamiltonians. That is, contributions from exchange and relaxation
-        matrices are not included.
+        the Hamiltonians. Contributions from exchange, relaxation, and rf
+        matrices are not included. 
         
         Only works if we are at a particular index of the Liouvillian
         L[0].Ln_H(0)
-        Other
+        
 
         Parameters
         ----------
@@ -268,10 +280,11 @@ class Liouvillian():
             out[k*q:(k+1)*q][:,k*q:(k+1)*q]=H0.Ln(n)
         out*=-1j*2*np.pi
         return out
-    
+               
     def Ln(self,n:int):
         """
-        Returns the nth rotation component of the total Liouvillian. 
+        Returns the nth rotation component of the total Liouvillian. Does not
+        include contributions from the rf Hamiltonian
 
         Parameters
         ----------
@@ -286,51 +299,50 @@ class Liouvillian():
             
         assert self.sub,"Calling Ln requires indexing to a specific element of the powder average"
         
-        if self._Ln is None:
+        if self.save_mem==1:   #Store Ln for all elements of the powder average
+            if self._Ln[self._index] is None:
+                self._Ln[self._index]=[self.Ln_H(n) for n in range(-2,3)]
+                self._Ln[self._index][2]+=self.Lex+self.Lrelax
+            return self._Ln[self._index][n]                
+        
+        if self._Ln is None:   #Store Ln for this element of the powder average
+            #Note, we do this also if we store all L matrices (pwd x n_gamma) (so save_mem=0 or 2)
             self._Ln=[self.Ln_H(n) for n in range(-2,3)]
             self._Ln[2]+=self.Lex+self.Lrelax
             
         return self._Ln[n+2]
-        
-        # out=self.Ln_H(n)
-        # if n==0:  #Only add these terms to the n=0 term
-        #     out+=self.Lex
-        #     if self.Lrelax is not None:
-        #         out+=self.Lrelax
-        # return out
     
     @property
     def Lrf(self):
         """
-        Liouville matrix due to RF field
+        Returns the Liouvillian for the applied RF field. Depends on the current
+        settings for L.fields
 
         Returns
         -------
-        None.
+        np.array
 
         """
-        
         if self._fields!=self.fields:
             self._Lrf=None
-                
+
         if self._Lrf is None:
+            self._fields=copy(self.fields)
             self._Lrf=np.zeros(self.shape,dtype=dtype)
             n=self.H[0].shape[0]**2
-            Lrf0=Ham2Super(self.rf())
+            Lrf=Ham2Super(self.rf())
             for k in range(len(self.H)):
-                self._Lrf[k*n:(k+1)*n][:,k*n:(k+1)*n]=Lrf0
-            self._Lrf*=-1j*2*np.pi
-            self._fields=copy(self.fields)
-                
+                self._Lrf[k*n:(k+1)*n][:,k*n:(k+1)*n]=Lrf
+            
         return self._Lrf
     
-    def L(self,step):
+    def L(self,step:int):
         """
-        Returns the Liouvillian for a given step in the rotor cycle (t=step*L.dt)
+        Returns the Liouvillian for a given step in the rotor cycle (t=step*L.dt).
 
         Parameters
         ----------
-        step : TYPE
+        step : Index of the step for the rotor cycle ()
             DESCRIPTION.
 
         Returns
@@ -338,14 +350,23 @@ class Liouvillian():
         None.
 
         """
-        # Ln=[self.Ln(n) for n in range(-2,3)]
-        # n_gamma=self.expsys.n_gamma
-        # ph=np.exp(1j*2*np.pi*step/n_gamma)
-        # return np.sum([Ln0*ph**(-m) for Ln0,m in zip(Ln,range(-2,3))],axis=0)+self.Lrf
-    
-        ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
-        return np.sum([self.Ln(m)*(ph**(-m)) for m in range(-2,3)],axis=0)+self.Lrf
-    
+        assert self.sub,"Calling Ln requires indexing to a specific element of the powder average"
+        
+        if self.save_mem==0:
+            if self._L[self._index] is None:
+                self._L[self._index]=[None for _ in range(self.expsys.n_gamma)]
+            if self._L[self._index][step] is None:
+                Ln=[self.Ln(n) for n in range(-2,3)]
+                ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
+                self._L[self._index][step]=\
+                  np.sum([Ln0*ph**(-m) for Ln0,m in zip(Ln,range(-2,3))],axis=0)
+            return self._L[self._index][step]-1j*2*np.pi*self.Lrf
+        
+        Ln=[self.Ln(n) for n in range(-2,3)]
+        n_gamma=self.expsys.n_gamma
+        ph=np.exp(1j*2*np.pi*step/n_gamma)
+        return np.sum([Ln0*ph**(-m) for Ln0,m in zip(Ln,range(-2,3))],axis=0)-1j*2*np.pi*self.Lrf
+ 
     
     def U(self,t0:float=0,tf:float=None):
         """
@@ -372,22 +393,35 @@ class Liouvillian():
         if tf is None:tf=self.taur
         
         if self.sub:
+            
+            # Ln=[self.Ln(n) for n in range(-2,3)]
+            
             dt=self.dt
             n0=int(t0//dt)
             nf=int(tf//dt)
+            
+            # n_gamma=self.expsys.n_gamma
             
             tm1=t0-n0*dt
             tp1=tf-nf*dt
             
             if tm1<=0:tm1=dt
             
+            # ph=np.exp(1j*2*np.pi*n0/n_gamma)
+            
+            # L=np.sum([Ln0*ph**(-m) for Ln0,m in zip(Ln,range(-2,3))],axis=0)
             L=self.L(n0)
+            
             U=expm(L*tm1)
                 
             for n in range(n0+1,nf):
+                # ph=np.exp(1j*2*np.pi*n/n_gamma)
+                # L=np.sum([Ln0*ph**(-m) for Ln0,m in zip(Ln,range(-2,3))],axis=0)
                 L=self.L(n)
                 U=expm(L*dt)@U
             if tp1>1e-10:
+                # ph=np.exp(1j*2*np.pi*nf/n_gamma)
+                # L=np.sum([Ln0*ph**(-m) for Ln0,m in zip(Ln,range(-2,3))],axis=0)
                 L=self.L(nf)
                 U=expm(L*tp1)@U
             return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self)

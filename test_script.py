@@ -10,6 +10,7 @@
 import pyRelaxSim as RS
 import numpy as np
 import matplotlib.pyplot as plt
+from time import time
 
 
 expsys=RS.ExpSys(850,['15N','1H'],vr=60000,pwdavg=RS.PowderAvg(q=5))
@@ -47,10 +48,12 @@ seq3.add_channel('15N',t=t,v1=[v1,0])
 ax=plt.figure().add_subplot(111)
 z=np.linspace(-8,-2,4)
 for tc in 10**z:
+    t0=time()
     L.kex=np.array([[-1/tc,1/tc],[1/tc,-1/tc]])
     U1=seq1.U()
     U2=seq2.U()
     Upi=seq3.U()
+    print(time()-t0)
     
     rho=RS.Rho(rho0='15Nx',detect='15Nx',L=L)
     U1a=U1**0
@@ -61,11 +64,11 @@ for tc in 10**z:
         U1a*=U1
         U1b*=U2
         
-    rho.plot(ax=ax)
+    rho.plot()
 ax.legend([f'z={z0}' for z0 in z])
 
 #%% R1p relaxation
-expsys=RS.ExpSys(850,['15N','1H'],vr=60000,pwdavg=RS.PowderAvg(q=3))
+expsys=RS.ExpSys(850,['15N','1H'],vr=60000,pwdavg=RS.PowderAvg(q=2))
 expsys.set_inter('dipole',delta=22000,i0=0,i1=1)
 expsys.set_inter('CS',i=0,ppm=0)
 
@@ -80,19 +83,21 @@ L=RS.Liouvillian((H0,H1),kex=kex)
 
 ax=plt.figure().add_subplot(111)
 seq=RS.Sequence(L)
-seq.add_channel('15N',t=[0,seq.taur],v1=25)
-z=np.linspace(-9,-1,8)
+seq.add_channel('15N',t=[0,seq.taur],v1=25000)
+z=np.linspace(-9,-1,9)
 for tc in 10**z:
     print(tc)
+    t0=time()
     L.kex=np.array([[-1/tc,1/tc],[1/tc,-1/tc]])
 
     U=seq.U()
+    print(time()-t0)
     U1=U**100
       
     rho=RS.Rho(rho0='15Nx',detect='15Nx',L=L)
-    rho.DetProp(U1,n=1000)
+    rho.DetProp(U1,n=100)
     
-    rho.plot(ax=ax)
+    rho.plot()
 ax.legend([f'z={z0}' for z0 in z])
 
 
@@ -141,3 +146,74 @@ for kex in [1e6,4e4]:
     # I*=np.exp(-np.linspace(0,1,len(I))*10)    
     S=np.fft.fftshift(np.fft.fft(I))
     ax.plot(f,S.real)
+    
+#%% Cross polarization
+
+expsys=RS.ExpSys(850,['15N','1H'],vr=60000,pwdavg=RS.PowderAvg(q=3))
+expsys.set_inter('dipole',delta=22000,i0=0,i1=1)
+expsys.set_inter('CS',i=0,ppm=-5)
+
+expsys1=expsys.copy()
+expsys1.set_inter('dipole',delta=22000,i0=0,i1=1,euler=[0,0*np.pi/180,0])
+expsys1.set_inter('CS',i=1,ppm=5)
+
+H0=RS.Hamiltonian(expsys)
+H1=RS.Hamiltonian(expsys1)
+
+kex=np.array([[-4e4,4e4],[4e4,-4e4]])*50
+
+L=RS.Liouvillian((H0,H1),kex=kex)
+
+axH=plt.figure().add_subplot(111)
+axN=plt.figure().add_subplot(111)
+
+z=np.linspace(-7,-2,6)
+for tc in 10**z:
+    L.kex=[[-1/tc,1/tc],[1/tc,-1/tc]]
+    seq=RS.Sequence(L)
+    seq.add_channel('1H',v1=80000,t=[0,seq.taur])
+    seq.add_channel('15N',v1=20000,t=[0,seq.taur])
+    
+    U=seq.U()
+    
+    rho=RS.Rho(rho0='1Hx',detect=['1Hx','15Nx'],L=L)
+    rho.DetProp(U,n=int(.002//rho.taur))
+    
+    rho.plot(det_num=0,ax=axH)
+    rho.plot(det_num=1,ax=axN)
+    
+axH.legend([f'z={z0}' for z0 in z])
+axN.legend([f'z={z0}' for z0 in z])
+
+#%% CEST
+#%% R1p relaxation
+expsys=RS.ExpSys(850,['13C'],vr=60000,pwdavg=RS.PowderAvg(q=1))
+expsys.set_inter('CSA',delta=0,i=0)
+expsys.set_inter('CS',i=0,ppm=10)
+
+expsys1=expsys.copy()
+expsys.set_inter('CS',i=0,ppm=-10)
+
+H0=RS.Hamiltonian(expsys=expsys)
+H1=RS.Hamiltonian(expsys=expsys1)
+
+kex=np.array([[-1e2,1e4],[1e2,-1e4]])
+L=RS.Liouvillian((H0,H1),kex=kex)
+
+L.add_relax(i=0,T1=5,T2=.1)
+
+ax=plt.figure().add_subplot(111)
+seq=RS.Sequence(L)
+seq.add_channel('13C',t=[0,seq.taur],v1=1000,voff=5125)
+
+
+t0=time()
+
+U=seq.U()
+print(time()-t0)
+U1=U**100
+  
+rho=RS.Rho(rho0='13Cz',detect='13Cz',L=L)
+rho.DetProp(U1,n=100)
+
+rho.plot()

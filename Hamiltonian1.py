@@ -1,14 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sun Jan 22 15:47:19 2023
-
-@author: albertsmith
-"""
-
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
 Created on Tue Jan 17 11:49:00 2023
 
 @author: albertsmith
@@ -113,7 +105,8 @@ class Hamiltonian():
     
     def Hn(self,n:int):
         """
-        Returns the nth rotating component of the total Hamiltonian
+        Returns the nth rotating component of the total Hamiltonian. Does not
+        include the rf fields
 
         Parameters
         ----------
