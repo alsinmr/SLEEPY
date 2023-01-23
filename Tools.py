@@ -9,7 +9,7 @@ Created on Fri Nov  8 13:44:13 2019
 import os
 import numpy as np
 import re
-from Info import Info
+from pyRelaxSim.Info import Info
 
 #%% Some useful tools (Gyromagnetic ratios, spins, dipole couplings)
 class NucInfo(Info):

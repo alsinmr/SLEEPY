@@ -14,9 +14,10 @@ Created on Tue Jan 17 11:49:00 2023
 @author: albertsmith
 """
 
-import HamTypes
+# import pyDIFRATE.HamTypes as HamTypes
+from pyRelaxSim import HamTypes
 from copy import copy
-from Tools import Ham2Super
+from pyRelaxSim.Tools import Ham2Super
 import numpy as np
 from pyRelaxSim import Defaults
 
@@ -36,6 +37,7 @@ class Hamiltonian():
             self.Hinter.append(Ham)
         if isotropic:
             self.expsys.pwdavg=expsys._iso_powder #set powder average to isotropic average if un-used
+            self.expsys.n_gamma=1
             self._isotropic=True
         else:
             self._isotropic=False
@@ -166,6 +168,11 @@ class Hamiltonian():
         """
         
         return Ham2Super(self.Hn(n))
+    
+    def __repr__(self):
+        out='Hamiltonian for the following experimental system:\n'
+        out+=self.expsys.__repr__()
+        return out
     
     
 class RF():

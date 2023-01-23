@@ -142,6 +142,37 @@ class Rho():
         """
         return (self.Ipwd.T*self.pwdavg.weight).sum(-1).T
     
+    @property
+    def v_axis(self):
+        """
+        Frequency axis for the Fourier transform of the signal
+
+        Returns
+        -------
+        None.
+
+        """
+        v=1/(self.t_axis[1]-self.t_axis[0])/2*np.linspace(-1,1,len(self.t_axis))
+        v-=np.diff(v[:2])/2
+        return v
+        
+    
+    @property
+    def FT(self):
+        """
+        Fourier transform of the time-dependent signal
+
+        Returns
+        -------
+        np.array
+            FT, including division of the first time point by zero.
+
+        """
+        if np.diff(self.t_axis).max()-np.diff(self.t_axis).min()>1e-8:
+            warnings.warn('Time points are not equally spaced. FT will be incorrect')
+        return np.fft.fftshift(np.fft.fft(np.concatenate((self.I[:,:1]/2,self.I[:,1:]),axis=1),axis=1),axes=[1])
+        
+    
     def _Setup(self):
         """
         At initialization, we do not require Rho to know the spin-system yet. 
@@ -393,15 +424,22 @@ class Rho():
         self._Ipwd=[[list() for _ in range(self.n_det)] for _ in range(self.pwdavg.N)]
         self._taxis=list()
         self._rho=list() #Storage for numerical rho
+        self._Setup()
         
-    def plot(self,det_num=0,ax=None):
+    def plot(self,det_num:int=0,ax=None,FT:bool=False,imag:bool=True):
         """
-        Plots the amplitudes as a function of time
+        Plots the amplitudes as a function of time or frequency
 
         Parameters
         ----------
-        fig : TYPE, optional
-            DESCRIPTION. The default is None.
+        det_num : int, optional
+            Which detection operator to plot. The default is 0.
+        ax : plt.axis, optional
+            Specify the axis to plot into. The default is None.
+        FT : bool, optional
+            Plot the Fourier transform if true. The default is False.
+        imag : bool, optional
+            Plot the imaginary components. The default is True
 
         Returns
         -------
@@ -410,16 +448,21 @@ class Rho():
         """
         if ax is None:ax=plt.figure().add_subplot(111)
         
-        # for a,I in zip(ax,self.I):
-            # a.plot(self.t_axis*1e3,I.real)
-            # a.plot(self.t_axis*1e3,I.imag)
-            # a.set_ylabel('I [a.u.]')
-        # ax[-1].set_xlabel('t / ms')
-        ax.plot(self.t_axis*1e3,self.I[det_num].real)
-        if not(isinstance(self.detect[det_num],str)) or self.detect[det_num][-1] in ['p','m']:
-            ax.plot(self.t_axis*1e3,self.I[det_num].imag)
-        ax.set_ylabel('<'+self.detect[det_num]+'>')
-        ax.set_xlabel('t / ms')
+        if FT:
+            ax.plot(self.v_axis/1e3,self.FT[det_num].real)
+            if imag:
+                ax.plot(self.v_axis/1e3,self.FT[det_num].imag)
+                ax.legend(('Re','Im'))
+            ax.set_xlabel(r'$\nu$ / kHz')
+            ax.set_ylabel('I / a.u.')
+        else:
+            ax.plot(self.t_axis*1e3,self.I[det_num].real)
+            if not(isinstance(self.detect[det_num],str)) or self.detect[det_num][-1] in ['p','m'] and imag:
+                ax.plot(self.t_axis*1e3,self.I[det_num].imag)
+                ax.legend(('Re','Im'))
+            ax.set_ylabel('<'+self.detect[det_num]+'>')
+            ax.set_xlabel('t / ms')
+        
         
             
         

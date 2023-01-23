@@ -17,9 +17,10 @@ Created on Tue Jan 17 15:06:02 2023
 import numpy as np
 from copy import copy
 from scipy.linalg import expm
-from Propagator import Propagator
+from pyRelaxSim.Propagator import Propagator
 from pyRelaxSim import Defaults
-from Tools import Ham2Super
+from pyRelaxSim.Tools import Ham2Super
+from pyRelaxSim.Hamiltonian import Hamiltonian
 
 
 dtype=Defaults['dtype']
@@ -33,7 +34,7 @@ class Liouvillian():
         Parameters
         ----------
         H : list
-            List of Hamiltonians.
+            List of Hamiltonians or alternatively ExpSys
         kex : np.array, optional
             Exchange Matrix. The default is None.
 
@@ -43,13 +44,17 @@ class Liouvillian():
 
         """
         
-        if hasattr(H,'shape'):H=[H]
-        self.H=H
+        if hasattr(H,'shape') or hasattr(H,'B0'):H=[H]
+        self.H=[*H]
         
-        for H in self.H:
+        for k,H in enumerate(self.H):
+            if not(hasattr(H,'Hinter')) and hasattr(H,'B0'):
+                H=Hamiltonian(H)
+                self.H[k]=H
+            assert hasattr(H,'Hinter'),'Liouvillian must be provided with Hamiltonian or ExpSys objects'
             assert H.pwdavg==self.pwdavg,"All Hamiltonians must have the same powder average"
             if H.rf is not self.rf:
-                H.rf=self.rf
+                H.expsys._rf=self.rf
 
         
         self.kex=kex
@@ -61,11 +66,10 @@ class Liouvillian():
         self._Lrf=None
         self._Ln=None
         self._fields=self.fields
-        
     
     @property
-    def saveL(self):
-        return self._saveL
+    def isotropic(self):
+        return np.all([H0.isotropic for H0 in self.H])
     
     @property
     def pwdavg(self):
@@ -148,6 +152,7 @@ class Liouvillian():
         
         if name=='kex':
             self._Lex=None
+            value=np.array(value)
         
         super().__setattr__(name,value)
     
@@ -368,32 +373,38 @@ class Liouvillian():
         
         # assert self.sub,"Calling L.U requires indexing to a specific element of the powder average"
     
-    
         if tf is None:tf=self.taur
         
         if self.sub:
-            dt=self.dt
-            n0=int(t0//dt)
-            nf=int(tf//dt)
-            
-            tm1=t0-n0*dt
-            tp1=tf-nf*dt
-            
-            if tm1<=0:tm1=dt
-            
-            L=self.L(n0)
-            U=expm(L*tm1)
+            if self.isotropic:
+                assert tf is not None,"Isotropic Liouvillians do not have a default value for tf when calculating propagators"
+                dt=tf-t0
+                L=self.L(0)
+                U=expm(L*dt)
+                return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
+            else:
+                dt=self.dt
+                n0=int(t0//dt)
+                nf=int(tf//dt)
                 
-            for n in range(n0+1,nf):
-                L=self.L(n)
-                U=expm(L*dt)@U
-            if tp1>1e-10:
-                L=self.L(nf)
-                U=expm(L*tp1)@U
-            return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self)
+                tm1=t0-n0*dt
+                tp1=tf-nf*dt
+                
+                if tm1<=0:tm1=dt
+                
+                L=self.L(n0)
+                U=expm(L*tm1)
+                    
+                for n in range(n0+1,nf):
+                    L=self.L(n)
+                    U=expm(L*dt)@U
+                if tp1>1e-10:
+                    L=self.L(nf)
+                    U=expm(L*tp1)@U
+                return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
         else:
             U=[L0.U(t0=t0,tf=tf).U for L0 in self]
-            return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self)
+            return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
 
     
 
@@ -429,6 +440,22 @@ class Liouvillian():
     def __iter__(self):
         self._index=-1
         return self
+    
+    def __repr__(self):
+        out='Liouvillian with Hamiltonians:\n'
+        for k,H in enumerate(self.H):
+            out+=f'Hamiltonian #{k}\n'
+            out+=H.__repr__()
+            out+='\n'
+            
+        if len(self.H)>1:
+            out+='Coupled by exchange matrix:\n'
+            out+=self.kex.__repr__()
+            
+        if np.any(self.Lrelax)>0:
+            out+='\nLiouvillian also includes additional relaxation (T1/T2)'
+        return out
+            
         
         
         

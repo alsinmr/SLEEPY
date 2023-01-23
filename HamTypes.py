@@ -7,7 +7,7 @@ Created on Tue Jan 17 11:49:36 2023
 """
 
 import numpy as np
-from PowderAvg import RotInter
+from pyRelaxSim.PowderAvg import RotInter
 from copy import copy
 
 dtype=np.complex64

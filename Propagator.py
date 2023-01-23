@@ -16,7 +16,7 @@ dtype=Defaults['dtype']
 tol=1e-6
 
 class Propagator():
-    def __init__(self,U,t0,tf,taur,L):
+    def __init__(self,U,t0,tf,taur,L,isotropic):
         self.U=U
         self.pwdavg=False if hasattr(U,'shape') else True
         self.t0=t0
@@ -24,7 +24,12 @@ class Propagator():
         self.taur=taur
         self.L=L
         self._index=-1
+        self._isotropic=isotropic
         
+        
+    @property
+    def isotropic(self):
+        return self._isotropic
         
     @property
     def Dt(self):
@@ -42,7 +47,7 @@ class Propagator():
         if str(U.__class__)!=str(self.__class__):
             return NotImplemented
         
-        if np.abs((self.t0-U.tf)%self.taur)>tol and np.abs((U.tf-self.t0)%self.taur)>tol:
+        if not(self.isotropic) and np.abs((self.t0-U.tf)%self.taur)>tol and np.abs((U.tf-self.t0)%self.taur)>tol:
             warnings.warn(f'\nFirst propagator ends at {U.tf%self.taur} but second propagator starts at {self.t0%U.taur}')
             # print(f'Warning: First propagator ends at {U.tf%self.taur} but second propagator starts at {self.t0%U.taur}')
         
@@ -55,7 +60,7 @@ class Propagator():
         Uout=[U1@U2 for U1,U2 in zip(self,U)]
         
         if not(self.pwdavg):Uout=Uout[0]
-        return Propagator(Uout,t0=U.t0,tf=U.tf+self.Dt,taur=self.taur,L=self.L)
+        return Propagator(Uout,t0=U.t0,tf=U.tf+self.Dt,taur=self.taur,L=self.L,isotropic=self.isotropic)
     
     def __or__(self,U):
         return self.__mul__(U)
@@ -101,11 +106,11 @@ class Propagator():
 
         """
 
-        if self.Dt%self.taur>tol:
-            print('Power of a propagator should only be used if the propagator is exactly one rotor period')
+        if not(self.isotropic) and self.Dt%self.taur>tol:
+            warnings.warn('Power of a propagator should only be used if the propagator is exactly one rotor period')
 
-        if not(isinstance(n,int)):
-            print('Warning: non-integer powers may not accurately reflect state of propagator in the middle of a rotor period')
+        if not(self.isotropic) and not(isinstance(n,int)):
+            warnings.warn('Warning: non-integer powers may not accurately reflect state of propagator in the middle of a rotor period')
 
     
 
@@ -118,7 +123,7 @@ class Propagator():
             Uout.append(v@np.diag(D)@np.linalg.pinv(v))
             
         if not(self.pwdavg):Uout=Uout[0]
-        return Propagator(Uout,t0=self.t0,tf=self.t0+self.Dt*n,taur=self.taur,L=self.L)
+        return Propagator(Uout,t0=self.t0,tf=self.t0+self.Dt*n,taur=self.taur,L=self.L,isotropic=self.isotropic)
             
     
     

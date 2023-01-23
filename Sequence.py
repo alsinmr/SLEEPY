@@ -43,6 +43,10 @@ class Sequence():
         self._spin_specific=False
     
     @property
+    def isotropic(self):
+        return self.L.isotropic
+    
+    @property
     def rf(self):
         return self.expsys._rf
     
@@ -202,7 +206,9 @@ class Sequence():
         if fig is None:fig=plt.figure()
         ax=[fig.add_subplot(2,1,k+1) for k in range(2)]
         
-        if self.t[-2]%self.taur==0:
+        if self.isotropic:
+            tf=self.t[-2]
+        elif self.t[-2]%self.taur<1e-10:
             tf=self.t[-2]
         else:
             tf=(self.t[-2]//self.taur+1)*self.taur  #Plot until end of next rotor period
@@ -245,7 +251,9 @@ class Sequence():
         """
         
         if tf is None:
-            if self.t[-2]%self.taur<1e-10:
+            if self.isotropic:
+                tf=self.t[-2]
+            elif self.t[-2]%self.taur<1e-10:
                 tf=self.t[-2]
             else:
                 tf=(self.t[-2]//self.taur+1)*self.taur

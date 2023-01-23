@@ -7,8 +7,7 @@ Created on Tue Jan 17 10:38:34 2023
 """
 
 import numpy as np
-import Operators as Op0
-from types import MethodType
+from pyRelaxSim import Operators as Op0
 
 
 dtype=np.complex64
