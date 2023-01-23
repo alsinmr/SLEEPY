@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from time import time
 
 
-expsys=RS.ExpSys(850,['15N','1H'],vr=60000,pwdavg=RS.PowderAvg(q=5))
+expsys=RS.ExpSys(850,Nucs=['15N','1H'],vr=60000,pwdavg=RS.PowderAvg(q=5))
 expsys.set_inter('dipole',delta=22000,i0=0,i1=1)
 expsys.set_inter('CS',i=0,ppm=0)
 

@@ -176,7 +176,7 @@ class Liouvillian():
         out.sub=True
         return out
     
-    def add_relax(self,M=None,i=None,T1=None,T2=None):
+    def add_relax(self,M=None,i=None,T1=None,T2=None,T_K=None,Peq=None):
         """
         Add explicit relaxation to the Liouvillian. This is provided by a matrix,
         M, directly. The matrix itself can be produced with the RelaxationMatrix
@@ -203,7 +203,12 @@ class Liouvillian():
                 for key in ['x','y','z']:
                     L=Ham2Super(getattr(self.expsys.Op[i],key))
                     M+=-(L@L)
-                M/=T1
+                M/=(T1*2)  #Is this right?
+                if Peq is None:
+                    if T_K is not None:
+                        Peq=np.tanh(6.626e-34*self.expsys.v0[i]/(1.38-23*T_K))
+                    else:
+                        Peq=0
                 
             if T2 is not None:
                 L=Ham2Super(self.expsys.Op[i].z)

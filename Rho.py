@@ -531,7 +531,7 @@ class Rho():
             det_d=self._detect[det_num]@v
             
             A[k]=(rhod*det_d).real
-            R[k]=(1-np.abs(d))/U.Dt
+            R[k]=-np.log(np.abs(d))/U.Dt
             f[k]=(np.log(d/np.abs(d))/U.Dt).real
             
 
@@ -540,8 +540,9 @@ class Rho():
             R/=A.sum(-1)
             A=A.sum(-1)
             if pwdavg:
-                Ravg=(R*A*U.L.pwdavg.weight).sum()/A.sum()*len(A)  #Something's wrong here!
-                print((A*U.L.pwdavg.weight).sum()/A.sum()*len(A))
+                wt=U.L.pwdavg.weight*A
+                wt/=wt.sum()
+                Ravg=(R*wt).sum()
                 return Ravg
                 
             return R,A
@@ -604,7 +605,9 @@ class Rho():
         
         bins,I=self.R_dist(U,det_num)
             
-        ax.bar(bins-(bins[1]-bins[0])/1,I)
+        ax.bar(bins-(bins[1]-bins[0])/1,I,width=(bins[1]-bins[0])*.5)
+        ax.set_xlabel(r'R / s$^{-1}$')
+        ax.set_ylabel('Weight')
         
         
         
