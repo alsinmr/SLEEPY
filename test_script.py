@@ -68,7 +68,7 @@ for tc in 10**z:
 ax.legend([f'z={z0}' for z0 in z])
 
 #%% R1p relaxation
-expsys=RS.ExpSys(850,['15N','1H'],vr=60000,pwdavg=RS.PowderAvg(q=2))
+expsys=RS.ExpSys(850,Nucs=['15N','1H'],vr=60000,pwdavg=RS.PowderAvg(q=2))
 expsys.set_inter('dipole',delta=22000,i0=0,i1=1)
 expsys.set_inter('CS',i=0,ppm=0)
 
@@ -85,6 +85,7 @@ ax=plt.figure().add_subplot(111)
 seq=RS.Sequence(L)
 seq.add_channel('15N',t=[0,seq.taur],v1=25000)
 z=np.linspace(-9,-1,9)
+rho=RS.Rho(rho0='15Nx',detect='15Nx',L=L)
 for tc in 10**z:
     print(tc)
     t0=time()
@@ -94,7 +95,7 @@ for tc in 10**z:
     print(time()-t0)
     U1=U**100
       
-    rho=RS.Rho(rho0='15Nx',detect='15Nx',L=L)
+    rho.clear()
     rho.DetProp(U1,n=100)
     
     rho.plot()

@@ -45,14 +45,17 @@ class NucInfo(Info):
         mass=re.findall(r'\d+',Nuc)
         if not mass==[]:
             mass=int(mass[0])
-                   
-        Nuc=re.findall(r'[A-Z]',Nuc.upper())
         
-        #Make first letter capital
-        if np.size(Nuc)>1:
-            Nuc=Nuc[0].upper()+Nuc[1].lower()
-        else:
-            Nuc=Nuc[0]
+            
+        if Nuc!='e-':
+            Nuc=re.findall(r'[A-Z]',Nuc.upper())
+            
+            #Make first letter capital
+            # Nuc=Nuc.capitalize()
+            if np.size(Nuc)>1:
+                Nuc=Nuc[0].upper()+Nuc[1].lower()
+            else:
+                Nuc=Nuc[0]
                         
         ftd=self[self['Nuc']==Nuc]  #Filtered by nucleus input
         
@@ -76,13 +79,14 @@ class NucInfo(Info):
         out=''
         for k in self.keys:out+='{:7s}'.format(k)+'\t'
         out=out[:-1]
-        fstring=['{:7s}','{:<7.0f}','{:<7.0f}','{:<3.4f}','{:<4.3f}']
+        fstring=['{:7s}','{:<7.0f}','{:<7.1f}','{:<3.4f}','{:<4.3f}']
         for nucs in self:
             out+='\n'
             for k,(v,fs) in enumerate(zip(nucs.values(),fstring)):
                 out+=fs.format(v*(1e-6 if k==3 else 1))+'\t'
         return out
 NucInfo=NucInfo()
+NucInfo.new_exper(Nuc='e-',mass=0,spin=1/2,gyro=-1.76085963023e11/2/np.pi,abundance=1)
 
 def dipole_coupling(r,Nuc1,Nuc2):
     """ Returns the dipole coupling between two nuclei ('Nuc1','Nuc2') 

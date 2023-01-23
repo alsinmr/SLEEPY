@@ -462,7 +462,156 @@ class Rho():
                 ax.legend(('Re','Im'))
             ax.set_ylabel('<'+self.detect[det_num]+'>')
             ax.set_xlabel('t / ms')
+            
+    def extract_decay_rates(self,U,det_num:int=0,avg:bool=True,pwdavg:bool=False):
+        """
+        Uses eigenvalue decomposition to determine all relaxation rates present
+        for a density matrix, rho, and their corresponding amplitudes, based
+        on detection with the stored detection operators. Note that the
+        returned rate constants will be based on the current rho values. If
+        you want to start from rho0, make sure to first run reset.
         
+        Note, I am not sure what this will return for 'p' and 'm' operators
+        
+        For an nxn Liouville matrix, and N powder elements, we obtain with
+        the following settings
+
+        avg = False, pwdavg = False:
+            Returns     R : (N,n) real matrix containing the eigenvector 
+                            specific relaxation rate constants (1/s)
+                        f : (N,n) real matrix containing the eigenvector
+                            specific frequencies (rad/s). These frequencies
+                            can be back-folded, so the maximum absolute frequency
+                            is 1/(2*U.dt).
+                        A : (N,n) real matrix containing the eigenvector
+                            specific amplitude. 
+                            
+        avg = True, pwdavg = False
+            Returns     R : (N,) real matrix containing the rate constants
+                            for each element of the powder average
+                        A : (N,) real matrix containing the amplitude for that
+                            element of the powder average (if Rho.reset())
+                            is run at the beginning, then this is usually all
+                            ones (or constant)
+                            
+        avg =True, pwdavg = True
+            Returns      R : Returns the powder-averaged relaxation rate constant
+                        
+        
+        
+
+        Parameters
+        ----------
+        U : TYPE
+            DESCRIPTION.
+        det_num : int, optional
+            DESCRIPTION. The default is 0.
+        avg : bool, optional
+            DESCRIPTION. The default is True.
+        pwdavg : bool, optional
+            DESCRIPTION. The default is False.
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        if not(avg):assert not(pwdavg),"If avg is False, then pwdavg must also be false"
+        
+        
+
+        R=np.zeros([U.L.pwdavg.N,U.shape[0]],dtype=float)
+        f=np.zeros([U.L.pwdavg.N,U.shape[0]],dtype=float)
+        A=np.zeros([U.L.pwdavg.N,U.shape[0]],dtype=float)
+            
+        for k,(rho0,U0) in enumerate(zip(self._rho,U)):
+            d,v=np.linalg.eig(U0)
+            rhod=np.linalg.pinv(v)@rho0
+            det_d=self._detect[det_num]@v
+            
+            A[k]=(rhod*det_d).real
+            R[k]=(1-np.abs(d))/U.Dt
+            f[k]=(np.log(d/np.abs(d))/U.Dt).real
+            
+
+        if avg:
+            R=(R*A).sum(-1)
+            R/=A.sum(-1)
+            A=A.sum(-1)
+            if pwdavg:
+                Ravg=(R*A*U.L.pwdavg.weight).sum()/A.sum()*len(A)  #Something's wrong here!
+                print((A*U.L.pwdavg.weight).sum()/A.sum()*len(A))
+                return Ravg
+                
+            return R,A
+        
+        return R,v,A
+    
+    def R_dist(self,U,det_num:int=0,nbins=None):
+        """
+        
+
+        Parameters
+        ----------
+        U : TYPE
+            DESCRIPTION.
+        det_num : int, optional
+            DESCRIPTION. The default is 0.
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        R,A=self.extract_decay_rates(U=U,det_num=det_num)
+        nbins=U.L.pwdavg.N//2
+        bins=np.linspace(R.min(),R.max(),nbins)
+        I=np.zeros(bins.shape)
+        
+        # bl=np.concatenate(([0],bins[:-1]))
+        bl=bins
+        br=np.concatenate((bins[1:],[np.inf]))
+        
+        for k,(R0,A0) in enumerate(zip(R,A)):
+            i=np.logical_and(R0>=bl,R0<br)
+            I[i]+=A0*U.L.pwdavg.weight[k]/A.sum()*len(A)
+            
+        return bins,I
+    
+    def plot_R_dist(self,U,det_num:int=0,ax=None):
+        """
+        Plots a histogram showing the distribution of relaxation rate
+        constants resulting from the powder average
+
+        Parameters
+        ----------
+        U : Propagator
+            Propagator to investigate
+        det_num : int, optional
+            DESCRIPTION. The default is 0.
+        ax : TYPE, optional
+            DESCRIPTION. The default is None.
+
+        Returns
+        -------
+        None.
+
+        """
+        if ax is None:ax=plt.figure().add_subplot(111)
+        
+        
+        bins,I=self.R_dist(U,det_num)
+            
+        ax.bar(bins-(bins[1]-bins[0])/1,I)
+        
+        
+        
+            
+            
+            
+
         
             
         

@@ -206,7 +206,11 @@ class Sequence():
         if fig is None:fig=plt.figure()
         ax=[fig.add_subplot(2,1,k+1) for k in range(2)]
         
-        if self.isotropic:
+        if len(self.t)==2 and self.isotropic:
+            assert 0,"For isotropic systems, one must specify tf"
+        elif len(self.t)==2:
+            tf=self.taur
+        elif self.isotropic:
             tf=self.t[-2]
         elif self.t[-2]%self.taur<1e-10:
             tf=self.t[-2]
@@ -251,7 +255,11 @@ class Sequence():
         """
         
         if tf is None:
-            if self.isotropic:
+            if len(self.t)==2 and self.isotropic:
+                assert 0,"For isotropic systems, one must specify tf"
+            elif len(self.t)==2:
+                tf=self.taur
+            elif self.isotropic:
                 tf=self.t[-2]
             elif self.t[-2]%self.taur<1e-10:
                 tf=self.t[-2]
