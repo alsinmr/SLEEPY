@@ -9,10 +9,7 @@ Created on Tue Jan 17 21:29:29 2023
 import numpy as np
 from fractions import Fraction
 import warnings
-from pyRelaxSim import Defaults
 
-
-dtype=Defaults['dtype']
 tol=1e-6
 
 class Propagator():

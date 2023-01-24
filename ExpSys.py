@@ -7,14 +7,14 @@ Created on Tue Jan 17 11:22:59 2023
 """
 
 import numpy as np
-from pyRelaxSim.Tools import NucInfo
-from pyRelaxSim.SpinOp import SpinOp
-from pyRelaxSim.PowderAvg import PowderAvg
-from pyRelaxSim import HamTypes as HamTypes
+from .Tools import NucInfo
+from .SpinOp import SpinOp
+from .PowderAvg import PowderAvg
+from . import HamTypes as HamTypes
 # import pyRelaxSim.HamTypes as HamTypes
 from copy import deepcopy as DC
 from copy import copy
-from pyRelaxSim.Hamiltonian import RF
+from .Hamiltonian import RF
 
 class ExpSys():
     """
@@ -22,7 +22,7 @@ class ExpSys():
     all nuclei in the spin system.
     """
     _iso_powder=PowderAvg('alpha0beta0')
-    def __init__(self,v0H=None,B0=None,Nucs=[],vr=10000,rotor_angle=np.arccos(np.sqrt(1/3)),n_gamma=100,pwdavg=PowderAvg()):
+    def __init__(self,v0H=None,B0=None,Nucs=[],vr=10000,T_K=298,rotor_angle=np.arccos(np.sqrt(1/3)),n_gamma=100,pwdavg=PowderAvg()):
         
         assert B0 is not None or v0H is not None,"B0 or v0H must be specified"
         self.B0=B0 if B0 is not None else v0H*1e6/NucInfo('1H')
@@ -33,6 +33,7 @@ class ExpSys():
         self.Op=SpinOp(self.S)
         self._index=-1
         self.vr=vr
+        self.T_K=T_K
         self.rotor_angle=rotor_angle
         self.n_gamma=n_gamma
         self.pwdavg=pwdavg
@@ -66,6 +67,18 @@ class ExpSys():
     
     def __copy__(self):
         return self.copy()
+    
+    @property
+    def Peq(self):
+        """
+        Polarization of the individual spins
+
+        Returns
+        -------
+        None.
+
+        """
+        return np.tanh(self.gamma*6.62607015e-34/(2*1.380649e-23*self.T_K))
                 
     def copy(self,deepcopy:bool=False):
         """
@@ -208,15 +221,16 @@ class ExpSys():
         out+=f'B0 = {self.B0:.3f} T ({self.v0H/1e6:.3f} MHz 1H frequency)\n'
         out+=f'rotor angle = {self.rotor_angle*180/np.pi:.3f} degrees\n'
         out+=f'rotor frequency = {self.vr/1e3} kHz\n'
+        out+=f'Temperature = {self.T_K} K\n'
         out+=f'Powder average with {self.pwdavg.N} angles, {self.n_gamma} steps per rotor period\n'
-        out+=f'Interactions:\n'
+        out+='Interactions:\n'
         for i in self.inter:
             dct=copy(i)
             if 'i' in dct:
                 out+=f'\t{dct.pop("Type")} on spin {dct.pop("i")} with arguments: ('+\
                     ','.join([f'{key}={value}' for key,value in dct.items()])+')\n'
             else:
-                out+=f'\t{dct.pop("Type")} between spins {dct.pop("i0")},{dct.pop("i1")} with arguments:\n\t\t('+\
+                out+=f'\t{dct.pop("Type")} between spins {dct.pop("i0")},{dct.pop("i1")} with arguments:\n\t('+\
                     ','.join([f'{key}={value}' for key,value in dct.items()])+')\n'
             
         return out

@@ -8,9 +8,8 @@ Created on Mon Jul  5 10:14:04 2021
 
 import numpy as np
 import os
-from pyRelaxSim.Tools import D2,d2
-# import pyRelaxSim.PwdAvgFuns as PwdAvgFuns
-from pyRelaxSim import PwdAvgFuns as PwdAvgFuns
+from .Tools import D2,d2
+from . import PwdAvgFuns
 
 
 class PowderAvg():

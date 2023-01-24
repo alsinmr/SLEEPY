@@ -51,3 +51,8 @@ def so_beta(S=None):
     "Calculates the beta state for a single spin"
     Sz=so_z(S)
     return np.eye(Sz.shape[0],dtype=dtype).astype(dtype)/2-Sz
+
+def so_eye(S=None):
+    if S is None:S=1/2
+    M=np.round(2*S+1).astype(int)
+    return np.eye(M,dtype=dtype)

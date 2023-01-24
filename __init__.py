@@ -1,12 +1,17 @@
 # __init__.py
-from numpy import complex64 as _dtype
-Defaults={'dtype':_dtype}
 
-import pyRelaxSim.Tools as Tools
-from pyRelaxSim.PowderAvg import PowderAvg
-from pyRelaxSim.SpinOp import SpinOp
-from pyRelaxSim.ExpSys import ExpSys
-from pyRelaxSim.Hamiltonian import Hamiltonian,RF
+
+Defaults={}
+from numpy import float32 as _rtype
+from numpy import complex64 as _ctype
+Defaults.update({'rtype':_rtype,'ctype':_ctype})
+
+from . import Tools
+from .PowderAvg import PowderAvg
+from .SpinOp import SpinOp
+from .ExpSys import ExpSys
+from .Hamiltonian import Hamiltonian
 from .Liouvillian import Liouvillian
 from .Sequence import Sequence
 from .Rho import Rho
+

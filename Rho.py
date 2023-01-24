@@ -10,10 +10,11 @@ from copy import copy
 import numpy as np
 import warnings
 import matplotlib.pyplot as plt
-from pyRelaxSim import Defaults
+from . import Defaults
 
 
-dtype=Defaults['dtype']
+ctype=Defaults['ctype']
+rtype=Defaults['rtype']
 tol=1e-6
 
 class Rho():
@@ -190,7 +191,7 @@ class Rho():
         self._taxis=list()
         
         self._rho0=self.Op2vec(self.strOp2vec(self.rho0))
-        self._detect=[self.Op2vec(self.strOp2vec(det),detect=True) for det in self.detect]
+        self._detect=[self.Op2vec(self.strOp2vec(det,detect=True),detect=True) for det in self.detect]
         self.reset()
         
     def prop(self,U):
@@ -315,7 +316,7 @@ class Rho():
                 U*self()
         return self
     
-    def strOp2vec(self,OpName:str):
+    def strOp2vec(self,OpName:str,detect:bool=False):
         """
         Converts the string for an operator into a matrix
 
@@ -332,6 +333,8 @@ class Rho():
         ----------
         OpName : str
             Name of the desired operator.
+        detect : bool
+            Indicates if this is the detection operator
 
         Returns
         -------
@@ -354,12 +357,19 @@ class Rho():
         elif 'beta' in OpName:
             a='beta'
             Nuc=OpName[:-4]
-        Op=np.zeros(self.Op.Mult.prod()*np.ones(2,dtype=int),dtype=dtype)
+        Op=np.zeros(self.Op.Mult.prod()*np.ones(2,dtype=int),dtype=ctype)
         i=self.expsys.Nucs==Nuc
         if not(np.any(i)):
             warnings.warn('Nucleus is not in the spin system or was not recognized')
         for i0 in np.argwhere(i)[:,0]:
             Op+=getattr(self.Op[i0],a)
+        
+        if self.L.Peq:
+            Peq=self.expsys.Peq[i0]
+            Op*=Peq  #Start out at thermal polarization
+            for op0 in self.expsys.Op:
+                Op+=op0.eye  #Add in the identity for relaxation to thermal equilibrium
+
         return Op
     
     def Op2vec(self,Op,detect:bool=False):
@@ -385,6 +395,7 @@ class Rho():
         if detect:
             Op=Op.T.conj()
             Op/=np.trace(Op.T.conj()@Op)*nHam
+        
         return np.tile(Op.reshape(Op.size),nHam)
             
     
@@ -547,7 +558,7 @@ class Rho():
                 
             return R,A
         
-        return R,v,A
+        return R,f,A
     
     def R_dist(self,U,det_num:int=0,nbins=None):
         """

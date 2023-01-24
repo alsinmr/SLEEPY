@@ -16,14 +16,16 @@ Created on Tue Jan 17 15:06:02 2023
 
 import numpy as np
 from copy import copy
+import warnings
 from scipy.linalg import expm
-from pyRelaxSim.Propagator import Propagator
-from pyRelaxSim import Defaults
-from pyRelaxSim.Tools import Ham2Super
-from pyRelaxSim.Hamiltonian import Hamiltonian
+from .Propagator import Propagator
+from . import Defaults
+from .Tools import Ham2Super
+from .Hamiltonian import Hamiltonian
+from . import RelaxMat
 
-
-dtype=Defaults['dtype']
+ctype=Defaults['ctype']
+rtype=Defaults['rtype']
 
 class Liouvillian():
     def __init__(self,H:list,kex=None):
@@ -66,6 +68,7 @@ class Liouvillian():
         self._Lrf=None
         self._Ln=None
         self._fields=self.fields
+        self.relax_info=[]  #Keeps a short record of what kind of relaxation is used
     
     @property
     def isotropic(self):
@@ -74,6 +77,13 @@ class Liouvillian():
     @property
     def pwdavg(self):
         return self.H[0].pwdavg
+    
+    @property
+    def Peq(self):
+        for ri in self.relax_info:
+            if 'Peq' in ri[1] and ri[1]['Peq']:
+                return True
+        return False
     
     @property
     def expsys(self):
@@ -176,7 +186,7 @@ class Liouvillian():
         out.sub=True
         return out
     
-    def add_relax(self,M=None,i=None,T1=None,T2=None,T_K=None,Peq=None):
+    def add_relax(self,M=None,Type:str=None,**kwargs):
         """
         Add explicit relaxation to the Liouvillian. This is provided by a matrix,
         M, directly. The matrix itself can be produced with the RelaxationMatrix
@@ -197,39 +207,65 @@ class Liouvillian():
 
         """
         if M is None:
-            n=self.H[0].shape[0]**2
-            M=np.zeros([n,n],dtype=dtype)
-            if T1 is not None:
-                for key in ['x','y','z']:
-                    L=Ham2Super(getattr(self.expsys.Op[i],key))
-                    M+=-(L@L)
-                M/=(T1*2)  #Is this right?
-                if Peq is None:
-                    if T_K is not None:
-                        Peq=np.tanh(6.626e-34*self.expsys.v0[i]/(1.38-23*T_K))
-                    else:
-                        Peq=0
-                
-            if T2 is not None:
-                L=Ham2Super(self.expsys.Op[i].z)
-                M+=-(L@L)/T2
-                
-                
+            if hasattr(RelaxMat,Type):
+                M=getattr(RelaxMat,Type)(expsys=self.expsys,**kwargs)
+                self.relax_info.append((Type,kwargs))
+            else:
+                warnings.warn(f'Unknown relaxation type: {Type}')
+                return
         
         q=np.prod(self.H[0].shape)
+        self.Lrelax  #Call just to pre-allocate
         if M.shape[0]==q:
-            self._Lrelax=np.zeros(self.shape)
             for k,H0 in enumerate(self.H):
-                self._Lrelax[k*q:(k+1)*q][:,k*q:(k+1)*q]=M
+                self._Lrelax[k*q:(k+1)*q][:,k*q:(k+1)*q]+=M
         elif M.shape[0]==self.shape[0]:
-            self._Lrelax=M
+            self._Lrelax+=M
         else:
             assert False,f"M needs to have size ({q},{q}) or {self.shape}"   
+    
+    def clear_relax(self):
+        """
+        Removes all explicitely defined relaxation
+
+        Returns
+        -------
+        None.
+
+        """
+        self.relax_info=[]
+        self._Lrelax=None
+        
+    def validate_relax(self):
+        """
+        Checks if systems with T1 relaxation have T2 relaxation. Also returns
+        True if the system relaxes to an equilibrium value
+
+        Returns
+        -------
+        None.
+
+        """
+        Long=False
+        Peq=False
+        Trans=False
+        for ri in self.relax_info:
+            if ri[0] in ['T1']:  #Check for Longitudinal relaxation
+                Long=True
+                if 'Peq' in ri[1] and ri[1]['Peq']:
+                    Peq=True
+            elif ri[0] in ['T2']: #Check for Transverse relaxation
+                Trans=True
+        if Long and Peq and not Trans:
+            warnings.warn('T1 relaxation and Peq included without T2 relaxation. System can diverge')
+        elif Long and not Trans:
+            warnings.warn('T1 relaxation included without T2 relaxation. Unphysical system')
+    
     
     @property
     def Lrelax(self):
         if self._Lrelax is None:
-            self._Lrelax=np.zeros(self.shape,dtype=dtype)
+            self._Lrelax=np.zeros(self.shape,dtype=rtype)
         return self._Lrelax 
     
     @property
@@ -244,10 +280,10 @@ class Liouvillian():
         """
         
         if self._Lex is None:
-            if self.kex is None:
-                self.kex=np.zeros([len(self.H),len(self.H)],dtype=dtype)
+            if self.kex is None or self.kex.size!=len(self.H)**2 or self.kex.ndim!=2:
+                self.kex=np.zeros([len(self.H),len(self.H)],dtype=rtype)
                 if len(self.H)>1:print('Warning: Exchange matrix was not defined')
-            self._Lex=np.kron(self.kex.astype(dtype),np.eye(np.prod(self.H[0].shape),dtype=dtype))
+            self._Lex=np.kron(self.kex.astype(rtype),np.eye(np.prod(self.H[0].shape),dtype=rtype))
             
         return self._Lex
     
@@ -272,7 +308,7 @@ class Liouvillian():
 
         """
         assert self.sub,"Calling Ln_H requires indexing to a specific element of the powder average"
-        out=np.zeros(self.shape,dtype=dtype)
+        out=np.zeros(self.shape,dtype=ctype)
         q=np.prod(self.H[0].shape)
         for k,H0 in enumerate(self.H):
             out[k*q:(k+1)*q][:,k*q:(k+1)*q]=H0.Ln(n)
@@ -324,7 +360,7 @@ class Liouvillian():
             self._Lrf=None
                 
         if self._Lrf is None:
-            self._Lrf=np.zeros(self.shape,dtype=dtype)
+            self._Lrf=np.zeros(self.shape,dtype=ctype)
             n=self.H[0].shape[0]**2
             Lrf0=Ham2Super(self.rf())
             for k in range(len(self.H)):
@@ -378,6 +414,8 @@ class Liouvillian():
         
         # assert self.sub,"Calling L.U requires indexing to a specific element of the powder average"
     
+        self.validate_relax()
+    
         if tf is None:tf=self.taur
         
         if self.sub:
@@ -385,7 +423,9 @@ class Liouvillian():
                 assert tf is not None,"Isotropic Liouvillians do not have a default value for tf when calculating propagators"
                 dt=tf-t0
                 L=self.L(0)
-                U=expm(L*dt)
+                # U=expm(L*dt)
+                d,v=np.linalg.eig(L)
+                U=v@np.diag(d*dt)@np.linalg.pinv(v)
                 return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
             else:
                 dt=self.dt
@@ -460,7 +500,4 @@ class Liouvillian():
         if np.any(self.Lrelax)>0:
             out+='\nLiouvillian also includes additional relaxation (T1/T2)'
         return out
-            
-        
-        
-        
+    

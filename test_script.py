@@ -150,7 +150,7 @@ for kex in [1e6,4e4]:
     
 #%% Cross polarization
 
-expsys=RS.ExpSys(850,['15N','1H'],vr=60000,pwdavg=RS.PowderAvg(q=3))
+expsys=RS.ExpSys(850,Nucs=['15N','1H'],vr=60000,pwdavg=RS.PowderAvg(q=3))
 expsys.set_inter('dipole',delta=22000,i0=0,i1=1)
 expsys.set_inter('CS',i=0,ppm=-5)
 
@@ -188,7 +188,7 @@ axN.legend([f'z={z0}' for z0 in z])
 
 #%% CEST
 #%% R1p relaxation
-expsys=RS.ExpSys(850,['13C'],vr=60000,pwdavg=RS.PowderAvg(q=1))
+expsys=RS.ExpSys(850,Nucs=['13C'],vr=60000,pwdavg=RS.PowderAvg(q=1))
 expsys.set_inter('CSA',delta=0,i=0)
 expsys.set_inter('CS',i=0,ppm=10)
 

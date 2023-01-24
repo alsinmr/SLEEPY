@@ -7,19 +7,22 @@ Created on Tue Jan 17 11:49:36 2023
 """
 
 import numpy as np
-from pyRelaxSim.PowderAvg import RotInter
+import warnings
+from .PowderAvg import RotInter
 from copy import copy
+from . import Defaults
 
-dtype=np.complex64
+dtype=Defaults['ctype']
 
 class Ham1inter():
-    def __init__(self,M=None,H=None,isotropic=False,delta=0,eta=0,euler=[0,0,0],
+    def __init__(self,M=None,H=None,isotropic=False,delta=0,eta=0,iso=0,euler=[0,0,0],
                  rotor_angle=np.arccos(np.sqrt(1/3)),info={}):
         self.M=M
         self.H=H
         self.isotropic=isotropic
         self.delta=delta
         self.eta=eta
+        self.iso=iso
         self.euler=euler
         self.pwdavg=None
         self.rotInter=None
@@ -203,10 +206,64 @@ def CSA(es,i:int,delta:float,eta:float=0,euler=[0,0,0]):
     """
     
     S=es.Op[i]
-    M=S.z
+    M=np.sqrt(2/3)*S.z    #Is the multiplication factor correct?
     delta=delta*es.v0[i]/1e6
     
     info={'Type':'CSA','i':i,'delta':delta,'eta':eta,'euler':euler}
     
     return Ham1inter(M=M,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info)
-                    
+ 
+
+def hyperfine(es,i0:int,i1:int,Axx:float=0,Ayy:float=0,Azz:float=0,euler=[0,0,0]):
+    """
+    Hyperfine between electron and nucleus. Note that in this implementation,
+    we are only including the secular term. This will allow transverse relaxation
+    due to both electron T1 and hyperfine tensor reorientation, and also the
+    pseudocontact shift. However, DNP will not be possible except for buildup
+    in the transverse plane (no SE, CE, NOVEL, etc.)
+
+    Parameters
+    ----------
+    es : exp_sys
+        Experimental system object.
+    i0 : int
+        index of the first spin.
+    i1 : int
+        index of the second spin.
+    Axx : float
+        Axx component of the hyperfine.
+    Ayy : float
+        Ayy component of the hyperfine.
+    Azz : flat
+        Azz component of the hyperfine.
+    euler : TYPE, optional
+        DESCRIPTION. The default is [0,0,0].
+
+    Returns
+    -------
+    None.
+
+    """
+    if es.Nucs[i0][0]!='e' and es.Nucs[i1][0]!='e':
+        warnings.warn(f'Hyperfine coupling between two nuclei ({es.Nucs[i0]},{es.Nucs[i1]})')
+    
+    avg=(Axx+Ayy+Azz)/3
+    Ayy,Axx,Azz=np.sort([Axx-avg,Ayy-avg,Azz-avg])
+    
+    iso=avg*np.sqrt(3/2)  #Cancel out the sqrt(2/3) in M
+    delta=Azz
+    eta=(Ayy-Axx)/delta if delta else 0
+    info={'Type':'Hyperfine','i0':i0,'i1':i1,'Axx':Axx+avg,'Ayy':Ayy+avg,'Azz':Azz+avg,'euler':euler}
+
+    S,I=es.Op[i0],es.Op[i1]
+    M=np.sqrt(2/3)*S.z*I.z
+    if delta:                        
+        return Ham1inter(M=M,isotropic=False,delta=delta,eta=eta,iso=iso,euler=euler,rotor_angle=es.rotor_angle,info=info)
+    else:
+        return Ham1inter(H=M*avg,isotropic=True,info=info)
+
+    
+
+
+
+                   

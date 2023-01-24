@@ -7,7 +7,7 @@ Created on Tue Jan 17 10:38:34 2023
 """
 
 import numpy as np
-from pyRelaxSim import Operators as Op0
+from . import Operators as Op0
 
 
 dtype=np.complex64
@@ -33,8 +33,10 @@ class SpinOp:
 
         """
         
+        
         assert S is not None or N is not None,'Either S or N must be defined to initiate SpinOp'
         if S is not None:
+            if not(hasattr(S,'__len__')):S=[S]
             self.Mult=(np.array(S)*2+1).astype(int)
         elif N is not None:
             self.Mult=(np.ones(N)*2).astype(int)

@@ -15,13 +15,13 @@ Created on Tue Jan 17 11:49:00 2023
 """
 
 # import pyDIFRATE.HamTypes as HamTypes
-from pyRelaxSim import HamTypes
+from . import HamTypes
 from copy import copy
-from pyRelaxSim.Tools import Ham2Super
+from .Tools import Ham2Super
 import numpy as np
-from pyRelaxSim import Defaults
+from . import Defaults
 
-dtype=Defaults['dtype']
+dtype=Defaults['ctype']
 
 class Hamiltonian():
     def __init__(self,expsys):
