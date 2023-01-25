@@ -84,6 +84,23 @@ class Sequence():
         
     
 
+    def reset_prop_time(self,t:float=0):
+        """
+        Resets the current time for propagators to t
+        
+        (L.expsys._tprop=t)
+
+        Parameters
+        ----------
+        t : float, optional
+            DESCRIPTION. The default is 0.
+
+        Returns
+        -------
+        None.
+
+        """
+        self.expsys._tprop=t
     
     def add_channel(self,channel,t=[0,np.inf],v1=0,voff=0,phase=0):
         """
@@ -137,6 +154,7 @@ class Sequence():
             elif np.all(t==self.t):
                 new=np.array(x)
             else:
+                assert len(x)==len(t),f"{name[1:]} has a different length than t"
                 new=np.zeros(self.t.shape)
                 for k,t0 in enumerate(self.t):
                     if t0<t[0] or t0>t[-1]:
@@ -231,58 +249,89 @@ class Sequence():
         ax[-1].set_xlabel(r't / $\mu$s')
             
         
-    def U(self,t0=0,tf=None):
+    def U(self,t0:float=None,Dt:float=None):
         """
-        Returns the propagator corresponding to the stored sequence. Note that
-        the t0 and tf refer to position in the rotor cycle, as do the t values
-        stored within the sequence. 
+        Returns the propagator corresponding to the stored sequence. If Dt is
+        not specified, then Dt will extend to the last specified point in the
+        sequence. If no time has been specified, then it will revert to one
+        rotor period, unless the system is isotropic, in which case an error 
+        will occur.
         
-        If t0 and tf are not specified, then t0 will default to 0 and tf
-        will be an integer multiple of rotor cycles, sufficiently long to
-        contain all specified pulses
+        If t0 is not specified, then the stored pulse sequence will begin at
+        the end of the last calculated propagator. Otherwise, t0 specifies
+        the time in the rotor period to start calculating the propagator of
+        the pulse sequence.
+        
+        The stored time axis in the sequence is used as a relative time axis, 
+        to t0, i.e. we will not cut off the beginning of the sequence when t0 
+        is not 0.
 
         Parameters
         ----------
-        t0 : TYPE, optional
-            DESCRIPTION. The default is 0.
-        tf : TYPE, optional
-            DESCRIPTION. The default is None.
+        t0 : float, optional
+            Initial time for the propagator. The default is None, which sets t0
+            to the end of the last calculated propagator
+        Dt : float, optional
+            Length of the propagator. The default is None, which sets it to
+            return the full pulse sequence
 
         Returns
         -------
-        Propagator
+        U : Propagator
+            DESCRIPTION.
 
         """
         
-        if tf is None:
-            if len(self.t)==2 and self.isotropic:
-                assert 0,"For isotropic systems, one must specify tf"
-            elif len(self.t)==2:
-                tf=self.taur
-            elif self.isotropic:
-                tf=self.t[-2]
-            elif self.t[-2]%self.taur<1e-10:
-                tf=self.t[-2]
-            else:
-                tf=(self.t[-2]//self.taur+1)*self.taur
+
+        if Dt is None:Dt=self.t[-2]
+        if self.isotropic:t0=0
+        if t0 is None:t0=self.expsys._tprop%self.taur
+            
+        tf=t0+Dt
         
-        i0=np.argwhere(self.t<=t0)[-1,0]  #Last time point before t0
-        i1=np.argwhere(self.t>=tf)[0,0]  #First time after tf
+        # if tf is None:
+        #     if len(self.t)==2 and self.isotropic:
+        #         assert 0,"For isotropic systems, one must specify tf"
+        #     elif len(self.t)==2:
+        #         tf=self.taur
+        #     elif self.isotropic:
+        #         tf=self.t[-2]
+        #     elif self.t[-2]%self.taur<1e-10:
+        #         tf=self.t[-2]
+        #     else:
+        #         tf=(self.t[-2]//self.taur+1)*self.taur
         
-        t=np.concatenate(([t0],self.t[i0+1:i1],[tf]))
+        t=self.t+t0 #Absolute time axis
+        
+        # i0=np.argwhere(self.t<=t0)[-1,0]  #Last time point before t0
+        # i1=np.argwhere(self.t>=tf)[0,0]  #First time after tf
+        
+        # t=np.concatenate(([t0],self.t[i0+1:i1],[tf]))
+        
+        # U=None
+        
+        # for m,(ta,tb) in enumerate(zip(t[:-1],t[1:])):
+        #     for k,(v1,phase,voff) in enumerate(zip(self.v1,self.phase,self.voff)):
+        #         self.fields[k]=(v1[i0+m],phase[i0+m],voff[i0+m])
+        #     U0=self.L.U(t0=ta,tf=tb)
+            
+        #     if U is None:
+        #         U=U0
+        #     else:
+        #         U=U0*U
         
         U=None
-        
+        i1=np.argwhere(t>=tf)[0,0] #First time after tf
+        t=np.concatenate((t[:i1],[tf]))
         for m,(ta,tb) in enumerate(zip(t[:-1],t[1:])):
             for k,(v1,phase,voff) in enumerate(zip(self.v1,self.phase,self.voff)):
-                self.fields[k]=(v1[i0+m],phase[i0+m],voff[i0+m])
-            U0=self.L.U(t0=ta,tf=tb)
-            
-            if U is None:
-                U=U0
-            else:
-                U=U0*U
-                
+                self.fields[k]=(v1[m],phase[m],voff[m])
+            U0=self.L.U(t0=ta,Dt=tb-ta)
+            U=U0 if U is None else U0*U
+        
+        ns=self.nspins
+        self.fields.update({k:(0,0,0) for k in range(ns)}) #Turn off all fields  
+        
         return U
                 
             

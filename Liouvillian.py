@@ -70,6 +70,24 @@ class Liouvillian():
         self._fields=self.fields
         self.relax_info=[]  #Keeps a short record of what kind of relaxation is used
     
+    def reset_prop_time(self,t:float=0):
+        """
+        Resets the current time for propagators to t
+        
+        (L.expsys._tprop=t)
+
+        Parameters
+        ----------
+        t : float, optional
+            DESCRIPTION. The default is 0.
+
+        Returns
+        -------
+        None.
+
+        """
+        self.expsys._tprop=t
+    
     @property
     def isotropic(self):
         return np.all([H0.isotropic for H0 in self.H])
@@ -393,18 +411,18 @@ class Liouvillian():
         return np.sum([self.Ln(m)*(ph**(-m)) for m in range(-2,3)],axis=0)+self.Lrf
     
     
-    def U(self,t0:float=0,tf:float=None):
+    def U(self,t0:float=None,Dt:float=None):
         """
-        Calculates the propagator between times t0 and tf. By default, we will
-        calculate one rotor period
+        Calculates the propagator between times t0 and t0+Dt. By default, t0 will
+        be set to align with the end of the last propagator calculated for 
+        this system. By default, Dt will be one rotor period. 
 
         Parameters
         ----------
         t0 : float, optional
             Initial time for the propagator. The default is 0.
-        tf : float, optional
-            Final time for the propagator. The default is None, which will be
-            set to taur (length of rotor period)
+        Dt : float, optional
+            Length of the propagator. 
 
         Returns
         -------
@@ -416,16 +434,24 @@ class Liouvillian():
     
         self.validate_relax()
     
-        if tf is None:tf=self.taur
+        if self.isotropic:
+            assert Dt is not None,"For isotropic systems, one must specify Dt"
+            t0=0
+        else:
+            if t0 is None:t0=self.expsys._tprop%self.taur
+            if Dt is None:Dt=self.taur
+
+        tf=t0+Dt
+        
+        self.expsys._tprop=tf%self.taur  #Update current time
         
         if self.sub:
             if self.isotropic:
-                assert tf is not None,"Isotropic Liouvillians do not have a default value for tf when calculating propagators"
-                dt=tf-t0
                 L=self.L(0)
-                # U=expm(L*dt)
-                d,v=np.linalg.eig(L)
-                U=v@np.diag(d*dt)@np.linalg.pinv(v)
+                U=expm(L*Dt)
+                # d,v=np.linalg.eig(L)
+                # d[d.real>0]-=d[d.real>0].real
+                # U=v@np.diag(np.exp(d*dt))@np.linalg.pinv(v)
                 return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
             else:
                 dt=self.dt
@@ -448,7 +474,7 @@ class Liouvillian():
                     U=expm(L*tp1)@U
                 return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
         else:
-            U=[L0.U(t0=t0,tf=tf).U for L0 in self]
+            U=[L0.U(t0=t0,Dt=Dt).U for L0 in self]
             return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
 
     

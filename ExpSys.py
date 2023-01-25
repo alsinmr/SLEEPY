@@ -39,6 +39,7 @@ class ExpSys():
         self.pwdavg=pwdavg
         self.inter=[]
         self._rf=RF(expsys=self)
+        self._tprop=0
         
         self.inter_types=dict()
                     
@@ -64,7 +65,6 @@ class ExpSys():
     def nspins(self):
         return len(self.Op)
     
-    
     def __copy__(self):
         return self.copy()
     
@@ -79,7 +79,25 @@ class ExpSys():
 
         """
         return np.tanh(self.gamma*6.62607015e-34/(2*1.380649e-23*self.T_K))
-                
+    
+    def reset_prop_time(self,t:float=0):
+        """
+        Resets the current time for propagators to t
+        
+        (L.expsys._tprop=t)
+
+        Parameters
+        ----------
+        t : float, optional
+            DESCRIPTION. The default is 0.
+
+        Returns
+        -------
+        None.
+
+        """
+        self._tprop=t
+            
     def copy(self,deepcopy:bool=False):
         """
         Return a copy of the ExpSys object. This copy method will use a 

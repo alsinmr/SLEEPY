@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from time import time
 
 
-expsys=RS.ExpSys(850,Nucs=['15N','1H'],vr=60000,pwdavg=RS.PowderAvg(q=5))
+expsys=RS.ExpSys(850,Nucs=['15N','1H'],vr=60000,pwdavg=RS.PowderAvg(q=3))
 expsys.set_inter('dipole',delta=22000,i0=0,i1=1)
 expsys.set_inter('CS',i=0,ppm=0)
 
@@ -40,19 +40,21 @@ t=[0,1/v1/2,L.taur/2-shift,L.taur/2+1/v1/2-shift]
 seq2=RS.Sequence(L)
 seq2.add_channel('1H',t=t,v1=[v1,0,v1,0],phase=[np.pi/4,0,0,0])
 
-t=[L.taur-1/v1/2,L.taur+1/v1/2]
+t=[0,L.taur-1/v1/2,L.taur+1/v1/2,L.taur*2]
 seq3=RS.Sequence(L)
-seq3.add_channel('1H',t=t,v1=[v1,0])
-seq3.add_channel('15N',t=t,v1=[v1,0])
+seq3.add_channel('1H',t=t,v1=[0,v1,0,0])
+seq3.add_channel('15N',t=t,v1=[0,v1,0,0])
 
 ax=plt.figure().add_subplot(111)
-z=np.linspace(-8,-2,4)
+z=np.linspace(-8,-2,1)
 for tc in 10**z:
     t0=time()
     L.kex=np.array([[-1/tc,1/tc],[1/tc,-1/tc]])
+    L.reset_prop_time()
     U1=seq1.U()
-    U2=seq2.U()
     Upi=seq3.U()
+    U2=seq2.U()
+    
     print(time()-t0)
     
     rho=RS.Rho(rho0='15Nx',detect='15Nx',L=L)
@@ -201,7 +203,8 @@ H1=RS.Hamiltonian(expsys=expsys1)
 kex=np.array([[-1e2,1e4],[1e2,-1e4]])
 L=RS.Liouvillian((H0,H1),kex=kex)
 
-L.add_relax(i=0,T1=5,T2=.1)
+L.add_relax(Type='T1',i=0,T1=1)
+L.add_relax(Type='T2',i=0,T2=.1)
 
 ax=plt.figure().add_subplot(111)
 seq=RS.Sequence(L)
