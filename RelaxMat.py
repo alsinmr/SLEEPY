@@ -90,6 +90,7 @@ def T1(expsys,i:int,T1:float,Peq=False):
     index=np.unique(index,axis=0)
 
     out=np.zeros([sz**2,sz**2],dtype=rtype)
+    # This is only valid for spin-1/2!!!
     for id0,id1 in index:
         out[id0,id0]=p[0,0]
         out[id0,id1]=p[0,1]
