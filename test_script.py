@@ -33,12 +33,12 @@ L=RS.Liouvillian((H0,H1),kex=kex)
 seq1=RS.Sequence(L)
 v1=150000
 shift=L.taur/6
-t=[L.taur/2+shift-1/v1/2,L.taur/2+shift,L.taur-1/v1/2,L.taur]
-seq1.add_channel('1H',t=t,v1=[v1,0,v1,0],phase=[0,0,np.pi/4,0])
+t=[0,L.taur/2+shift-1/v1/2,L.taur/2+shift,L.taur-1/v1/2,L.taur]
+seq1.add_channel('1H',t=t,v1=[0,v1,0,v1,0],phase=[0,0,0,np.pi/4,0])
 
-t=[0,1/v1/2,L.taur/2-shift,L.taur/2+1/v1/2-shift]
+t=[0,1/v1/2,L.taur/2-shift,L.taur/2+1/v1/2-shift,L.taur]
 seq2=RS.Sequence(L)
-seq2.add_channel('1H',t=t,v1=[v1,0,v1,0],phase=[np.pi/4,0,0,0])
+seq2.add_channel('1H',t=t,v1=[v1,0,v1,0,0],phase=[np.pi/4,0,0,0,0])
 
 t=[0,L.taur-1/v1/2,L.taur+1/v1/2,L.taur*2]
 seq3=RS.Sequence(L)
@@ -58,15 +58,15 @@ for tc in 10**z:
     print(time()-t0)
     
     rho=RS.Rho(rho0='15Nx',detect='15Nx',L=L)
-    U1a=U1**0
-    U1b=U2**0
-    for k in range(100):
+    U1a=L.Ueye()
+    U1b=L.Ueye()
+    for k in range(75):
         rho.reset()
         (U1b*Upi*U1a*rho)()
         U1a*=U1
-        U1b*=U2
-        
+        U1b*=U2       
     rho.plot()
+    
 ax.legend([f'z={z0}' for z0 in z])
 
 #%% R1p relaxation
@@ -221,20 +221,3 @@ rho=RS.Rho(rho0='13Cz',detect='13Cz',L=L)
 rho.DetProp(U1,n=100)
 
 rho.plot()
-
-
-#%% Simple 1-spin T1 relaxation
-ex=RS.ExpSys(850,Nucs='13C')
-L=RS.Liouvillian(ex)
-
-L.clear_relax()
-L.add_relax(Type='T1',i=0,T1=.5,Peq=True)
-
-rho=RS.Rho(rho0='13Cx',detect='13Cz',L=L)
-U=L.U(tf=.05)
-rho.DetProp(U,100)
-rho.plot()
-
-
-
-

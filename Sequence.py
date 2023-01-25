@@ -204,7 +204,7 @@ class Sequence():
                 
             setattr(self,name,new)
             
-    def plot(self,fig=None):
+    def plot(self,fig=None,ax=None):
         """
         Plots the pulse sequence
 
@@ -222,8 +222,10 @@ class Sequence():
         else:
             spins=[np.argwhere(chn==self.expsys.Nucs)[0,0] for chn in np.unique(self.expsys.Nucs)]
         
-        if fig is None:fig=plt.figure()
-        ax=[fig.add_subplot(2,1,k+1) for k in range(2)]
+        if ax is None:
+            if fig is None:
+                fig=plt.figure()
+            ax=[fig.add_subplot(len(spins),1,k+1) for k in range(len(spins))]
         
         if len(self.t)==2 and self.isotropic:
             assert 0,"For isotropic systems, one must specify tf"
@@ -321,6 +323,7 @@ class Sequence():
         #     else:
         #         U=U0*U
         
+        ini_fields=copy(self.fields)
 
         U=None
         i1=np.argwhere(t>=tf)[0,0] #First time after tf
@@ -331,20 +334,20 @@ class Sequence():
             U0=self.L.U(t0=ta,Dt=tb-ta)
             U=U0 if U is None else U0*U
         
-        ns=self.nspins
-        self.fields.update({k:(0,0,0) for k in range(ns)}) #Turn off all fields  
+        # ns=self.nspins
+        # self.fields.update({k:(0,0,0) for k in range(ns)}) #Turn off all fields  
 
-        ini_fields=copy(self.fields)
         
-        for m,(ta,tb) in enumerate(zip(t[:-1],t[1:])):
-            for k,(v1,phase,voff) in enumerate(zip(self.v1,self.phase,self.voff)):
-                self.fields[k]=(v1[i0+m],phase[i0+m],voff[i0+m])
-            U0=self.L.U(t0=ta,tf=tb)
+        
+        # for m,(ta,tb) in enumerate(zip(t[:-1],t[1:])):
+        #     for k,(v1,phase,voff) in enumerate(zip(self.v1,self.phase,self.voff)):
+        #         self.fields[k]=(v1[i0+m],phase[i0+m],voff[i0+m])
+        #     U0=self.L.U(t0=ta,tf=tb)
             
-            if U is None:
-                U=U0
-            else:
-                U=U0*U
+        #     if U is None:
+        #         U=U0
+        #     else:
+        #         U=U0*U
         
         self.L.rf.fields=ini_fields        
         

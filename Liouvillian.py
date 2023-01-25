@@ -426,7 +426,7 @@ class Liouvillian():
 
         Returns
         -------
-        None.
+        U  :  Propagator
 
         """
         
@@ -451,7 +451,7 @@ class Liouvillian():
                 # U=expm(L*Dt)
 
                 d,v=np.linalg.eig(L)
-                U=v@np.diag(np.exp(d*dt))@np.linalg.pinv(v)
+                U=v@np.diag(np.exp(d*Dt))@np.linalg.pinv(v)
 
                 return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
             else:
@@ -478,7 +478,25 @@ class Liouvillian():
             U=[L0.U(t0=t0,Dt=Dt).U for L0 in self]
             return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
 
-    
+    def Ueye(self,t0:float=None):
+        """
+        Returns a propagator with length zero (identity propagator)
+
+        Returns
+        -------
+        t0 : float, optional
+            Initial time for the propagator. The default is 0.
+            
+        U  :  Propagator
+
+        """
+        
+        if self.isotropic:
+            t0=0
+        else:
+            if t0 is None:t0=self.expsys._tprop%self.taur
+            
+        return self.U(t0,0)
 
     def Ueig(self):
         """
