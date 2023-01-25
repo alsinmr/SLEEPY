@@ -293,7 +293,7 @@ class Sequence():
         """
         
 
-        if Dt is None:Dt=self.t[-2]
+        if Dt is None:Dt=self.Dt
         if self.isotropic:t0=0
         if t0 is None:t0=self.expsys._tprop%self.taur
             

@@ -443,7 +443,7 @@ class Liouvillian():
 
         tf=t0+Dt
         
-        self.expsys._tprop=tf%self.taur  #Update current time
+        self.expsys._tprop=0 if self.taur is None else tf%self.taur  #Update current time
         
         if self.sub:
             if self.isotropic:

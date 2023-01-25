@@ -92,10 +92,11 @@ def T1(expsys,i:int,T1:float,Peq=False):
     out=np.zeros([sz**2,sz**2],dtype=rtype)
     # This is only valid for spin-1/2!!!
     for id0,id1 in index:
-        out[id0,id0]=p[0,0]
-        out[id0,id1]=p[0,1]
-        out[id1,id0]=p[1,0]
-        out[id1,id1]=p[1,1]
+        # out[id0,id0]=p[0,0]
+        out[id0,id1]=p[0,-1]
+        out[id1,id0]=p[-1,0]
+        # out[id1,id1]=p[1,1]
+    out-=np.diag(out.sum(0))
 
     
     # P=np.zeros([N**2,N**2])
