@@ -59,9 +59,12 @@ class Rho():
         self.detect=detect
         self._L=L
         self._Setup()
+        self._apodize=False
         
         
-
+    @property
+    def isotropic(self):
+        return self.L.isotropic
         
     @property
     def L(self):
@@ -169,9 +172,12 @@ class Rho():
             FT, including division of the first time point by zero.
 
         """
+        I=np.concatenate((self.I[:,:1]/2,self.I[:,1:]),axis=1)
+        if self._apodize:
+            I*=np.exp(-np.arange(I.shape[-1])/I.shape[-1]*5)
         if np.diff(self.t_axis).max()-np.diff(self.t_axis).min()>1e-8:
             warnings.warn('Time points are not equally spaced. FT will be incorrect')
-        return np.fft.fftshift(np.fft.fft(np.concatenate((self.I[:,:1]/2,self.I[:,1:]),axis=1),axis=1),axes=[1])
+        return np.fft.fftshift(np.fft.fft(I,axis=1),axes=[1])
         
     
     def _Setup(self):
@@ -212,7 +218,7 @@ class Rho():
         if U.L is not self.L:
             warnings.warn('Propagating using a system with a different Liouvillian than the initial Liouvillian')
             
-        if np.abs((self.t-U.t0)%self.taur)>tol and np.abs((U.t0-self.t)%self.taur)>tol:
+        if not(self.isotropic) and np.abs((self.t-U.t0)%self.taur)>tol and np.abs((U.t0-self.t)%self.taur)>tol:
             warnings.warn('The initial time of the propagator is not equal to the current time of the density matrix')
             
         self._rho=[U0@rho for U0,rho in zip(U,self._rho)]
@@ -348,7 +354,17 @@ class Rho():
             i=int(OpName[1])   #At the moment, I'm assuming this program won't work with 11 spins...
             return getattr(self.Op[0],OpName[2:])
         
-        if OpName[-1] in ['x','y','z','p','m']:
+        if OpName=='Thermal':
+            Op=np.zeros(self.Op.Mult.prod()*np.ones(2,dtype=int),dtype=ctype)
+            for op,peq,mult in zip(self.expsys.Op,self.expsys.Peq,self.expsys.Op.Mult):
+                Op+=op.z*peq
+                if self.L.Peq:
+                    Op+=op.eye/mult
+            return Op
+        
+        if OpName.lower()=='zero':
+            Nuc='None'
+        elif OpName[-1] in ['x','y','z','p','m']:
             a=OpName[-1]
             Nuc=OpName[:-1]
         elif 'alpha' in OpName:
@@ -359,16 +375,18 @@ class Rho():
             Nuc=OpName[:-4]
         Op=np.zeros(self.Op.Mult.prod()*np.ones(2,dtype=int),dtype=ctype)
         i=self.expsys.Nucs==Nuc
-        if not(np.any(i)):
+        if OpName.lower()=='zero':
+            i0=0
+        elif not(np.any(i)):
             warnings.warn('Nucleus is not in the spin system or was not recognized')
         for i0 in np.argwhere(i)[:,0]:
             Op+=getattr(self.Op[i0],a)
         
-        if self.L.Peq:
+        if self.L.Peq and not(detect):
             Peq=self.expsys.Peq[i0]
             Op*=Peq  #Start out at thermal polarization
-            for op0 in self.expsys.Op:
-                Op+=op0.eye  #Add in the identity for relaxation to thermal equilibrium
+            for op0,mult in zip(self.expsys.Op,self.expsys.Op.Mult):
+                Op+=op0.eye/mult  #Add in the identity for relaxation to thermal equilibrium
 
         return Op
     
@@ -437,7 +455,7 @@ class Rho():
         self._rho=list() #Storage for numerical rho
         self._Setup()
         
-    def plot(self,det_num:int=0,ax=None,FT:bool=False,imag:bool=True):
+    def plot(self,det_num:int=0,ax=None,FT:bool=False,imag:bool=True,apodize=False):
         """
         Plots the amplitudes as a function of time or frequency
 
@@ -451,6 +469,9 @@ class Rho():
             Plot the Fourier transform if true. The default is False.
         imag : bool, optional
             Plot the imaginary components. The default is True
+        apodize : bool, optional
+            Apodize the signal with decaying exponential, with time constant 1/5
+            of the time axis (FT signal only)
 
         Returns
         -------
@@ -458,6 +479,10 @@ class Rho():
 
         """
         if ax is None:ax=plt.figure().add_subplot(111)
+        
+        ap=self._apodize
+        self._apodize=apodize
+        
         
         if FT:
             ax.plot(self.v_axis/1e3,self.FT[det_num].real)
@@ -473,6 +498,8 @@ class Rho():
                 ax.legend(('Re','Im'))
             ax.set_ylabel('<'+self.detect[det_num]+'>')
             ax.set_xlabel('t / ms')
+        self._apodize=ap
+        return ax
             
     def extract_decay_rates(self,U,det_num:int=0,avg:bool=True,pwdavg:bool=False):
         """

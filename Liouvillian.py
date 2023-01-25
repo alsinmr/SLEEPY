@@ -425,7 +425,7 @@ class Liouvillian():
                 L=self.L(0)
                 # U=expm(L*dt)
                 d,v=np.linalg.eig(L)
-                U=v@np.diag(d*dt)@np.linalg.pinv(v)
+                U=v@np.diag(np.exp(d*dt))@np.linalg.pinv(v)
                 return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
             else:
                 dt=self.dt
@@ -498,6 +498,8 @@ class Liouvillian():
             out+=self.kex.__repr__()
             
         if np.any(self.Lrelax)>0:
-            out+='\nLiouvillian also includes additional relaxation (T1/T2)'
+            out+='Explicit relaxation\n'
+            for ri in self.relax_info:
+                out+=f'{ri[0]} with arguments: '+','.join([f'{k} = {v}' for k,v in ri[1].items()])+'\n'
         return out
     

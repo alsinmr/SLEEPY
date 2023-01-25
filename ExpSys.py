@@ -78,7 +78,7 @@ class ExpSys():
         None.
 
         """
-        return np.tanh(self.gamma*6.62607015e-34/(2*1.380649e-23*self.T_K))
+        return np.tanh(self.gamma*6.62607015e-34*self.B0/(2*1.380649e-23*self.T_K))
                 
     def copy(self,deepcopy:bool=False):
         """

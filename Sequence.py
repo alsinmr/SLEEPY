@@ -8,6 +8,7 @@ Created on Thu Jan 19 14:34:23 2023
 
 import numpy as np
 import matplotlib.pyplot as plt
+from copy import copy
 
 class Sequence():
     def __init__(self,L):
@@ -273,6 +274,8 @@ class Sequence():
         
         U=None
         
+        ini_fields=copy(self.fields)
+        
         for m,(ta,tb) in enumerate(zip(t[:-1],t[1:])):
             for k,(v1,phase,voff) in enumerate(zip(self.v1,self.phase,self.voff)):
                 self.fields[k]=(v1[i0+m],phase[i0+m],voff[i0+m])
@@ -282,7 +285,9 @@ class Sequence():
                 U=U0
             else:
                 U=U0*U
-                
+        
+        self.L.rf.fields=ini_fields        
+        
         return U
                 
             

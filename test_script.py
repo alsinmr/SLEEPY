@@ -218,3 +218,20 @@ rho=RS.Rho(rho0='13Cz',detect='13Cz',L=L)
 rho.DetProp(U1,n=100)
 
 rho.plot()
+
+
+#%% Simple 1-spin T1 relaxation
+ex=RS.ExpSys(850,Nucs='13C')
+L=RS.Liouvillian(ex)
+
+L.clear_relax()
+L.add_relax(Type='T1',i=0,T1=.5,Peq=True)
+
+rho=RS.Rho(rho0='13Cx',detect='13Cz',L=L)
+U=L.U(tf=.05)
+rho.DetProp(U,100)
+rho.plot()
+
+
+
+
