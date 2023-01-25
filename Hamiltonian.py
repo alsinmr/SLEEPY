@@ -237,10 +237,10 @@ class RF():
             if isinstance(name,str):
                 for x,S in zip(self.expsys.Nucs==name,self.expsys.Op):
                     if x:
-                        out+=(np.cos(value[1])*S.x+np.sin(value[1])*S.y)*value[0]+value[2]*S.z
+                        out+=(np.cos(value[1])*S.x+np.sin(value[1])*S.y)*value[0]-value[2]*S.z
             else:
                 S=self.expsys.Op[name]
-                out+=(np.cos(value[1])*S.x+np.sin(value[1])*S.y)*value[0]+value[2]*S.z
+                out+=(np.cos(value[1])*S.x+np.sin(value[1])*S.y)*value[0]-value[2]*S.z
         return out
     
     def add_field(self,channel,v1:float=0,voff:float=0,phase:float=0):

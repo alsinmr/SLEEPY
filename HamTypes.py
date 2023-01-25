@@ -260,7 +260,7 @@ def hyperfine(es,i0:int,i1:int,Axx:float=0,Ayy:float=0,Azz:float=0,euler=[0,0,0]
     if delta:                        
         return Ham1inter(M=M,isotropic=False,delta=delta,eta=eta,iso=iso,euler=euler,rotor_angle=es.rotor_angle,info=info)
     else:
-        return Ham1inter(H=M*avg,isotropic=True,info=info)
+        return Ham1inter(H=M*iso,isotropic=True,info=info)
 
     
 
