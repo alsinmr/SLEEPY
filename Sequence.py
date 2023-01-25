@@ -58,6 +58,11 @@ class Sequence():
     @property
     def t(self):
         return self._t
+    
+    @property
+    def Dt(self):
+        if len(self._t)==2:return self.taur
+        return self._t[-2]
 
     @property
     def v1(self):
@@ -227,16 +232,18 @@ class Sequence():
                 fig=plt.figure()
             ax=[fig.add_subplot(len(spins),1,k+1) for k in range(len(spins))]
         
-        if len(self.t)==2 and self.isotropic:
-            assert 0,"For isotropic systems, one must specify tf"
-        elif len(self.t)==2:
-            tf=self.taur
-        elif self.isotropic:
-            tf=self.t[-2]
-        elif self.t[-2]%self.taur<1e-10:
-            tf=self.t[-2]
-        else:
-            tf=(self.t[-2]//self.taur+1)*self.taur  #Plot until end of next rotor period
+        # if len(self.t)==2 and self.isotropic:
+        #     assert 0,"For isotropic systems, one must specify tf"
+        # elif len(self.t)==2:
+        #     tf=self.taur
+        # elif self.isotropic:
+        #     tf=self.t[-2]
+        # elif self.t[-2]%self.taur<1e-10:
+        #     tf=self.t[-2]
+        # else:
+        #     tf=(self.t[-2]//self.taur+1)*self.taur  #Plot until end of next rotor period
+        
+        tf=self.Dt
         
         t=np.concatenate(([0],self.t[1:-1].repeat(2),[tf]))
         

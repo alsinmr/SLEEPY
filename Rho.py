@@ -15,7 +15,7 @@ from . import Defaults
 
 ctype=Defaults['ctype']
 rtype=Defaults['rtype']
-tol=1e-6
+tol=1e-10
 
 class Rho():
     def __init__(self,rho0,detect,L):
@@ -117,6 +117,32 @@ class Rho():
         return np.sort(self._taxis)
     
     @property
+    def _tstatus(self):
+        """
+        Returns an integer indicating what the time axis can be used for.
+        
+        0   :   Unusable (likely constant time experiment)
+        1   :   Ideal usage (uniformly spaced)
+        2   :   Acceptable usage (unique values)
+        3   :   Non-ideal usage (1-2 duplicate value- likely due to poor coding)
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        unique=np.unique(self._taxis)
+        if unique.size+2<len(self._taxis):  #3 or more non-unique values
+            return 0
+        if unique.size<len(self._taxis): #1-2 duplicate values
+            return 3
+        diff=np.diff(unique)
+        if diff.min()*(1+1e-10)>diff.max():   #Uniform spacing within error
+            return 1
+        return 2
+    
+    @property
     def Ipwd(self):
         """
         Npwd x Nd x Nt matrix of detected amplitudes, where Npwd is the number
@@ -129,8 +155,11 @@ class Rho():
 
         """
         if len(self.t_axis):
-            i=np.argsort(self._taxis)
-            return np.array(self._Ipwd).T[i].T
+            if self._tstatus:
+                i=np.argsort(self._taxis)
+                return np.array(self._Ipwd).T[i].T
+            else:
+                return np.array(self._Ipwd).T
     
     @property
     def I(self):
@@ -175,7 +204,7 @@ class Rho():
         I=np.concatenate((self.I[:,:1]/2,self.I[:,1:]),axis=1)
         if self._apodize:
             I*=np.exp(-np.arange(I.shape[-1])/I.shape[-1]*5)
-        if np.diff(self.t_axis).max()-np.diff(self.t_axis).min()>1e-8:
+        if self._tstatus!=1:
             warnings.warn('Time points are not equally spaced. FT will be incorrect')
         return np.fft.fftshift(np.fft.fft(I,axis=1),axes=[1])
         
@@ -241,8 +270,22 @@ class Rho():
         """
         return self.prop(U)
     
-    def __ror__(self,U):
+    def __mul__(self,U):
+        """
+        Runs rho.prop(U) and returns self
+
+        Parameters
+        ----------
+        U : Propagator
+            Propagator object.
+
+        Returns
+        -------
+        self
+
+        """
         return self.prop(U)
+        
     
     def Detect(self):
         """
@@ -284,7 +327,7 @@ class Rho():
     def __len__(self):
         return self.L.__len__()
     
-    def DetProp(self,U,n:int=1):
+    def DetProp(self,U=None,seq=None,n:int=1):
         """
         Executes a series of propagation/detection steps. Detection occurs first,
         followed by propagation for n steps. If n>100, then we will use
@@ -302,24 +345,57 @@ class Rho():
         self
 
         """
-        if n>=100:
-            self()
-            for k,(U0,rho) in enumerate(zip(U,self)):
-                d,v=np.linalg.eig(U0)
-                rho0=np.linalg.pinv(v)@rho
-                dp=np.cumprod(np.repeat([d],n,axis=0),axis=0)
-                rho_d=dp*rho0
-                self._rho[k]=v@rho_d[-1]
-                for m,det in enumerate(self._detect):
-                    det_d=det@v
-                    self._Ipwd[k][m].extend((det_d*rho_d[:-1]).sum(-1))
-            
-            self._taxis.extend([self.t+k*U.Dt for k in range(1,n)])
-            self._t+=n*U.Dt
+        if U is not None:
+            if n>=100:
+                self()
+                for k,(U0,rho) in enumerate(zip(U,self)):
+                    d,v=np.linalg.eig(U0)
+                    rho0=np.linalg.pinv(v)@rho
+                    dp=np.cumprod(np.repeat([d],n,axis=0),axis=0)
+                    rho_d=dp*rho0
+                    self._rho[k]=v@rho_d[-1]
+                    for m,det in enumerate(self._detect):
+                        det_d=det@v
+                        self._Ipwd[k][m].extend((det_d*rho_d[:-1]).sum(-1))
                 
+                self._taxis.extend([self.t+k*U.Dt for k in range(1,n)])
+                self._t+=n*U.Dt
+                    
+            else:
+                for _ in range(n):
+                    U*self()
         else:
-            for _ in range(n):
-                U*self()
+            if seq.Dt%seq.taur<tol or -seq.Dt%seq.taur<tol:
+                U=seq.U(t0=self.t,Dt=self.t+seq.Dt)  #Just generate the propagator and call with U
+                self.DetProp(U=U,n=n)
+                return self
+            
+            nsteps=np.round(seq.taur/seq.Dt,0).astype(int)
+            assert np.abs(nsteps*seq.Dt-seq.taur)<tol,"Sequences shorter than a rotor period can only be propagated if seq.Dt fits an integer number of times into the rotor period"
+            
+            seq.reset_prop_time(self.t)
+            
+            U=[seq.U() for _ in range(nsteps)]
+            
+            for k in range(n):
+                U[k%nsteps]*self()
+            # t0,rho0=self.t,copy(self._rho)  #We need to keep the starting state in case this has already been propagated
+            
+            # Ua=seq.L.Ueye(t0=t0)
+            # for k in range(nsteps):
+            #     self.reset(t0=t0)  #This line and next set rho back to its starting state
+            #     self._rho=copy(rho0)
+                
+            #     Ua*self  #Accumlate (k-1) steps to the density matrix
+            #     Ua=U[k]*Ua  #Accumulate the kth step into the propagator
+            #     Ur=seq.L.Ueye(t0=self.t) #Propagator for one rotor period                
+            #     for m in range(nsteps):
+            #         Ur=U[(k+m)%nsteps]*Ur
+            #     print(Ua.Dt,Ur.t0,Ur.Dt,self.t)
+                
+            #     self.DetProp(U=Ur,n=n//nsteps+(k<n%nsteps))
+            
+            
         return self
     
     def strOp2vec(self,OpName:str,detect:bool=False):
@@ -417,7 +493,7 @@ class Rho():
         return np.tile(Op.reshape(Op.size),nHam)
             
     
-    def reset(self):
+    def reset(self,t0=0):
         """
         Resets the density matrices back to rho0
 
@@ -427,7 +503,7 @@ class Rho():
 
         """
         self._rho=[self._rho0 for _ in range(self.pwdavg.N)]
-        self._t=0
+        self._t=t0
     
     def clear(self):
         """
@@ -492,12 +568,21 @@ class Rho():
             ax.set_xlabel(r'$\nu$ / kHz')
             ax.set_ylabel('I / a.u.')
         else:
-            ax.plot(self.t_axis*1e3,self.I[det_num].real)
-            if not(isinstance(self.detect[det_num],str)) or self.detect[det_num][-1] in ['p','m'] and imag:
-                ax.plot(self.t_axis*1e3,self.I[det_num].imag)
-                ax.legend(('Re','Im'))
-            ax.set_ylabel('<'+self.detect[det_num]+'>')
-            ax.set_xlabel('t / ms')
+            if self._tstatus==0:
+                ax.plot(np.arange(len(self.t_axis)),self.I[det_num].real)
+                if not(isinstance(self.detect[det_num],str)) or self.detect[det_num][-1] in ['p','m'] and imag:
+                    ax.plot(np.arange(len(self.t_axis)),self.I[det_num].imag)
+                    ax.legend(('Re','Im'))
+                ax.set_ylabel('<'+self.detect[det_num]+'>')
+                ax.set_xlabel('Acquisition Number')
+                
+            else:
+                ax.plot(self.t_axis*1e3,self.I[det_num].real)
+                if not(isinstance(self.detect[det_num],str)) or self.detect[det_num][-1] in ['p','m'] and imag:
+                    ax.plot(self.t_axis*1e3,self.I[det_num].imag)
+                    ax.legend(('Re','Im'))
+                ax.set_ylabel('<'+self.detect[det_num]+'>')
+                ax.set_xlabel('t / ms')
         self._apodize=ap
         return ax
             
