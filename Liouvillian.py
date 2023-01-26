@@ -564,19 +564,27 @@ class Liouvillian():
         return self
     
     def __repr__(self):
-        out='Liouvillian with Hamiltonians:\n'
+        out='Liouvillian under the following conditions:\n\t'
         for k,H in enumerate(self.H):
-            out+=f'Hamiltonian #{k}\n'
-            out+=H.__repr__()
-            out+='\n'
+            
+            if k:
+                out+=f'\tHamiltonian #{k}\n\t'
+                out+=H.__repr__().split('\n',1)[1].split('\n',7)[-1].rsplit('\n',1)[0].replace('\n','\n\t')
+            else:
+                out+='\n\t'.join(H.__repr__().split('\n')[1:7])
+                out+='\n\nThe individual Hamiltonians have the following interactions\n\t'
+                out+=f'Hamiltonian #{k}\n\t'
+                out+=H.__repr__().split('\n',1)[1].split('\n',7)[-1].rsplit('\n',1)[0].replace('\n','\n\t')
+                out+='\n'
             
         if len(self.H)>1:
-            out+='Coupled by exchange matrix:\n'
-            out+=self.kex.__repr__()
+            out+='\nHamiltonians are coupled by exchange matrix:\n\t'
+            out+=self.kex.__repr__().replace('\n','\n\t')
             
         if np.any(self.Lrelax)>0:
             out+='Explicit relaxation\n'
             for ri in self.relax_info:
                 out+=f'{ri[0]} with arguments: '+','.join([f'{k} = {v}' for k,v in ri[1].items()])+'\n'
+        out+='\n\n'+super().__repr__()
         return out
     

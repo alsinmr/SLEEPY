@@ -175,7 +175,8 @@ class Hamiltonian():
     
     def __repr__(self):
         out='Hamiltonian for the following experimental system:\n'
-        out+=self.expsys.__repr__()
+        out+=self.expsys.__repr__().rsplit('\n',1)[0]
+        out+='\n'+super().__repr__()
         return out
     
     

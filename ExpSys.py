@@ -242,14 +242,14 @@ class ExpSys():
         out+=f'rotor frequency = {self.vr/1e3} kHz\n'
         out+=f'Temperature = {self.T_K} K\n'
         out+=f'Powder average with {self.pwdavg.N} angles, {self.n_gamma} steps per rotor period\n'
-        out+='Interactions:\n'
+        out+='\nInteractions:\n'
         for i in self.inter:
             dct=copy(i)
             if 'i' in dct:
                 out+=f'\t{dct.pop("Type")} on spin {dct.pop("i")} with arguments: ('+\
                     ','.join([f'{key}={value}' for key,value in dct.items()])+')\n'
             else:
-                out+=f'\t{dct.pop("Type")} between spins {dct.pop("i0")},{dct.pop("i1")} with arguments:\n\t('+\
+                out+=f'\t{dct.pop("Type")} between spins {dct.pop("i0")},{dct.pop("i1")} with arguments:\n\t\t('+\
                     ','.join([f'{key}={value}' for key,value in dct.items()])+')\n'
         out+='\n'+super().__repr__()    
         return out
