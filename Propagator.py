@@ -114,8 +114,8 @@ class Propagator():
         Uout=list()
         for U in self:
             d,v=np.linalg.eig(U)
-            # i=np.abs(d)>1
-            # d[i]/=np.abs(d[i]) #Avoid growth from numerical error
+            i=np.abs(d)>1
+            d[i]/=np.abs(d[i]) #Avoid growth from numerical error
             D=d**n
             Uout.append(v@np.diag(D)@np.linalg.pinv(v))
             

@@ -11,6 +11,8 @@ import numpy as np
 import warnings
 import matplotlib.pyplot as plt
 from . import Defaults
+from .Tools import NucInfo
+import re
 
 
 ctype=Defaults['ctype']
@@ -192,7 +194,7 @@ class Rho():
         None.
 
         """
-        v=1/(self.t_axis[1]-self.t_axis[0])/2*np.linspace(-1,1,len(self.t_axis))
+        v=1/(self.t_axis[1]-self.t_axis[0])/2*np.linspace(-1,1,len(self.t_axis)*2)
         v-=np.diff(v[:2])/2
         return v
         
@@ -213,7 +215,7 @@ class Rho():
             I*=np.exp(-np.arange(I.shape[-1])/I.shape[-1]*5)
         if self._tstatus!=1:
             warnings.warn('Time points are not equally spaced. FT will be incorrect')
-        return np.fft.fftshift(np.fft.fft(I,axis=1),axes=[1])
+        return np.fft.fftshift(np.fft.fft(I,n=I.shape[1]*2,axis=1),axes=[1])
         
     
     def _Setup(self):
@@ -357,8 +359,8 @@ class Rho():
                 self()
                 for k,(U0,rho) in enumerate(zip(U,self)):
                     d,v=np.linalg.eig(U0)
-                    # i=np.abs(d)>1
-                    # d[i]/=np.abs(d[i])
+                    i=np.abs(d)>1
+                    d[i]/=np.abs(d[i])
                     rho0=np.linalg.pinv(v)@rho
                     dp=np.cumprod(np.repeat([d],n,axis=0),axis=0)
                     rho_d=dp*rho0
@@ -407,6 +409,39 @@ class Rho():
             
         return self
     
+    def parseOp(self,OpName):
+        """
+        Determines nucleus and operator type from the operator string
+
+        Parameters
+        ----------
+        OpName : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        tuple 
+            (Nuc,optype)
+
+        """
+        
+        if OpName.lower()=='zero':
+            Nuc='None'
+            a=''
+        elif OpName[-1] in ['x','y','z','p','m']:
+            a=OpName[-1]
+            Nuc=OpName[:-1]
+        elif 'alpha' in OpName:
+            a='alpha'
+            Nuc=OpName[:-5]
+        elif 'beta' in OpName:
+            a='beta'
+            Nuc=OpName[:-4]
+        else:
+            return None
+        return Nuc,a 
+        
+    
     def strOp2vec(self,OpName:str,detect:bool=False):
         """
         Converts the string for an operator into a matrix
@@ -447,18 +482,11 @@ class Rho():
                     Op+=op.eye/mult
             return Op
         
-        if OpName.lower()=='zero':
-            Nuc='None'
-        elif OpName[-1] in ['x','y','z','p','m']:
-            a=OpName[-1]
-            Nuc=OpName[:-1]
-        elif 'alpha' in OpName:
-            a='alpha'
-            Nuc=OpName[:-5]
-        elif 'beta' in OpName:
-            a='beta'
-            Nuc=OpName[:-4]
+        
         Op=np.zeros(self.Op.Mult.prod()*np.ones(2,dtype=int),dtype=self._ctype)
+        
+        Nuc,a=self.parseOp(OpName)
+        
         i=self.expsys.Nucs==Nuc
         if OpName.lower()=='zero':
             i0=0
@@ -540,7 +568,7 @@ class Rho():
         self._rho=list() #Storage for numerical rho
         self._Setup()
         
-    def plot(self,det_num:int=0,ax=None,FT:bool=False,imag:bool=True,apodize=False):
+    def plot(self,det_num:int=0,ax=None,FT:bool=False,imag:bool=True,apodize=False,axis='kHz'):
         """
         Plots the amplitudes as a function of time or frequency
 
@@ -557,6 +585,9 @@ class Rho():
         apodize : bool, optional
             Apodize the signal with decaying exponential, with time constant 1/5
             of the time axis (FT signal only)
+        axis : str, optional
+            Specify the type of axis. Currently, 'Hz', 'kHz', 'MHz', and 'ppm'
+            are implemented. 'ppm' is only valid if the detector 
 
         Returns
         -------
@@ -570,12 +601,28 @@ class Rho():
         
         
         if FT:
-            ax.plot(self.v_axis/1e3,self.FT[det_num].real)
+            if axis.lower()=='ppm' and self.parseOp(self.detect[det_num]) is not None:
+                Nuc,_=self.parseOp(self.detect[det_num]) 
+                v0=NucInfo(Nuc)*self.expsys.B0
+                v_axis=self.v_axis/v0*1e6
+                mass,name=''.join(re.findall(r'\d',Nuc)),''.join(re.findall(f'[A-Z]',Nuc.upper()))
+                label=r"$\delta$($^{"+mass+r"}$"+name+") / ppm"
+            elif axis.lower()=='mhz':
+                v_axis=self.v_axis/1e6
+                label=r'$\nu$ / MHz'
+            elif axis.lower()=='khz':
+                v_axis=self.v_axis/1e3
+                label=r'$\nu$ / kHz'
+            else:
+                v_axis=self.v_axis
+                label=r'$\nu$ / Hz'
+            ax.plot(v_axis,self.FT[det_num].real)
             if imag:
                 ax.plot(self.v_axis/1e3,self.FT[det_num].imag)
                 ax.legend(('Re','Im'))
-            ax.set_xlabel(r'$\nu$ / kHz')
+            ax.set_xlabel(label)
             ax.set_ylabel('I / a.u.')
+            ax.invert_xaxis()
         else:
             if self._tstatus==0:
                 ax.plot(np.arange(len(self.t_axis)),self.I[det_num].real)

@@ -493,7 +493,7 @@ class Liouvillian():
                     U=expm(L*tp1)@U
                 return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
         else:
-            if self._parallel:
+            if self._parallel and not(self.isotropic):
                 dt=self.dt
                 n0=int(t0//dt)
                 nf=int(tf//dt)
