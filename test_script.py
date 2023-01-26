@@ -105,7 +105,7 @@ ax.legend([f'z={z0}' for z0 in z])
 
 
 #%% Spinning side bands?
-expsys=RS.ExpSys(850,['13C'],vr=7000,pwdavg=RS.PowderAvg(q=5))
+expsys=RS.ExpSys(850,Nucs=['13C'],vr=7000,pwdavg=RS.PowderAvg(q=5))
 expsys.set_inter('CSA',delta=100,eta=0,i=0)
 
 expsys1=expsys.copy()

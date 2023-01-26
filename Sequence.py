@@ -332,14 +332,14 @@ class Sequence():
         
         ini_fields=copy(self.fields)
 
-        U=None
+        U=self.L.Ueye(t[0])
         i1=np.argwhere(t>=tf)[0,0] #First time after tf
         t=np.concatenate((t[:i1],[tf]))
         for m,(ta,tb) in enumerate(zip(t[:-1],t[1:])):
             for k,(v1,phase,voff) in enumerate(zip(self.v1,self.phase,self.voff)):
                 self.fields[k]=(v1[m],phase[m],voff[m])
             U0=self.L.U(t0=ta,Dt=tb-ta)
-            U=U0 if U is None else U0*U
+            U=U0*U
         
         # ns=self.nspins
         # self.fields.update({k:(0,0,0) for k in range(ns)}) #Turn off all fields  

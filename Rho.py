@@ -350,6 +350,8 @@ class Rho():
                 self()
                 for k,(U0,rho) in enumerate(zip(U,self)):
                     d,v=np.linalg.eig(U0)
+                    # i=np.abs(d)>1
+                    # d[i]/=np.abs(d[i])
                     rho0=np.linalg.pinv(v)@rho
                     dp=np.cumprod(np.repeat([d],n,axis=0),axis=0)
                     rho_d=dp*rho0
@@ -654,8 +656,8 @@ class Rho():
             det_d=self._detect[det_num]@v
             
             A[k]=(rhod*det_d).real
-            R[k]=-np.log(np.abs(d))/U.Dt
-            f[k]=(np.log(d/np.abs(d))/U.Dt).real
+            R[k]=-np.log(d).real/U.Dt
+            f[k]=np.log(d).imag/U.Dt
             
 
         if avg:

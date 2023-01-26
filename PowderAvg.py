@@ -8,6 +8,7 @@ Created on Mon Jul  5 10:14:04 2021
 
 import numpy as np
 import os
+from copy import copy
 from .Tools import D2,d2
 from . import PwdAvgFuns
 
@@ -83,6 +84,29 @@ class PowderAvg():
         for key in ['N','alpha','beta','gamma']:
             if not(np.all(getattr(pwdavg,key)==getattr(self,key))):return False
         return True
+    
+    def __getitem__(self,i):
+        """
+        Returns the ith element of the powder average as a new powder average
+
+        Parameters
+        ----------
+        def __getitem__[i] : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        out=copy(self)
+        out.alpha=self.alpha[i:i+1]
+        out.beta=self.beta[i:i+1]
+        out.gamma=self.gamma[i:i+1]
+        out.N=1
+        out.weight=np.ones([1])
+        return out
             
         
     
