@@ -8,6 +8,7 @@ Created on Tue Jan 17 10:38:34 2023
 
 import numpy as np
 from . import Operators as Op0
+from . import Defaults
 
 
 dtype=np.complex64
@@ -88,5 +89,6 @@ class OneSpin():
                 Type=k[3:]
                 Mult=(S*2+1).astype(int)
                 op0=getattr(Op0,'so_'+Type)(S[n])
-                op=np.kron(np.kron(np.eye(Mult[:n].prod(),dtype=dtype),op0),np.eye(Mult[n+1:].prod(),dtype=dtype))
+                op=np.kron(np.kron(np.eye(Mult[:n].prod(),dtype=Defaults['ctype']),op0),
+                            np.eye(Mult[n+1:].prod(),dtype=Defaults['ctype']))
                 setattr(self,Type,op)

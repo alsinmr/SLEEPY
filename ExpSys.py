@@ -251,7 +251,7 @@ class ExpSys():
             else:
                 out+=f'\t{dct.pop("Type")} between spins {dct.pop("i0")},{dct.pop("i1")} with arguments:\n\t('+\
                     ','.join([f'{key}={value}' for key,value in dct.items()])+')\n'
-            
+        out+='\n'+super().__repr__()    
         return out
         
         

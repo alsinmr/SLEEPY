@@ -70,7 +70,7 @@ def T1(expsys,i:int,T1:float,Peq=False):
     # step=expsys.Op.Mult[i+1:].prod()
     # Len=expsys.Op.Mult[:i].prod()
 
-    # out=np.zeros([sz**2,sz**2],dtype=rtype)
+    # out=np.zeros([sz**2,sz**2],dtype=Defaults['rtype'])
     # for m in range(Len):
     #     diag0=diag[m*Len:(m+1)*Len]
     #     for k in range(step):
@@ -89,7 +89,7 @@ def T1(expsys,i:int,T1:float,Peq=False):
     index.sort()
     index=np.unique(index,axis=0)
 
-    out=np.zeros([sz**2,sz**2],dtype=rtype)
+    out=np.zeros([sz**2,sz**2],dtype=Defaults['rtype'])
     # This is only valid for spin-1/2!!!
     for id0,id1 in index:
         # out[id0,id0]=p[0,0]
@@ -135,7 +135,7 @@ def T2(expsys,i:int,T2:float):
     """
     
     # N=expsys.Op.Mult[i]
-    # P=np.eye(N**2,dtype=rtype)*(-1/T2)
+    # P=np.eye(N**2,dtype=Defaults['rtype'])*(-1/T2)
     # index=np.arange(0,N**2,N+1)
     # for i0 in index:P[i0,i0]=0
     
@@ -145,10 +145,10 @@ def T2(expsys,i:int,T2:float):
     # N=expsys.Op.Mult.prod()
     
     # i=(expsys.Op[i].p+expsys.Op[i].m).astype(bool).reshape(N**2)
-    # out0=np.zeros(N**2,dtype=rtype)
+    # out0=np.zeros(N**2,dtype=Defaults['rtype'])
     # out0[i]=1/T2
     
     Lz=Ham2Super(expsys.Op[i].z)
-    out=(Lz@Lz).astype(bool).astype(rtype)*(-1/T2)
+    out=(Lz@Lz).astype(bool).astype(Defaults['rtype'])*(-1/T2)
     
     return out

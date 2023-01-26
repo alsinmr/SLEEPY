@@ -21,10 +21,10 @@ from .Tools import Ham2Super
 import numpy as np
 from . import Defaults
 
-dtype=Defaults['ctype']
 
 class Hamiltonian():
     def __init__(self,expsys):
+        
         self._expsys=expsys
 
         #Attach Hamiltonians for each interaction
@@ -48,6 +48,10 @@ class Hamiltonian():
         self._index=-1
         
         self._initialized=True
+    
+    @property
+    def _ctype(self):
+        return Defaults['ctype']
     
     @property
     def rf(self):
@@ -130,7 +134,7 @@ class Hamiltonian():
         assert self.sub or self.pwdavg is None,'Calling Hn requires indexing to a specific element of the powder average'
         
         
-        out=np.zeros(self.shape,dtype=dtype)
+        out=np.zeros(self.shape,dtype=self._ctype)
         for Hinter in self.Hinter:
             out+=Hinter.Hn(n)
                 
@@ -217,7 +221,13 @@ class RF():
         
         self.fields={}
         self.expsys=expsys
+    
         
+        
+    @property
+    def _ctype(self):
+        return Defaults['ctype']
+    
     def __call__(self):
         """
         Returns the Hamiltonian for the RF fields (non-rotating component)
@@ -230,7 +240,7 @@ class RF():
         assert self.expsys is not None,"expsys must be defined before RF can be called"
         
         n=self.expsys.Op.Mult.prod()
-        out=np.zeros([n,n],dtype=dtype)
+        out=np.zeros([n,n],dtype=self._ctype)
         
         for name,value in self.fields.items():
             if not(hasattr(value,'__len__')):value=[value,0,0]  #Phase/offset default to zero

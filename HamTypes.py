@@ -12,11 +12,10 @@ from .PowderAvg import RotInter
 from copy import copy
 from . import Defaults
 
-dtype=Defaults['ctype']
-
 class Ham1inter():
     def __init__(self,M=None,H=None,isotropic=False,delta=0,eta=0,iso=0,euler=[0,0,0],
                  rotor_angle=np.arccos(np.sqrt(1/3)),info={}):
+        
         self.M=M
         self.H=H
         self.isotropic=isotropic
@@ -30,6 +29,10 @@ class Ham1inter():
         self.rotor_angle=rotor_angle
         
         self.A=None
+        
+    @property
+    def _ctype(self):
+        return Defaults['ctype']
         
     def __getitem__(self,i:int):
         """
@@ -82,7 +85,7 @@ class Ham1inter():
             if n==0:
                 return self.H
             else:
-                return np.zeros(self.H.shape,dtype=dtype)
+                return np.zeros(self.H.shape,dtype=self._ctype)
             
         if self.A is None:
             return None

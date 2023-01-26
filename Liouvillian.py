@@ -24,8 +24,13 @@ from .Tools import Ham2Super
 from .Hamiltonian import Hamiltonian
 from . import RelaxMat
 
-ctype=Defaults['ctype']
-rtype=Defaults['rtype']
+
+# import importlib.util
+# numba=importlib.util.find_spec('numba') is not None
+# if numba:
+#     from .Parallel import prop
+
+from .Parallel import prop
 
 class Liouvillian():
     def __init__(self,H:list,kex=None):
@@ -45,7 +50,6 @@ class Liouvillian():
         None.
 
         """
-        
         if hasattr(H,'shape') or hasattr(H,'B0'):H=[H]
         self.H=[*H]
         
@@ -69,6 +73,20 @@ class Liouvillian():
         self._Ln=None
         self._fields=self.fields
         self.relax_info=[]  #Keeps a short record of what kind of relaxation is used
+    
+
+    
+    @property
+    def _ctype(self):
+        return Defaults['ctype']
+    
+    @property
+    def _rtype(self):
+        return Defaults['rtype']
+    
+    @property
+    def _parallel(self):
+        return Defaults['parallel']
     
     def reset_prop_time(self,t:float=0):
         """
@@ -283,7 +301,7 @@ class Liouvillian():
     @property
     def Lrelax(self):
         if self._Lrelax is None:
-            self._Lrelax=np.zeros(self.shape,dtype=rtype)
+            self._Lrelax=np.zeros(self.shape,dtype=self._rtype)
         return self._Lrelax 
     
     @property
@@ -299,9 +317,9 @@ class Liouvillian():
         
         if self._Lex is None:
             if self.kex is None or self.kex.size!=len(self.H)**2 or self.kex.ndim!=2:
-                self.kex=np.zeros([len(self.H),len(self.H)],dtype=rtype)
+                self.kex=np.zeros([len(self.H),len(self.H)],dtype=self._rtype)
                 if len(self.H)>1:print('Warning: Exchange matrix was not defined')
-            self._Lex=np.kron(self.kex.astype(rtype),np.eye(np.prod(self.H[0].shape),dtype=rtype))
+            self._Lex=np.kron(self.kex.astype(self._rtype),np.eye(np.prod(self.H[0].shape),dtype=self._rtype))
             
         return self._Lex
     
@@ -326,7 +344,7 @@ class Liouvillian():
 
         """
         assert self.sub,"Calling Ln_H requires indexing to a specific element of the powder average"
-        out=np.zeros(self.shape,dtype=ctype)
+        out=np.zeros(self.shape,dtype=self._ctype)
         q=np.prod(self.H[0].shape)
         for k,H0 in enumerate(self.H):
             out[k*q:(k+1)*q][:,k*q:(k+1)*q]=H0.Ln(n)
@@ -378,7 +396,7 @@ class Liouvillian():
             self._Lrf=None
                 
         if self._Lrf is None:
-            self._Lrf=np.zeros(self.shape,dtype=ctype)
+            self._Lrf=np.zeros(self.shape,dtype=self._ctype)
             n=self.H[0].shape[0]**2
             Lrf0=Ham2Super(self.rf())
             for k in range(len(self.H)):
@@ -475,7 +493,21 @@ class Liouvillian():
                     U=expm(L*tp1)@U
                 return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
         else:
-            U=[L0.U(t0=t0,Dt=Dt).U for L0 in self]
+            if self._parallel:
+                dt=self.dt
+                n0=int(t0//dt)
+                nf=int(tf//dt)
+                
+                tm1=t0-n0*dt
+                tp1=tf-nf*dt
+                
+                if tm1<=0:tm1=dt
+                Ln=[[L0.Ln(k) for k in range(-2,3)] for L0 in self]
+                U=prop(Ln,Lrf=np.array(self.Lrf),n0=n0,nf=nf,tm1=tm1,tp1=tp1,dt=dt,n_gamma=int(self.expsys.n_gamma))
+                return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
+                
+            else:
+                U=[L0.U(t0=t0,Dt=Dt).U for L0 in self]
             return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
 
     def Ueye(self,t0:float=None):

@@ -61,7 +61,14 @@ class Rho():
         self._Setup()
         self._apodize=False
         
-        
+    @property
+    def _rtype(self):
+        return Defaults['rtype']
+
+    @property
+    def _ctype(self):
+        return Defaults['ctype']
+    
     @property
     def isotropic(self):
         return self.L.isotropic
@@ -433,7 +440,7 @@ class Rho():
             return getattr(self.Op[0],OpName[2:])
         
         if OpName=='Thermal':
-            Op=np.zeros(self.Op.Mult.prod()*np.ones(2,dtype=int),dtype=ctype)
+            Op=np.zeros(self.Op.Mult.prod()*np.ones(2,dtype=int),dtype=self._ctype)
             for op,peq,mult in zip(self.expsys.Op,self.expsys.Peq,self.expsys.Op.Mult):
                 Op+=op.z*peq
                 if self.L.Peq:
@@ -451,7 +458,7 @@ class Rho():
         elif 'beta' in OpName:
             a='beta'
             Nuc=OpName[:-4]
-        Op=np.zeros(self.Op.Mult.prod()*np.ones(2,dtype=int),dtype=ctype)
+        Op=np.zeros(self.Op.Mult.prod()*np.ones(2,dtype=int),dtype=self._ctype)
         i=self.expsys.Nucs==Nuc
         if OpName.lower()=='zero':
             i0=0

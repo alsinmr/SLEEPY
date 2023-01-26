@@ -10,7 +10,7 @@ import numpy as np
 from fractions import Fraction
 import warnings
 
-tol=1e-6
+tol=1e-10
 
 class Propagator():
     def __init__(self,U,t0,tf,taur,L,isotropic):
@@ -162,7 +162,12 @@ class Propagator():
             for k in range(len(self)):
                 yield self[k]
         return fun()
-        
+    
+    def __repr__(self):
+        out=f'Propagator with length of {self.Dt*1e6:.3f} microseconds (t0={self.t0*1e6:.3f},tf={self.tf*1e6:.3f})\n'
+        out+='Constructed from the following Liouvillian:\n\t'
+        out+=self.L.__repr__().replace('\n','\n\t')
+        return out
                 
             
         
