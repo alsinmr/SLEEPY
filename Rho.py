@@ -20,7 +20,7 @@ rtype=Defaults['rtype']
 tol=1e-10
 
 class Rho():
-    def __init__(self,rho0,detect,L):
+    def __init__(self,rho0,detect,L=None):
         """
         Creates an object that contains both the initial density matrix and
         the detector matrix. One may then apply propagators to the density
@@ -59,10 +59,24 @@ class Rho():
         self.rho=copy(rho0)
         if not(isinstance(detect,list)):detect=[detect]  #Make sure a list
         self.detect=detect
-        self._L=L
-        self._Setup()
-        self._apodize=False
+        self._L=None
+        self._taxis=[]
         
+        # self._Setup()
+        self._apodize=False
+    
+    def __setattr__(self,name,value):
+        if name=="L":
+            if value.L is not self.L and len(self.t_axis):
+                self.L=value.L
+                warnings.warn("Internal Liouvillian does not match propagator's Liouvillian, although system has already been propagated")
+             
+            super().__setattr__('_L',value)
+            self._Setup()
+            return
+        
+        super().__setattr__(name,value)
+    
     @property
     def _rtype(self):
         return Defaults['rtype']
@@ -240,11 +254,11 @@ class Rho():
         
     def prop(self,U):
         """
-        Propagates the density matrix by the provided propagator
+        Propagates the density matrix by the provided propagator or sequence
 
         Parameters
         ----------
-        U : Propagator
+        U : Propagator or sequence
             Propagator object.
 
         Returns
@@ -252,10 +266,12 @@ class Rho():
         None.
 
         """
-            
-        if U.L is not self.L:
-            warnings.warn('Propagating using a system with a different Liouvillian than the initial Liouvillian')
-            
+        if not(hasattr(U,'__getitem__')):U=U.U()
+        
+                   
+        if U.L is None:
+            self.L=U.L
+               
         if not(self.isotropic) and np.abs((self.t-U.t0)%self.taur)>tol and np.abs((U.t0-self.t)%self.taur)>tol:
             warnings.warn('The initial time of the propagator is not equal to the current time of the density matrix')
             
@@ -306,6 +322,7 @@ class Rho():
         None.
 
         """
+        assert self.L is not None,"Rho cannot detect yet because the Liouvillian is undefined (set L or propagate first)"
         self._taxis.append(self.t)
         for k,rho in enumerate(self._rho):
             for m,det in enumerate(self._detect):
@@ -334,7 +351,8 @@ class Rho():
         return self._rho[i]
     
     def __len__(self):
-        return self.L.__len__()
+        if self.L is not None:
+            return self.L.__len__()
     
     def DetProp(self,U=None,seq=None,n:int=1):
         """
@@ -354,6 +372,17 @@ class Rho():
         self
 
         """
+        
+        assert not(U is None and seq is None),"Either U or seq must be defined"
+        if U is not None and seq is not None:
+            warnings.warn('Both U and seq are defined. seq will not be used')
+        
+        if self.L is None:
+            if U is not None:
+                self.L=U.L
+            else:
+                self.L=seq.L
+        
         if U is not None:
             if n>=100:
                 self()
