@@ -60,7 +60,9 @@ class Rho():
         if not(isinstance(detect,list)):detect=[detect]  #Make sure a list
         self.detect=detect
         self._L=None
+        self._awaiting_detection=False  #Detection hanging because L not defined
         self._taxis=[]
+        self._t=0
         
         # self._Setup()
         self._apodize=False
@@ -258,7 +260,7 @@ class Rho():
 
         Parameters
         ----------
-        U : Propagator or sequence
+        U : Propagator
             Propagator object.
 
         Returns
@@ -266,11 +268,17 @@ class Rho():
         None.
 
         """
-        if not(hasattr(U,'__getitem__')):U=U.U()
+        
+        # if not(hasattr(U,'__getitem__')):U=U.U()
         
                    
-        if U.L is None:
+        if self.L is None:
             self.L=U.L
+
+        if self._awaiting_detection:  #Use this if detect was called before L was assigned
+            self._awaiting_detection=False
+            self()
+            
                
         if not(self.isotropic) and np.abs((self.t-U.t0)%self.taur)>tol and np.abs((U.t0-self.t)%self.taur)>tol:
             warnings.warn('The initial time of the propagator is not equal to the current time of the density matrix')
@@ -322,7 +330,12 @@ class Rho():
         None.
 
         """
-        assert self.L is not None,"Rho cannot detect yet because the Liouvillian is undefined (set L or propagate first)"
+        if self.L is None:
+            if self._awaiting_detection:
+                warnings.warn('Detection called twice before applying propagator. Second call ignored')
+            self._awaiting_detection=True
+            return
+        
         self._taxis.append(self.t)
         for k,rho in enumerate(self._rho):
             for m,det in enumerate(self._detect):
@@ -818,6 +831,17 @@ class Rho():
         ax.set_ylabel('Weight')
         
         
+    def __repr__(self):
+        out='Density Matrix/Detection Operator\n'
+        out+=f'rho0: '+(f'{self.rho}' if isinstance(self.rho,str) else 'user-defined matrix')+'\n'
+        for k,d in enumerate(self.detect):
+            out+=f'detect[{k}]: '+(f'{d}' if isinstance(d,str) else 'user-defined matrix')+'\n'
+        out+=f'Current time is {self.t*1e6:.3f} microseconds\n'
+        out+=f'{len(self.t_axis)} time points have been recorded'
+        if self.L is None:
+            out+='\n[Currently uninitialized (L is None)]'
+        out+='\n\n'+super().__repr__()
+        return out
         
             
             
