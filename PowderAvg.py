@@ -117,12 +117,11 @@ class PowderAvg():
         if self.PwdType is None:
             out+='[undefined type]'
         else:
-            out+=f'Type:\t{self.PwdType}\n'
             plural='s' if self.N>1 else ''
-            out+=f'\t\t{self.N} angle{plural}\n'
+            out+=f'Type:\t{self.PwdType} with {self.N} angle{plural}\n'
             if self.gamma.max()==0:
-                out+='Gamma not included'
-        out+='\n\n'+super().__repr__()
+                out+='Gamma not included\n'
+        out+='\n'+super().__repr__()
         return out
             
         

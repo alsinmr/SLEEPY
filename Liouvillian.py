@@ -433,11 +433,14 @@ class Liouvillian():
         return np.sum([self.Ln(m)*(ph**(-m)) for m in range(-2,3)],axis=0)+self.Lrf
     
     
-    def U(self,t0:float=None,Dt:float=None):
+    def U(self,t0:float=None,Dt:float=None,calc_now:bool=False):
         """
         Calculates the propagator between times t0 and t0+Dt. By default, t0 will
         be set to align with the end of the last propagator calculated for 
         this system. By default, Dt will be one rotor period. 
+        
+        Note that the propagator in general will not be calculated until required.
+        To force calculation on creation, set calc_now to True.
 
         Parameters
         ----------
@@ -445,6 +448,8 @@ class Liouvillian():
             Initial time for the propagator. The default is 0.
         Dt : float, optional
             Length of the propagator. 
+        calc_now : bool, optional.
+            Calculates the propagator immediately, as opposed to only when required
 
         Returns
         -------
@@ -465,55 +470,68 @@ class Liouvillian():
 
         tf=t0+Dt
         
+        print('checkpoint')
         self.expsys._tprop=0 if self.taur is None else tf%self.taur  #Update current time
         
-        if self.sub:
-            if self.static:
-                L=self.L(0)
-                # U=expm(L*Dt)
-
-                d,v=np.linalg.eig(L)
-                U=v@np.diag(np.exp(d*Dt))@np.linalg.pinv(v)
-
-                return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
-            else:
-                dt=self.dt
-                n0=int(t0//dt)
-                nf=int(tf//dt)
-                
-                tm1=t0-n0*dt
-                tp1=tf-nf*dt
-                
-                if tm1<=0:tm1=dt
-                
-                L=self.L(n0)
-                U=expm(L*tm1)
+        
+        if calc_now:
+            if self.sub:
+                if self.static:
+                    L=self.L(0)
+                    # U=expm(L*Dt)
+    
+                    d,v=np.linalg.eig(L)
+                    U=v@np.diag(np.exp(d*Dt))@np.linalg.pinv(v)
+    
+                    return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
+                else:
+                    dt=self.dt
+                    n0=int(t0//dt)
+                    nf=int(tf//dt)
                     
-                for n in range(n0+1,nf):
-                    L=self.L(n)
-                    U=expm(L*dt)@U
-                if tp1>1e-10:
-                    L=self.L(nf)
-                    U=expm(L*tp1)@U
-                return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
-        else:
-            if self._parallel and not(self.static):
-                dt=self.dt
-                n0=int(t0//dt)
-                nf=int(tf//dt)
-                
-                tm1=t0-n0*dt
-                tp1=tf-nf*dt
-                
-                if tm1<=0:tm1=dt
-                Ln=[[L0.Ln(k) for k in range(-2,3)] for L0 in self]
-                U=prop(Ln,Lrf=np.array(self.Lrf),n0=n0,nf=nf,tm1=tm1,tp1=tp1,dt=dt,n_gamma=int(self.expsys.n_gamma))
-                return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
-                
+                    tm1=t0-n0*dt
+                    tp1=tf-nf*dt
+                    
+                    if tm1<=0:tm1=dt
+                    
+                    L=self.L(n0)
+                    U=expm(L*tm1)
+                        
+                    for n in range(n0+1,nf):
+                        L=self.L(n)
+                        U=expm(L*dt)@U
+                    if tp1>1e-10:
+                        L=self.L(nf)
+                        U=expm(L*tp1)@U
+                    return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
             else:
-                U=[L0.U(t0=t0,Dt=Dt).U for L0 in self]
-            return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
-
+                if self._parallel and not(self.static):
+                    dt=self.dt
+                    n0=int(t0//dt)
+                    nf=int(tf//dt)
+                    
+                    tm1=t0-n0*dt
+                    tp1=tf-nf*dt
+                    
+                    if tm1<=0:tm1=dt
+                    Ln=[[L0.Ln(k) for k in range(-2,3)] for L0 in self]
+                    U=prop(Ln,Lrf=np.array(self.Lrf),n0=n0,nf=nf,tm1=tm1,tp1=tp1,dt=dt,n_gamma=int(self.expsys.n_gamma))
+                    return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
+                    
+                else:
+                    U=[L0.U(t0=t0,Dt=Dt).U for L0 in self]
+                return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
+        else:
+            dct=dict()
+            dct['t']=[t0,tf]
+            dct['v1']=np.zeros([len(self.fields),2])
+            dct['phase']=np.zeros([len(self.fields),2])
+            dct['voff']=np.zeros([len(self.fields),2])
+            for k,v in self.fields.items():
+                dct['v1'][k],dct['phase'][k],dct['voff'][k]=v
+            return Propagator(U=dct,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
+            
+        
     def Ueye(self,t0:float=None):
         """
         Returns a propagator with length zero (identity propagator)
@@ -531,8 +549,9 @@ class Liouvillian():
             t0=0
         else:
             if t0 is None:t0=self.expsys._tprop%self.taur
-            
-        return self.U(t0,0)
+        
+        return Propagator(U=[np.eye(self.shape[0]) for _ in range(len(self))],
+                          t0=t0,tf=t0,taur=self.taur,L=self,isotropic=self.isotropic)    
 
     def Ueig(self):
         """

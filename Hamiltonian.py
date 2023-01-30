@@ -223,6 +223,7 @@ class RF():
         self.fields={}
         self.expsys=expsys
     
+        self.fields={k:(0.,0.,0.) for k in range(len(expsys.S))}
         
         
     @property

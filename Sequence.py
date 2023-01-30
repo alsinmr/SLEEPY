@@ -9,6 +9,7 @@ Created on Thu Jan 19 14:34:23 2023
 import numpy as np
 import matplotlib.pyplot as plt
 from copy import copy
+from .Propagator import Propagator
 
 class Sequence():
     def __init__(self,L):
@@ -209,7 +210,7 @@ class Sequence():
                 
             setattr(self,name,new)
             
-    def plot(self,fig=None,ax=None):
+    def plot(self,fig=None,ax=None,show_ph_off=True):
         """
         Plots the pulse sequence
 
@@ -249,14 +250,36 @@ class Sequence():
         
         cmap=plt.get_cmap('tab10')
         for a,s in zip(ax,spins):
+            a.sharex(ax[0])
             # v1=np.concatenate((self.v1[s,:-2].repeat(2)))
             v1=self.v1[s,:-1].repeat(2)/1e3
             a.plot(t*1e6,v1,color=cmap(3))
             a.plot(t*1e6,np.zeros(t.shape),color='black',linewidth=1.5)
-            a.text(0,0.5*self.v1.max()/1e3,s if self._spin_specific else self.expsys.Nucs[s])
+            a.text(0,0.95*self.v1.max()/1e3,s if self._spin_specific else self.expsys.Nucs[s])
             a.set_ylabel(r'$v_1$ / kHz')
             a.set_ylim([0,self.v1.max()*1.1/1e3])
+            
+            for k,t0 in enumerate(self.t[:-1]):
+                
+                ch=False
+                if show_ph_off:
+                    if k==0:
+                        ch=True
+                        a.text(t0*1e6,.3*a.get_ylim()[1],f'{self.phase[s,k]*180/np.pi:.0f}'+r'$^\circ$')
+                        a.text(t0*1e6,.1*a.get_ylim()[1],f'{self.voff[s,k]/1e3:.0f} kHz')
+                    else:
+                        if self.phase[s,k]!=self.phase[s,k-1]:
+                            ch=True
+                            a.text(t0*1e6,.3*a.get_ylim()[1],f'{self.phase[s,k]*180/np.pi:.0f}'+r'$^\circ$')
+                        if self.voff[s,k]!=self.voff[s,k-1]:
+                            ch=True
+                            a.text(t0*1e6,.1*a.get_ylim()[1],f'{self.voff[s,k]/1e3:.0f} kHz')
+                    if ch:
+                        a.plot([t0*1e6,t0*1e6],a.get_ylim(),linestyle=':',color='grey')
+                            
+                
         ax[-1].set_xlabel(r't / $\mu$s')
+        return ax
             
         
     def U(self,t0:float=None,Dt:float=None):
@@ -299,65 +322,27 @@ class Sequence():
             
         tf=t0+Dt
         
-        # if tf is None:
-        #     if len(self.t)==2 and self.isotropic:
-        #         assert 0,"For isotropic systems, one must specify tf"
-        #     elif len(self.t)==2:
-        #         tf=self.taur
-        #     elif self.isotropic:
-        #         tf=self.t[-2]
-        #     elif self.t[-2]%self.taur<1e-10:
-        #         tf=self.t[-2]
-        #     else:
-        #         tf=(self.t[-2]//self.taur+1)*self.taur
-        
         t=self.t+t0 #Absolute time axis
         
-        # i0=np.argwhere(self.t<=t0)[-1,0]  #Last time point before t0
-        # i1=np.argwhere(self.t>=tf)[0,0]  #First time after tf
-        
-        # t=np.concatenate(([t0],self.t[i0+1:i1],[tf]))
-        
-        # U=None
-        
-        # for m,(ta,tb) in enumerate(zip(t[:-1],t[1:])):
-        #     for k,(v1,phase,voff) in enumerate(zip(self.v1,self.phase,self.voff)):
-        #         self.fields[k]=(v1[i0+m],phase[i0+m],voff[i0+m])
-        #     U0=self.L.U(t0=ta,tf=tb)
-            
-        #     if U is None:
-        #         U=U0
-        #     else:
-        #         U=U0*U
+
         
         ini_fields=copy(self.fields)
 
         U=self.L.Ueye(t[0])
         i1=np.argwhere(t>=tf)[0,0] #First time after tf
         t=np.concatenate((t[:i1],[tf]))
-        for m,(ta,tb) in enumerate(zip(t[:-1],t[1:])):
-            for k,(v1,phase,voff) in enumerate(zip(self.v1,self.phase,self.voff)):
-                self.fields[k]=(v1[m],phase[m],voff[m])
-            U0=self.L.U(t0=ta,Dt=tb-ta)
-            U=U0*U
-        
-        # ns=self.nspins
-        # self.fields.update({k:(0,0,0) for k in range(ns)}) #Turn off all fields  
-
-        
         
         # for m,(ta,tb) in enumerate(zip(t[:-1],t[1:])):
         #     for k,(v1,phase,voff) in enumerate(zip(self.v1,self.phase,self.voff)):
-        #         self.fields[k]=(v1[i0+m],phase[i0+m],voff[i0+m])
-        #     U0=self.L.U(t0=ta,tf=tb)
-            
-        #     if U is None:
-        #         U=U0
-        #     else:
-        #         U=U0*U
+        #         self.fields[k]=(v1[m],phase[m],voff[m])
+        #     U0=self.L.U(t0=ta,Dt=tb-ta)
+        #     U=U0*U
+         
+        # self.L.rf.fields=ini_fields        
         
-        self.L.rf.fields=ini_fields        
+        dct={'t':t,'v1':self.v1,'phase':self.phase,'voff':self.voff}
+        self.expsys._tprop=0 if self.taur is None else tf%self.taur
         
-        return U
+        return Propagator(U=dct,t0=t0,tf=tf,taur=self.taur,L=self.L,isotropic=self.isotropic)
                 
             

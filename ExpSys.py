@@ -27,10 +27,9 @@ class ExpSys():
         assert B0 is not None or v0H is not None,"B0 or v0H must be specified"
         self.B0=B0 if B0 is not None else v0H*1e6/NucInfo('1H')
         self.Nucs=np.atleast_1d(Nucs)
-        self.N=len(self.Nucs)
-        self.S=np.array([NucInfo(nuc,'spin') for nuc in self.Nucs])
+        S=np.array([NucInfo(nuc,'spin') for nuc in self.Nucs])
         self.gamma=np.array([NucInfo(nuc,'gyro') for nuc in self.Nucs])
-        self.Op=SpinOp(self.S)
+        self.Op=SpinOp(S)
         self._index=-1
         self.vr=vr
         self.T_K=T_K
@@ -48,7 +47,7 @@ class ExpSys():
             if hasattr(fun,'__code__') and fun.__code__.co_varnames[0]=='es':
                 self.inter_types[k]=fun.__code__.co_varnames[1:fun.__code__.co_argcount]
                 setattr(self,k,[])
-    
+        
     @property
     def v0H(self):
         return self.B0*NucInfo('1H')
@@ -56,6 +55,10 @@ class ExpSys():
     @property
     def v0(self):
         return self.B0*self.gamma
+    
+    @property
+    def S(self):
+        return self.Op.S
     
     @property
     def taur(self):
@@ -241,7 +244,8 @@ class ExpSys():
         out+=f'rotor angle = {self.rotor_angle*180/np.pi:.3f} degrees\n'
         out+=f'rotor frequency = {self.vr/1e3} kHz\n'
         out+=f'Temperature = {self.T_K} K\n'
-        out+=f'Powder average with {self.pwdavg.N} angles, {self.n_gamma} steps per rotor period\n'
+        out+=self.pwdavg.__repr__().rsplit('\n',2)[0].replace('\nType:\t',': ')
+        # out+=f'Powder average with {self.pwdavg.N} angles, {self.n_gamma} steps per rotor period\n'
         out+='\nInteractions:\n'
         for i in self.inter:
             dct=copy(i)

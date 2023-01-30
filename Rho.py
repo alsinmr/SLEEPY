@@ -322,10 +322,32 @@ class Rho():
                
         if not(self.isotropic) and np.abs((self.t-U.t0)%self.taur)>tol and np.abs((U.t0-self.t)%self.taur)>tol:
             warnings.warn('The initial time of the propagator is not equal to the current time of the density matrix')
+        
             
-        self._rho=[U0@rho for U0,rho in zip(U,self._rho)]
-        self._t+=U.Dt
-        return self
+        if U.calculated:
+            self._rho=[U0@rho for U0,rho in zip(U,self._rho)]
+            self._t+=U.Dt
+            return self
+        else:
+            dct=U.U
+            t=dct['t']
+            L=U.L
+            ini_fields=copy(L.fields)
+            
+            for m,(ta,tb) in enumerate(zip(t[:-1],t[1:])):
+                for k,(v1,phase,voff) in enumerate(zip(dct['v1'],dct['phase'],dct['voff'])):
+                    L.fields[k]=(v1[m],phase[m],voff[m])
+            
+                    #TODO
+                    # AT THIS POINT, WE NEED TO APPLY THE PROPAGATOR TO RHO
+                    # OVER DIFFERENT ROTOR POSITIONS. FOR EXAMPLE, CHECK THE
+                    # L.U MACHINERY. ALSO SHOULD BE SET UP FOR PARALLEL PROCESSING
+                    
+            
+            L.fields.update(ini_fields)  #Return fields to their initial state
+                    
+                    
+                
         
     def __rmul__(self,U):
         """

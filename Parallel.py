@@ -71,3 +71,54 @@ def prop(Ln,Lrf,n0,nf,tm1,tp1,dt,n_gamma):
     return U
 
 
+
+def prop_x_rho0(X):
+    Ln,dct,Op,rho,static=X
+    
+    t=dct['t']
+    for m,(ta,tb) in enumerate(zip(t[:-1],t[1:])):
+        #Set the RF fields
+        Lrf=np.zeros(Ln[0].shape)
+        for k,(v1,phase,voff,Op0) in enumerate(zip(dct['v1'],dct['phase'],dct['voff'],Op)):
+            Lrf+=-1j*2*np.pi*(v1*(np.cos(phase)*Op0.x+np.sin(phase)*Op0.y)-voff*Op0.z)
+        
+        if static:
+            Ldt=(Ln[2]+Lrf)*(tb-ta)
+            rho=expm_x_rho(Ldt,rho)
+        else:
+            pass
+            #TODO
+            # HERE WE NEED TO GO THROUGH THE ROTOR CYCLE, EX. SEE LIOUVILLIAN,
+            # LINES 487-
+        
+from copy import copy
+def expm_x_rho(Ldt,rho,n=20):
+    """
+    Calculates the product of the matrix exponential multiplied by the density
+    operator. Bypasses full calculation of the matrix exponential
+
+    Parameters
+    ----------
+    Ldt : array (square)
+        Liouville matrix multiplied by time step
+    rho : array (vector)
+        Initial density matrix
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    out=copy(rho)
+    for k in range(1,n):
+        rho=Ldt@rho
+        out+=rho/np.math.factorial(k)
+    return out
+            
+    
+            
+    
+    
+
+
