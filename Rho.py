@@ -329,6 +329,7 @@ class Rho():
             self._t+=U.Dt
             return self
         else:
+            
             dct=U.U
             t=dct['t']
             L=U.L
@@ -345,6 +346,7 @@ class Rho():
                     
             
             L.fields.update(ini_fields)  #Return fields to their initial state
+            self._t+=U.Dt
                     
                     
                 
@@ -363,6 +365,7 @@ class Rho():
         self
 
         """
+        U.calcU()
         return self.prop(U)
     
     def __mul__(self,U):

@@ -470,7 +470,6 @@ class Liouvillian():
 
         tf=t0+Dt
         
-        print('checkpoint')
         self.expsys._tprop=0 if self.taur is None else tf%self.taur  #Update current time
         
         
@@ -519,7 +518,7 @@ class Liouvillian():
                     return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
                     
                 else:
-                    U=[L0.U(t0=t0,Dt=Dt).U for L0 in self]
+                    U=[L0.U(t0=t0,Dt=Dt,calc_now=calc_now).U for L0 in self]
                 return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
         else:
             dct=dict()
