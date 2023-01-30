@@ -81,7 +81,7 @@ class SpinOp:
         self._index=-1
         return self
     
-    
+from copy import copy    
 class OneSpin():
     def __init__(self,S,n):
         for k in dir(Op0):
@@ -92,3 +92,6 @@ class OneSpin():
                 op=np.kron(np.kron(np.eye(Mult[:n].prod(),dtype=Defaults['ctype']),op0),
                             np.eye(Mult[n+1:].prod(),dtype=Defaults['ctype']))
                 setattr(self,Type,op)
+    def __getattribute__(self, name):
+        return copy(super().__getattribute__(name))  #Ensure we don't modify the original object
+        

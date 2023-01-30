@@ -22,7 +22,9 @@ class PowderAvg():
         
         self._pwdpath=os.path.join(os.path.dirname(os.path.realpath(__file__)),'PowderFiles')
         self._inter=list()
-        if PwdType is not None:self.set_powder_type(PwdType,**kwargs)
+        
+        self.PwdType=None
+        self.set_powder_type(PwdType,**kwargs)
         
         self.__Types=list()
         
@@ -48,6 +50,7 @@ class PowderAvg():
             self.N=len(alpha)
             self.alpha,self.beta,self.gamma=np.array(alpha),np.array(beta),np.zeros(self.N)
             self.weight=np.array(weight)
+            self.PwdType=PwdType
         elif hasattr(PwdAvgFuns,'pwd_'+PwdType):
             out=getattr(PwdAvgFuns,'pwd_'+PwdType)(**kwargs)
             self.N=len(out[0])
@@ -57,15 +60,16 @@ class PowderAvg():
                 self.alpha,self.beta=np.array(out[:2])
                 self.gamma=np.zeros(self.N)
                 self.weight=np.array(out[2])
+            self.PwdType=PwdType
         else:
             print('Unknown powder average, try one of the following:')
             for f in np.sort(os.listdir(self._pwdpath)):
                 if '.txt' in f:
                     print(f.split('.')[0])
-            for fname in dir('PwdAvgFuns'):
+            for fname in dir(PwdAvgFuns):
                 if 'pwd_' in fname:
-                    fun=getattr('PwdAvgFuns','pwd_'+fname)
-                    print(fname[4:]+' with args:',fun.__code__.co_varnames[:fun.__code__.co_argcount])
+                    fun=getattr(PwdAvgFuns,fname)
+                    print(fname[4:]+' with args: '+','.join(fun.__code__.co_varnames[:fun.__code__.co_argcount]))
     
     @property
     def list_powder_types(self):
@@ -106,6 +110,19 @@ class PowderAvg():
         out.gamma=self.gamma[i:i+1]
         out.N=1
         out.weight=np.ones([1])
+        return out
+    
+    def __repr__(self):
+        out='Powder Average\n'
+        if self.PwdType is None:
+            out+='[undefined type]'
+        else:
+            out+=f'Type:\t{self.PwdType}\n'
+            plural='s' if self.N>1 else ''
+            out+=f'\t\t{self.N} angle{plural}\n'
+            if self.gamma.max()==0:
+                out+='Gamma not included'
+        out+='\n\n'+super().__repr__()
         return out
             
         

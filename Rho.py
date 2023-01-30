@@ -184,7 +184,7 @@ class Rho():
                 i=np.argsort(self._taxis)
                 return np.array(self._Ipwd).T[i].T
             else:
-                return np.array(self._Ipwd).T
+                return np.array(self._Ipwd)
     
     @property
     def I(self):
@@ -253,6 +253,46 @@ class Rho():
         self._rho0=self.Op2vec(self.strOp2vec(self.rho0))
         self._detect=[self.Op2vec(self.strOp2vec(det,detect=True),detect=True) for det in self.detect]
         self.reset()
+        
+    def reset(self,t0=0):
+        """
+        Resets the density matrices back to rho0
+
+        Returns
+        -------
+        None.
+
+        """
+        if self.L is not None:
+            self._rho=[self._rho0 for _ in range(self.pwdavg.N)]
+        self._t=t0
+    
+    def clear(self):
+        """
+        Clears variables in order to start over propagation. 
+        
+        Note that if you want to set the system back to the initial rho0 value,
+        but want to retain the amplitudes and times recorded, run rho.reset()
+        instead of rho.clear()
+
+        Parameters
+        ----------
+        clear_all : bool, optional
+            Completely reset rho. The default is False.
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        self._t=0
+        
+        self._Ipwd=[[]]
+        self._taxis=list()
+        self._rho=list() #Storage for numerical rho
+        if self._L is not None:
+            self._Setup()
         
     def prop(self,U):
         """
@@ -514,7 +554,13 @@ class Rho():
         
         if OpName[0]=='S':
             i=int(OpName[1])   #At the moment, I'm assuming this program won't work with 11 spins...
-            return getattr(self.Op[0],OpName[2:])
+            Op=getattr(self.Op[i],OpName[2:])
+            
+            if self.L.Peq and not(detect):
+                Peq=self.expsys.Peq[i]
+                Op*=Peq #Start out at thermal polarization
+                Op+=self.expsys.Op[0].eye/2
+            return Op
         
         if OpName=='Thermal':
             Op=np.zeros(self.Op.Mult.prod()*np.ones(2,dtype=int),dtype=self._ctype)
@@ -540,8 +586,9 @@ class Rho():
         if self.L.Peq and not(detect):
             Peq=self.expsys.Peq[i0]
             Op*=Peq  #Start out at thermal polarization
-            for op0,mult in zip(self.expsys.Op,self.expsys.Op.Mult):
-                Op+=op0.eye/mult  #Add in the identity for relaxation to thermal equilibrium
+            Op+=self.expsys.Op[0].eye/2
+            # for op0,mult in zip(self.expsys.Op,self.expsys.Op.Mult):
+            #     Op+=op0.eye/mult  #Add in the identity for relaxation to thermal equilibrium
 
         return Op
     
@@ -570,45 +617,6 @@ class Rho():
             Op/=np.trace(Op.T.conj()@Op)*nHam
         
         return np.tile(Op.reshape(Op.size),nHam)
-            
-    
-    def reset(self,t0=0):
-        """
-        Resets the density matrices back to rho0
-
-        Returns
-        -------
-        None.
-
-        """
-        self._rho=[self._rho0 for _ in range(self.pwdavg.N)]
-        self._t=t0
-    
-    def clear(self):
-        """
-        Clears variables in order to start over propagation. 
-        
-        Note that if you want to set the system back to the initial rho0 value,
-        but want to retain the amplitudes and times recorded, run rho.reset()
-        instead of rho.clear()
-
-        Parameters
-        ----------
-        clear_all : bool, optional
-            Completely reset rho. The default is False.
-
-        Returns
-        -------
-        None.
-
-        """
-        
-        self._t=0
-        
-        self._Ipwd=[[list() for _ in range(self.n_det)] for _ in range(self.pwdavg.N)]
-        self._taxis=list()
-        self._rho=list() #Storage for numerical rho
-        self._Setup()
         
     def plot(self,det_num:int=0,ax=None,FT:bool=False,imag:bool=True,apodize=False,axis='kHz'):
         """

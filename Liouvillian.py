@@ -111,6 +111,10 @@ class Liouvillian():
         return np.all([H0.isotropic for H0 in self.H])
     
     @property
+    def static(self):
+        return self.expsys.vr==0 or self.isotropic
+    
+    @property
     def pwdavg(self):
         return self.H[0].pwdavg
     
@@ -144,7 +148,7 @@ class Liouvillian():
         None.
 
         """
-        if self.H[0].isotropic:return None
+        if self.isotropic or self.static:return None
         return 1/self.expsys.vr
     
     @property
@@ -452,8 +456,8 @@ class Liouvillian():
     
         self.validate_relax()
     
-        if self.isotropic:
-            assert Dt is not None,"For isotropic systems, one must specify Dt"
+        if self.static:
+            assert Dt is not None,"For static/isotropic systems, one must specify Dt"
             t0=0
         else:
             if t0 is None:t0=self.expsys._tprop%self.taur
@@ -464,7 +468,7 @@ class Liouvillian():
         self.expsys._tprop=0 if self.taur is None else tf%self.taur  #Update current time
         
         if self.sub:
-            if self.isotropic:
+            if self.static:
                 L=self.L(0)
                 # U=expm(L*Dt)
 
@@ -493,7 +497,7 @@ class Liouvillian():
                     U=expm(L*tp1)@U
                 return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
         else:
-            if self._parallel and not(self.isotropic):
+            if self._parallel and not(self.static):
                 dt=self.dt
                 n0=int(t0//dt)
                 nf=int(tf//dt)
