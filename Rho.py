@@ -758,7 +758,7 @@ class Rho():
         self._apodize=ap
         return ax
             
-    def extract_decay_rates(self,U,det_num:int=0,avg:bool=True,pwdavg:bool=False):
+    def extract_decay_rates(self,U,det_num:int=0,avg:bool=True,pwdavg:bool=False,reweight=False):
         """
         Uses eigenvalue decomposition to determine all relaxation rates present
         for a density matrix, rho, and their corresponding amplitudes, based
@@ -845,7 +845,7 @@ class Rho():
             # R/=A.sum(-1)
             # A=A.sum(-1)
             if pwdavg:
-                wt=U.L.pwdavg.weight*A
+                wt=U.L.pwdavg.weight*(1 if reweight else A)
                 wt/=wt.sum()
                 Ravg=(R*wt).sum()
                 return Ravg
