@@ -157,6 +157,8 @@ class Rho():
 
         """
         
+        if len(self._taxis)==1:return 1
+        
         unique=np.unique(self._taxis)
         if unique.size+2<len(self._taxis):  #3 or more non-unique values
             return 0
@@ -464,10 +466,8 @@ class Rho():
         if U is not None:
             if n>=100:
                 self()
-                for k,(U0,rho) in enumerate(zip(U,self)):
-                    d,v=np.linalg.eig(U0)
-                    i=np.abs(d)>1
-                    d[i]/=np.abs(d[i])
+                U.eig()
+                for k,((d,v),rho) in enumerate(zip(U._eig,self)):
                     rho0=np.linalg.pinv(v)@rho
                     dp=np.cumprod(np.repeat([d],n,axis=0),axis=0)
                     rho_d=dp*rho0
@@ -531,6 +531,7 @@ class Rho():
             (Nuc,optype)
 
         """
+            
         
         if OpName.lower()=='zero':
             Nuc='None'
@@ -546,8 +547,22 @@ class Rho():
             Nuc=OpName[:-4]
         else:
             return None
-        return Nuc,a 
-        
+        return Nuc,a
+    
+    def OpScaling(self,OpName):  
+        scale=1.
+        if '*' in OpName:
+            p,q=OpName.split('*')
+            if len(re.findall('[A-Z]',p)):
+                scale=float(q)
+                OpName=p
+            else:
+                scale=float(p)
+                OpName=q
+        elif OpName[0]=='-':
+            scale=-1
+            OpName=OpName[1:]
+        return OpName,scale
     
     def strOp2vec(self,OpName:str,detect:bool=False):
         """
@@ -577,13 +592,15 @@ class Rho():
         
         if not(isinstance(OpName,str)):return OpName #Just return if already a matrix
         
+        OpName,scale=self.OpScaling(OpName)
+        
         if OpName[0]=='S':
             i=int(OpName[1])   #At the moment, I'm assuming this program won't work with 11 spins...
-            Op=getattr(self.Op[i],OpName[2:])
+            Op=getattr(self.Op[i],OpName[2:])*scale
             
             if self.L.Peq and not(detect):
                 Peq=self.expsys.Peq[i]
-                Op*=Peq #Start out at thermal polarization
+                Op*=np.abs(Peq) #Start out at thermal polarization
                 Op+=self.expsys.Op[0].eye/2
             return Op
         
@@ -591,8 +608,8 @@ class Rho():
             Op=np.zeros(self.Op.Mult.prod()*np.ones(2,dtype=int),dtype=self._ctype)
             for op,peq,mult in zip(self.expsys.Op,self.expsys.Peq,self.expsys.Op.Mult):
                 Op+=op.z*peq
-                if self.L.Peq:
-                    Op+=op.eye/mult
+            if self.L.Peq:
+                Op+=op.eye/2
             return Op
         
         
@@ -606,7 +623,7 @@ class Rho():
         elif not(np.any(i)):
             warnings.warn('Nucleus is not in the spin system or was not recognized')
         for i0 in np.argwhere(i)[:,0]:
-            Op+=getattr(self.Op[i0],a)
+            Op+=getattr(self.Op[i0],a)*scale
         
         if self.L.Peq and not(detect):
             Peq=self.expsys.Peq[i0]
@@ -639,11 +656,23 @@ class Rho():
         nHam=len(self.L.H)
         if detect:
             Op=Op.T.conj()
-            Op/=np.trace(Op.T.conj()@Op)*nHam
+            Op/=np.abs(np.trace(Op.T.conj()@Op))
+            return np.tile(Op.reshape(Op.size),nHam)
+        else:
+            if nHam==1:
+                return Op.reshape(Op.size)
+            else:
+                Op=Op.reshape(Op.size)
+                d,v=np.linalg.eig(self.L.kex)
+                pop=v[:,np.argmax(d)]    #We need to make sure we start at equilibrium
+                pop/=pop.sum()
+                out=np.zeros([Op.size*nHam],dtype=self._ctype)
+                for k,pop0 in enumerate(pop):
+                    out[k*Op.size:(k+1)*Op.size]=Op*pop0
+                return out
         
-        return np.tile(Op.reshape(Op.size),nHam)
         
-    def plot(self,det_num:int=0,ax=None,FT:bool=False,imag:bool=True,apodize=False,axis='kHz'):
+    def plot(self,det_num:int=0,ax=None,FT:bool=False,imag:bool=True,apodize=False,axis='kHz/ms'):
         """
         Plots the amplitudes as a function of time or frequency
 
@@ -680,7 +709,7 @@ class Rho():
                 Nuc,_=self.parseOp(self.detect[det_num]) 
                 v0=NucInfo(Nuc)*self.expsys.B0
                 v_axis=self.v_axis/v0*1e6
-                mass,name=''.join(re.findall(r'\d',Nuc)),''.join(re.findall(f'[A-Z]',Nuc.upper()))
+                mass,name=''.join(re.findall(r'\d',Nuc)),''.join(re.findall('[A-Z]',Nuc.upper()))
                 label=r"$\delta$($^{"+mass+r"}$"+name+") / ppm"
             elif axis.lower()=='mhz':
                 v_axis=self.v_axis/1e6
@@ -708,12 +737,24 @@ class Rho():
                 ax.set_xlabel('Acquisition Number')
                 
             else:
-                ax.plot(self.t_axis*1e3,self.I[det_num].real)
+                if axis.lower()=='microseconds':
+                    t_axis=self.t_axis*1e6
+                    label=r'$t$ / $\mu$s'
+                elif axis.lower()=='s':
+                    t_axis=self.t_axis
+                    label=r'$t$ / s'
+                elif axis.lower()=='ns':
+                    t_axis=self.t_axis*1e9
+                    label=r'$t$ / ns'
+                else:
+                    t_axis=self.t_axis*1e3
+                    label=r'$t$ / ms'
+                ax.plot(t_axis,self.I[det_num].real)
                 if not(isinstance(self.detect[det_num],str)) or self.detect[det_num][-1] in ['p','m'] and imag:
-                    ax.plot(self.t_axis*1e3,self.I[det_num].imag)
+                    ax.plot(t_axis,self.I[det_num].imag)
                     ax.legend(('Re','Im'))
                 ax.set_ylabel('<'+self.detect[det_num]+'>')
-                ax.set_xlabel('t / ms')
+                ax.set_xlabel(label)
         self._apodize=ap
         return ax
             
@@ -778,9 +819,10 @@ class Rho():
         R=np.zeros([U.L.pwdavg.N,U.shape[0]],dtype=float)
         f=np.zeros([U.L.pwdavg.N,U.shape[0]],dtype=float)
         A=np.zeros([U.L.pwdavg.N,U.shape[0]],dtype=float)
-            
-        for k,(rho0,U0) in enumerate(zip(self._rho,U)):
-            d,v=np.linalg.eig(U0)
+           
+        U.eig()
+        for k,(rho0,(d,v)) in enumerate(zip(self._rho,U._eig)):
+            # d,v=np.linalg.eig(U0)
             rhod=np.linalg.pinv(v)@rho0
             det_d=self._detect[det_num]@v
             
@@ -790,9 +832,18 @@ class Rho():
             
 
         if avg:
-            R=(R*A).sum(-1)
-            R/=A.sum(-1)
-            A=A.sum(-1)
+            Rout=list()
+            Aout=list()
+            for R0,A0,f0 in zip(R,A,f):
+                i=np.abs(f0)<1e-5  #non-oscillating terms (??)
+                Aout.append(A0[i].sum())
+                Rout.append((R0[i]*A0[i]).sum()/Aout[-1])
+            R=np.array(Rout)
+            A=np.array(Aout)
+                
+            # R=(R*A).sum(-1)
+            # R/=A.sum(-1)
+            # A=A.sum(-1)
             if pwdavg:
                 wt=U.L.pwdavg.weight*A
                 wt/=wt.sum()

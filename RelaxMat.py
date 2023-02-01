@@ -57,8 +57,8 @@ def T1(expsys,i:int,T1:float,Peq=False):
         
         peq=np.zeros([N,N])
         for n in range(N-1):
-            peq[n,n+1]=-Peq
-            peq[n+1,n]=Peq
+            peq[n,n+1]=Peq
+            peq[n+1,n]=-Peq
         peq-=np.diag(peq.sum(0))
         peq*=1/(T1*2)
         

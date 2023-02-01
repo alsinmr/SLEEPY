@@ -2,8 +2,8 @@
 
 
 Defaults={}
-from numpy import float32 as _rtype
-from numpy import complex64 as _ctype
+from numpy import float64 as _rtype       #Not much gain if we reduced precision.
+from numpy import complex128 as _ctype    #Also, overflow errors become common at lower precision
 Defaults.update({'rtype':_rtype,'ctype':_ctype,'parallel':True})
 
 from . import Tools

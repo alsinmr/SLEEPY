@@ -48,26 +48,9 @@ class Propagator():
     def shape(self):
         return self.L.shape
     
-    def __mul__(self,U):
-        if str(U.__class__)!=str(self.__class__):
-            return NotImplemented
-        
-        
-        if not(self.isotropic) and np.abs((self.t0-U.tf)%self.taur)>tol and np.abs((U.tf-self.t0)%self.taur)>tol:
-            warnings.warn(f'\nFirst propagator ends at {U.tf%self.taur} but second propagator starts at {self.t0%U.taur}')
-            # print(f'Warning: First propagator ends at {U.tf%self.taur} but second propagator starts at {self.t0%U.taur}')
-        
-        if self.pwdavg:
-            assert U.pwdavg,"Both propagators should have a powder average or bot not"
-        else:
-            assert not(U.pwdavg),"Both propagators should have a powder average or bot not"
 
-        Uout=[U1@U2 for U1,U2 in zip(self,U)]
-        
-        if not(self.pwdavg):Uout=Uout[0]
-        return Propagator(Uout,t0=U.t0,tf=U.tf+self.Dt,taur=self.taur,L=self.L,isotropic=self.isotropic)
     
-    def eig(self):
+    def eig(self,back_calc:bool=True):
         """
         Calculates eigenvalues/eigenvectors of all stored propagators. Stored for
         later usage (self._eig). Subsequent operations will be performed in
@@ -75,19 +58,31 @@ class Propagator():
         eigenvalues have an absolute value greater than 1. For systems that 
         deviate due to numerical error, this approach may stabilize the system.
 
+        Parameters
+        ----------
+        back_calc : bool, optional
+            Back-calculates the stored propagators from the eigenvalues which
+            have been corrected such that they do not have magnitude greater than
+            one. This may stabilize some calculations.
+
         Returns
         -------
-        None.
+        self
 
         """
         if self._eig is None:
             self._eig=list()
+            Unew=list()
             for U in self:
                 d,v=np.linalg.eig(U)
                 dabs=np.abs(d)
                 i=dabs>1
                 d[i]/=dabs[i]
                 self._eig.append((d,v))
+                if back_calc:
+                    Unew.append(v@np.diag(d)@np.linalg.pinv(v))
+            if back_calc:self.U=Unew
+        return self
         
     
     def calcU(self):
@@ -127,9 +122,7 @@ class Propagator():
             L.fields.update(ini_fields)
             
             self.U=U.U
-        
-        
-    
+         
     @property
     def rotor_fraction(self):
         """
@@ -146,6 +139,24 @@ class Propagator():
         out=Fraction(self.Dt/self.taur).limit_denominator(100000)
         return out.numerator,out.denominator
         
+    def __mul__(self,U):
+        if str(U.__class__)!=str(self.__class__):
+            return NotImplemented
+        
+        
+        if not(self.isotropic) and np.abs((self.t0-U.tf)%self.taur)>tol and np.abs((U.tf-self.t0)%self.taur)>tol:
+            warnings.warn(f'\nFirst propagator ends at {U.tf%self.taur} but second propagator starts at {self.t0%U.taur}')
+            # print(f'Warning: First propagator ends at {U.tf%self.taur} but second propagator starts at {self.t0%U.taur}')
+        
+        if self.pwdavg:
+            assert U.pwdavg,"Both propagators should have a powder average or bot not"
+        else:
+            assert not(U.pwdavg),"Both propagators should have a powder average or bot not"
+
+        Uout=[U1@U2 for U1,U2 in zip(self,U)]
+        
+        if not(self.pwdavg):Uout=Uout[0]
+        return Propagator(Uout,t0=U.t0,tf=U.tf+self.Dt,taur=self.taur,L=self.L,isotropic=self.isotropic)
     
     def __pow__(self,n):
         """

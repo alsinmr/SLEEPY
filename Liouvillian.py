@@ -23,6 +23,7 @@ from . import Defaults
 from .Tools import Ham2Super
 from .Hamiltonian import Hamiltonian
 from . import RelaxMat
+from .Sequence import Sequence
 
 
 # import importlib.util
@@ -202,7 +203,12 @@ class Liouvillian():
         
         if name=='kex':
             self._Lex=None
-            value=np.array(value)
+            if value is not None:
+                value=np.array(value)
+                assert value.shape[0]==value.shape[1],"Exchange matrix must be square"
+                assert value.shape[0]==len(self.H),f"For {len(self.H)} Hamiltonians, exchange matrix must be {len(self.H)}x{len(self.H)}"
+                if np.any(value.sum(0)):
+                    warnings.warn("Invalid exchange matrix. Columns should sum to 0. Expect unphysical behavior.")
         
         super().__setattr__(name,value)
     
@@ -551,6 +557,28 @@ class Liouvillian():
         
         return Propagator(U=[np.eye(self.shape[0]) for _ in range(len(self))],
                           t0=t0,tf=t0,taur=self.taur,L=self,isotropic=self.isotropic)    
+    
+    def Udelta(self,channel,phi:float=np.pi,phase:float=0,t0:float=None):
+        """
+        Provides a delta pulse on the chosen channel. Channel 
+
+        Parameters
+        ----------
+        channel : TYPE
+            DESCRIPTION.
+        phi : float, optional
+            DESCRIPTION. The default is np.pi.
+        phase : float, optional
+            DESCRIPTION. The default is 0.
+        t0 : float, optional
+            DESCRIPTION. The default is None.
+
+        Returns
+        -------
+        None.
+
+        """
+        pass
 
     def Ueig(self):
         """
@@ -568,6 +596,17 @@ class Liouvillian():
         i=np.abs(d)>1
         d[i]/=np.abs(d[i])
         return d,v
+    
+    def Sequence(self):
+        """
+        Returns a Sequence object initialized from this Liouvillian
+
+        Returns
+        -------
+        None.
+
+        """
+        return Sequence(self)
     
     def __len__(self):
         if self.pwdavg is None:return 1
@@ -590,14 +629,15 @@ class Liouvillian():
         for k,H in enumerate(self.H):
             
             if k:
-                out+=f'\tHamiltonian #{k}\n\t'
+                out+=f'Hamiltonian #{k}\n\t'
                 out+=H.__repr__().split('\n',1)[1].split('\n',7)[-1].rsplit('\n',1)[0].replace('\n','\n\t')
+                out+='\n\t'
             else:
                 out+='\n\t'.join(H.__repr__().split('\n')[1:7])
                 out+='\n\nThe individual Hamiltonians have the following interactions\n\t'
                 out+=f'Hamiltonian #{k}\n\t'
                 out+=H.__repr__().split('\n',1)[1].split('\n',7)[-1].rsplit('\n',1)[0].replace('\n','\n\t')
-                out+='\n'
+                out+='\n\t'
             
         if len(self.H)>1:
             out+='\nHamiltonians are coupled by exchange matrix:\n\t'
@@ -606,7 +646,7 @@ class Liouvillian():
         if np.any(self.Lrelax)>0:
             out+='Explicit relaxation\n'
             for ri in self.relax_info:
-                out+=f'{ri[0]} with arguments: '+','.join([f'{k} = {v}' for k,v in ri[1].items()])+'\n'
+                out+=f'{ri[0]} with arguments: '+', '.join([f'{k} = {v}' for k,v in ri[1].items()])+'\n'
         out+='\n\n'+super().__repr__()
         return out
     
