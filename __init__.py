@@ -6,7 +6,7 @@ from numpy import float64 as _rtype       #Not much gain if we reduced precision
 from numpy import complex128 as _ctype    #Also, overflow errors become common at lower precision
 Defaults.update({'rtype':_rtype,'ctype':_ctype,'parallel':True})
 
-from . import Tools
+# from . import Tools
 from .PowderAvg import PowderAvg
 from .SpinOp import SpinOp
 from .ExpSys import ExpSys
