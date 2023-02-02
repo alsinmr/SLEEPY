@@ -644,9 +644,9 @@ class Liouvillian():
             out+=self.kex.__repr__().replace('\n','\n\t')
             
         if np.any(self.Lrelax)>0:
-            out+='Explicit relaxation\n'
+            out+='\n\nExplicit relaxation\n'
             for ri in self.relax_info:
-                out+=f'{ri[0]} with arguments: '+', '.join([f'{k} = {v}' for k,v in ri[1].items()])+'\n'
+                out+=f'\t{ri[0]} with arguments: '+', '.join([f'{k} = {v}' for k,v in ri[1].items()])+'\n'
         out+='\n\n'+super().__repr__()
         return out
     

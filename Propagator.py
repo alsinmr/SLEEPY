@@ -122,6 +122,7 @@ class Propagator():
             L.fields.update(ini_fields)
             
             self.U=U.U
+        return self
          
     @property
     def rotor_fraction(self):

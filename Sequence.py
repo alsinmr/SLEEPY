@@ -340,7 +340,7 @@ class Sequence():
          
         # self.L.rf.fields=ini_fields        
         
-        dct={'t':t,'v1':self.v1,'phase':self.phase,'voff':self.voff}
+        dct={'t':t,'v1':copy(self.v1),'phase':copy(self.phase),'voff':copy(self.voff)}
         self.expsys._tprop=0 if self.taur is None else tf%self.taur
         
         return Propagator(U=dct,t0=t0,tf=tf,taur=self.taur,L=self.L,isotropic=self.isotropic)
