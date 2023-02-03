@@ -672,7 +672,7 @@ class Rho():
                 return out
         
         
-    def plot(self,det_num:int=0,ax=None,FT:bool=False,imag:bool=True,apodize=False,axis='kHz/ms'):
+    def plot(self,det_num:int=0,ax=None,FT:bool=False,imag:bool=True,apodize=False,axis='kHz/ms',**kwargs):
         """
         Plots the amplitudes as a function of time or frequency
 
@@ -720,18 +720,18 @@ class Rho():
             else:
                 v_axis=self.v_axis
                 label=r'$\nu$ / Hz'
-            ax.plot(v_axis,self.FT[det_num].real)
+            ax.plot(v_axis,self.FT[det_num].real,**kwargs)
             if imag:
-                ax.plot(self.v_axis/1e3,self.FT[det_num].imag)
+                ax.plot(self.v_axis/1e3,self.FT[det_num].imag,**kwargs)
                 ax.legend(('Re','Im'))
             ax.set_xlabel(label)
             ax.set_ylabel('I / a.u.')
             ax.invert_xaxis()
         else:
             if self._tstatus==0:
-                ax.plot(np.arange(len(self.t_axis)),self.I[det_num].real)
+                ax.plot(np.arange(len(self.t_axis)),self.I[det_num].real,**kwargs)
                 if not(isinstance(self.detect[det_num],str)) or self.detect[det_num][-1] in ['p','m'] and imag:
-                    ax.plot(np.arange(len(self.t_axis)),self.I[det_num].imag)
+                    ax.plot(np.arange(len(self.t_axis)),self.I[det_num].imag,**kwargs)
                     ax.legend(('Re','Im'))
                 ax.set_ylabel('<'+self.detect[det_num]+'>')
                 ax.set_xlabel('Acquisition Number')
@@ -749,9 +749,9 @@ class Rho():
                 else:
                     t_axis=self.t_axis*1e3
                     label=r'$t$ / ms'
-                ax.plot(t_axis,self.I[det_num].real)
+                ax.plot(t_axis,self.I[det_num].real,**kwargs)
                 if not(isinstance(self.detect[det_num],str)) or self.detect[det_num][-1] in ['p','m'] and imag:
-                    ax.plot(t_axis,self.I[det_num].imag)
+                    ax.plot(t_axis,self.I[det_num].imag,**kwargs)
                     ax.legend(('Re','Im'))
                 ax.set_ylabel('<'+self.detect[det_num]+'>')
                 ax.set_xlabel(label)
