@@ -836,9 +836,11 @@ class Rho():
             Rout=list()
             Aout=list()
             for R0,A0,f0 in zip(R,A,f):
-                i=np.abs(f0)<1e-5  #non-oscillating terms (??)
+                i=np.logical_and(np.abs(f0)<1e-5,np.abs(A0)>1e-2)  #non-oscillating terms (??)
                 Aout.append(A0[i].sum())
-                Rout.append((R0[i]*np.abs(A0[i])).sum()/np.abs(A0[i]).sum())
+                Rout.append((R0[i]*A0[i]).sum()/Aout[-1])
+                print([f'{R00:.2f}' for R00 in R0[i]])
+                print([f'{R00:.2f}' for R00 in A0[i]])
             R=np.array(Rout)
             A=np.array(Aout)
                 
