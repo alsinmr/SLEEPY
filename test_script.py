@@ -23,7 +23,7 @@ expsys1.set_inter('dipole',delta=22000,i0=0,i1=1,euler=[0,90*np.pi/180,0])
 H0=RS.Hamiltonian(expsys=expsys)
 H1=RS.Hamiltonian(expsys=expsys1)
 
-kex=np.array([[-5e6,5e6],[5e6,-5e6]])
+kex=np.array([[-1e6,1e6],[1e6,-1e6]])
 L=RS.Liouvillian((H0,H1),kex=kex)
 # L=RS.Liouvillian(H0)
 

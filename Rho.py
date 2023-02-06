@@ -814,6 +814,7 @@ class Rho():
         
         if not(avg):assert not(pwdavg),"If avg is False, then pwdavg must also be false"
         
+        if self.L is None:self.L=U.L
         
 
         R=np.zeros([U.L.pwdavg.N,U.shape[0]],dtype=float)
@@ -837,7 +838,7 @@ class Rho():
             for R0,A0,f0 in zip(R,A,f):
                 i=np.abs(f0)<1e-5  #non-oscillating terms (??)
                 Aout.append(A0[i].sum())
-                Rout.append((R0[i]*A0[i]).sum()/Aout[-1])
+                Rout.append((R0[i]*np.abs(A0[i])).sum()/np.abs(A0[i]).sum())
             R=np.array(Rout)
             A=np.array(Aout)
                 
