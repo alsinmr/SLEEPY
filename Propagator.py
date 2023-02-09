@@ -33,7 +33,7 @@ class Propagator():
         return True
     
     @property
-    def isotropic(self):
+    def isotropic(self):            #Not sure this is necessary. Why not just get the value out of L?
         return self._isotropic
         
     @property
@@ -47,6 +47,10 @@ class Propagator():
     @property
     def shape(self):
         return self.L.shape
+    
+    @property
+    def static(self):
+        return self.L.static
     
 
     
@@ -145,7 +149,7 @@ class Propagator():
             return NotImplemented
         
         
-        if not(self.isotropic) and np.abs((self.t0-U.tf)%self.taur)>tol and np.abs((U.tf-self.t0)%self.taur)>tol:
+        if not(self.static) and np.abs((self.t0-U.tf)%self.taur)>tol and np.abs((U.tf-self.t0)%self.taur)>tol:
             warnings.warn(f'\nFirst propagator ends at {U.tf%self.taur} but second propagator starts at {self.t0%U.taur}')
             # print(f'Warning: First propagator ends at {U.tf%self.taur} but second propagator starts at {self.t0%U.taur}')
         
@@ -183,10 +187,10 @@ class Propagator():
 
         """
 
-        if not(self.isotropic) and self.Dt%self.taur>tol:
+        if not(self.static) and self.Dt%self.taur>tol:
             warnings.warn('Power of a propagator should only be used if the propagator is exactly one rotor period')
 
-        if not(self.isotropic) and not(isinstance(n,int)):
+        if not(self.static) and not(isinstance(n,int)):
             warnings.warn('Warning: non-integer powers may not accurately reflect state of propagator in the middle of a rotor period')
 
     

@@ -65,7 +65,7 @@ class Liouvillian():
 
         
         self.kex=kex
-        self.sub=False
+        # self.sub=False
         
         self._Lex=None
         self._index=-1
@@ -76,7 +76,12 @@ class Liouvillian():
         self.relax_info=[]  #Keeps a short record of what kind of relaxation is used
     
 
-    
+        
+    @property
+    def sub(self):
+        if self._index==-1:return False
+        return True
+
     @property
     def _ctype(self):
         return Defaults['ctype']
@@ -229,7 +234,8 @@ class Liouvillian():
         out=copy(self)
         
         out.H=[H0[i] for H0 in self.H]
-        out.sub=True
+        out._index=i
+        # out.sub=True
         return out
     
     def add_relax(self,M=None,Type:str=None,**kwargs):

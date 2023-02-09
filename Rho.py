@@ -722,7 +722,7 @@ class Rho():
                 label=r'$\nu$ / Hz'
             ax.plot(v_axis,self.FT[det_num].real,**kwargs)
             if imag:
-                ax.plot(self.v_axis/1e3,self.FT[det_num].imag,**kwargs)
+                ax.plot(v_axis,self.FT[det_num].imag,**kwargs)
                 ax.legend(('Re','Im'))
             ax.set_xlabel(label)
             ax.set_ylabel('I / a.u.')

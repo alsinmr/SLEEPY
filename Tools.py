@@ -131,10 +131,8 @@ def d2(c=0,s=None,m=None,mp=0):
     "First, for m=-2"
     
     if m is None or mp is None:
-        if m is None and mp is None:
-            print('m or mp must be specified')
-            return
-        elif m is None:
+        assert m is not None or mp is not None,"m or mp must be specified"
+        if m is None:
             if mp==-2:
                 index=range(0,5)
             elif mp==-1:

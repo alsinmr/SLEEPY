@@ -92,6 +92,79 @@ class OneSpin():
                 op=np.kron(np.kron(np.eye(Mult[:n].prod(),dtype=Defaults['ctype']),op0),
                             np.eye(Mult[n+1:].prod(),dtype=Defaults['ctype']))
                 setattr(self,Type,op)
+        self.T=SphericalTensor(self)
     def __getattribute__(self, name):
         return copy(super().__getattribute__(name))  #Ensure we don't modify the original object
+    
+class SphericalTensor():
+    def __init__(self,Op0,S0:float=None,Op1=None):
+        """
+        Initialize spherical tensors for one or two spins. Note that we only
+        calculate up to rank 2.
+
+        Parameters
+        ----------
+        Op0 : OneSpin
+            One-spin spin operator .
+        Op1 : OneSpin, optional
+            One-spin operator for a second spin. Use for calculating the tensor
+            product. The default is None.
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        self._Op0=Op0
+        self._Op1=Op1
+        self._S0=S0
+        
+        if Op1 is None:
+            # M=np.round(2*S0+1).astype(int)
+            self._T=[None for _ in range(2)]
+            self._T[0]=[Op0.eye]
+            self._T[1]=[-1/np.sqrt(2)*Op0.p,Op0.z,1/np.sqrt(2)*Op0.m]
+            return
+        else:
+            self._T=[None for _ in range(3)]
+            self._T[0]=[-1/np.sqrt(3)*(Op0.x@Op1.x+Op0.y@Op1.y+Op0.z*Op1.z)]
+            
+            self._T[1]=[-1/2*(Op0.m@Op1.z-Op0.z@Op1.m),
+                        -1/(2*np.sqrt(2))*(Op0.p@Op1.m-Op0.m@Op1.p),
+                        -1/2*(Op0.p@Op1.z-Op0.z@Op1.p)]
+            
+            self._T[2]=[1/2*Op0.m@Op1.m,
+                        -1/2*(Op0.p@Op1.z+Op0.z@Op1.p),
+                        1/np.sqrt(6)*(2*Op0.z@Op1.z-(Op0.x@Op1.x+Op0.y@Op1.y)),
+                        1/2*(Op0.m@Op1.z+Op0.z@Op1.m),
+                        1/2*Op0.p@Op1.p]
+            
+        
+    def __getitem__(self,index):
+        assert isinstance(index,tuple) and len(index)==2,"Spherical tensors should be accessed with a 2-element tuple"
+        rank,comp=index
+        assert rank<len(self._T),f"This spherical tensor object only contains objects up to rank {len(self._T)-1}"
+        assert np.abs(comp)<=rank,f"|comp| cannot be greater than rank ({rank})"
+        
+        return self._T[rank][comp+rank]
+        
+    def __mul__(self,T):
+        """
+        Returns the Tensor product for two tensors (up to rank-2 components)
+
+        Parameters
+        ----------
+        T : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        """
+        assert str(T.__class__).rsplit('.',maxsplit=1)[1].split("'")[0]=='SphericalTensor',"Tensor product only defined between two spherical tensors"
+        return SphericalTensor(Op0=self._Op0,Op1=T._Op0)
+        
+        
         

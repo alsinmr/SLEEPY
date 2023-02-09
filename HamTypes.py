@@ -148,7 +148,7 @@ def J(es,i0:int,i1:int,J:float):
 
     Returns
     -------
-    None.
+    Ham1inter
 
     """
     S,I=es.Op[i0],es.Op[i1]
@@ -174,7 +174,7 @@ def CS(es,i:int,ppm:float):
 
     Returns
     -------
-    None.
+    Ham1inter
 
     """
     
@@ -204,7 +204,7 @@ def CSA(es,i:int,delta:float,eta:float=0,euler=[0,0,0]):
 
     Returns
     -------
-    None.
+    Ham1inter
 
     """
     
@@ -244,7 +244,7 @@ def hyperfine(es,i0:int,i1:int,Axx:float=0,Ayy:float=0,Azz:float=0,euler=[0,0,0]
 
     Returns
     -------
-    None.
+    Ham1inter
 
     """
     if es.Nucs[i0][0]!='e' and es.Nucs[i1][0]!='e':
@@ -265,7 +265,42 @@ def hyperfine(es,i0:int,i1:int,Axx:float=0,Ayy:float=0,Azz:float=0,euler=[0,0,0]
     else:
         return Ham1inter(H=M*iso,isotropic=True,info=info)
 
+def quadrupole(es,i:int,delta:float=0,eta:float=0,euler=[0,0,0]):
+    """
+    Quadrupole coupling defined by its anisotropy (delta) and asymmetry (eta). 
     
+    (Maybe we would rather have the input be Cqcc?)
+
+    Parameters
+    ----------
+    es : exp_sys
+        Experimental system object.
+    i : int
+        index of the spin.
+    delta : float
+        anisotropy of the quadrupole coupling. Default is 0
+    eta   : float
+        asymmetry of the quadrupole coupling (usually 0). Default is 0
+    euler : list
+        3 elements giving the euler angles for the quadrupole coupling.
+        Default is [0,0,0]
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    S=es.Op[i]
+
+    I=es.S[i]
+
+    M=1/2*(3*S.z@S.z-I*(I+1)*S.eye)     
+    
+    info={'Type':'quadrupole','i':i,'delta':delta,'eta':eta,'euler':euler}
+    print('Quadrupole Hamiltonian does not include 2nd order terms')
+    return Ham1inter(M=M,isotropic=False,delta=delta,eta=eta,iso=0,euler=euler,
+                      rotor_angle=es.rotor_angle,info=info)
 
 
 

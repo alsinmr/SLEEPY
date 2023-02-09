@@ -44,7 +44,7 @@ class Hamiltonian():
         for Ham in self.Hinter:Ham.pwdavg=self.pwdavg #Share the powder average
             
             
-        self.sub=False
+        # self.sub=False
         self._index=-1
         
         self._initialized=True
@@ -52,6 +52,11 @@ class Hamiltonian():
     @property
     def _ctype(self):
         return Defaults['ctype']
+    
+    @property
+    def sub(self):
+        if self._index==-1:return False
+        return True
     
     @property
     def rf(self):
@@ -98,7 +103,7 @@ class Hamiltonian():
         for k,H0 in enumerate(self.Hinter):
             out.Hinter[k]=H0[i]
         out._index=i
-        out.sub=True
+        # out.sub=True
         return out
     
     def __len__(self):
