@@ -489,7 +489,7 @@ class Rho():
                 return self
             
             nsteps=np.round(seq.taur/seq.Dt,0).astype(int)
-            assert np.abs(nsteps*seq.Dt-seq.taur)<tol,"Sequences shorter than a rotor period can only be propagated if seq.Dt fits an integer number of times into the rotor period"
+            assert np.abs(nsteps*seq.Dt-seq.taur)<tol,"Sequences shorter than a rotor period can only be propagated via DetProp if seq.Dt fits an integer number of times into the rotor period"
             
             seq.reset_prop_time(self.t)
             

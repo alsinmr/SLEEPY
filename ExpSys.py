@@ -22,7 +22,7 @@ class ExpSys():
     all nuclei in the spin system.
     """
     _iso_powder=PowderAvg('alpha0beta0')
-    def __init__(self,v0H=None,B0=None,Nucs=[],vr=10000,T_K=298,rotor_angle=np.arccos(np.sqrt(1/3)),n_gamma=100,pwdavg=PowderAvg()):
+    def __init__(self,v0H=None,B0=None,Nucs=[],vr=10000,T_K=298,rotor_angle=np.arccos(np.sqrt(1/3)),n_gamma=100,pwdavg=PowderAvg(),LF:list=None):
         
         assert B0 is not None or v0H is not None,"B0 or v0H must be specified"
         self.B0=B0 if B0 is not None else v0H*1e6/NucInfo('1H')
@@ -30,6 +30,14 @@ class ExpSys():
         S=np.array([NucInfo(nuc,'spin') for nuc in self.Nucs])
         self.gamma=np.array([NucInfo(nuc,'gyro') for nuc in self.Nucs])
         self.Op=SpinOp(S)
+        if LF is None or LF is False:
+            self.LF=[False for _ in range(len(self.Op))]  #Calculate Hamiltonians in the lab frame
+        elif hasattr(LF,'__len__'):
+            assert len(LF)==len(self.Op),'LF (Lab frame) must be a list of logicals with same length as number of spins'
+            self.LF=LF
+        else:
+            assert LF is True or LF is False,'LF must be a list of logicals or a single boolean'
+            self.LF=[LF for _ in range(len(self.Op))]
         self._index=-1
         self.vr=vr
         self.T_K=T_K

@@ -199,7 +199,7 @@ class RotInter():
         This returns the n=-2,-1,0,1,2 rotating components of the term A0 in the
         lab frame, after scaling by 2/np.sqrt(6) (that is, we return the Azz 
         component). Note, the off-diagonal terms of the tensors are omitted in 
-        this case (the A-2,A-1,A1,A2 componets). 
+        this case (the A-2,A-1,A1,A2 components). 
 
         Output of this term sould be multiplied by T_{2,0},
         which we give for a few interactions:
@@ -207,8 +207,6 @@ class RotInter():
             Homonuclear dipole:     sqrt(2/3)*(Iz*Sz-1/2*(Ix*Sx+Iy*Sy))
             CSA:                    sqrt(2/3)*Iz
             
-        Note that the isotropic part of the interaction is added to the n=0
-        (non-rotating) component
         """
         # pwdavg=self.pwdavg
         rotor_angle=self.rotor_angle

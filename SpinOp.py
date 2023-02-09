@@ -120,28 +120,150 @@ class SphericalTensor():
         self._Op1=Op1
         self._S0=S0
         
-        if Op1 is None:
-            # M=np.round(2*S0+1).astype(int)
-            self._T=[None for _ in range(2)]
-            self._T[0]=[Op0.eye]
-            self._T[1]=[-1/np.sqrt(2)*Op0.p,Op0.z,1/np.sqrt(2)*Op0.m]
-            return
+        self._T=None
+        
+        # if Op1 is None:
+        #     # M=np.round(2*S0+1).astype(int)
+        #     self._T=[None for _ in range(2)]
+        #     self._T[0]=[Op0.eye]
+        #     self._T[1]=[-1/np.sqrt(2)*Op0.p,Op0.z,1/np.sqrt(2)*Op0.m]
+        #     return
+        # else:
+        #     self._T=[None for _ in range(3)]
+        #     self._T[0]=[-1/np.sqrt(3)*(Op0.x@Op1.x+Op0.y@Op1.y+Op0.z*Op1.z)]
+            
+        #     self._T[1]=[-1/2*(Op0.m@Op1.z-Op0.z@Op1.m),
+        #                 -1/(2*np.sqrt(2))*(Op0.p@Op1.m-Op0.m@Op1.p),
+        #                 -1/2*(Op0.p@Op1.z-Op0.z@Op1.p)]
+            
+        #     self._T[2]=[1/2*Op0.m@Op1.m,
+        #                 -1/2*(Op0.p@Op1.z+Op0.z@Op1.p),
+        #                 1/np.sqrt(6)*(2*Op0.z@Op1.z-(Op0.x@Op1.x+Op0.y@Op1.y)),
+        #                 1/2*(Op0.m@Op1.z+Op0.z@Op1.m),
+        #                 1/2*Op0.p@Op1.p]
+            
+    def set_mode(self,mode:str=None):
+        """
+        Sets the type of rank-2 sphereical tensors to return. Options are as 
+        follows:
+            
+            If Op1 is not defined (1 spin):
+            '1spin': Rank-1, 1 spin tensors (default)
+            'B0_LF': Interaction between field and spin. 
+            
+            If Op1 is defined (2-spin)
+            'LF_LF': Full rank-2 tensors in the lab frame (default)
+            'LF_RF': First spin in lab frame, second spin in rotating frame
+            'RF_LF': First spin in rotating frame, second spin in lab frame
+            'het'  : Both spins in rotating frame. Heteronuclear coupling
+            'homo' : Both spins in rotating frame. Homonuclear coupling
+
+        Parameters
+        ----------
+        mode : str, optional
+            DESCRIPTION. The default is 'LF_LF'.
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        if self._Op1 is None:
+            Op=self._Op0
+            if mode is None:mode='1spin'
+            assert mode in ['1spin','B0_LF'],'1-spin modes are 1spin and B0_LF'
+            if mode=='1spin':
+                self._T=[None for _ in range(2)]
+                self._T[0]=[Op.eye]
+                self._T[1]=[-1/np.sqrt(2)*Op.p,Op.z,1/np.sqrt(2)*Op.m]
+            elif mode=='B0_LF':
+                zero=np.zeros(Op.eye.shape)
+                self._T=[None for _ in range(3)]
+                self._T[0]=[-1/np.sqrt(3)*Op.z]
+                self._T[1]=[-1/2*Op.m,zero,-1/2*Op.p] #Not really convinced about sign here
+                self._T[2]=[zero,1/2*Op.m,np.sqrt(2/3)*Op.z,-1/2*Op.p,zero]
         else:
+            if mode is None:mode='LF_LF'
+            assert mode in ['LF_LF','LF_RF','RF_LF','het','homo'],'2-spin modes are LF_LF,LF_RF,RF_LF,het, and homo'
+            Op0,Op1=self._Op0,self._Op1
+            
             self._T=[None for _ in range(3)]
-            self._T[0]=[-1/np.sqrt(3)*(Op0.x@Op1.x+Op0.y@Op1.y+Op0.z*Op1.z)]
+            if mode=='LF_LF':
+                self._T[0]=[-1/np.sqrt(3)*(Op0.x@Op1.x+Op0.y@Op1.y+Op0.z*Op1.z)]
+                
+                self._T[1]=[-1/2*(Op0.m@Op1.z-Op0.z@Op1.m),
+                            -1/(2*np.sqrt(2))*(Op0.p@Op1.m-Op0.m@Op1.p),
+                            -1/2*(Op0.p@Op1.z-Op0.z@Op1.p)]
+                
+                self._T[2]=[1/2*Op0.m@Op1.m,
+                            -1/2*(Op0.p@Op1.z+Op0.z@Op1.p),
+                            1/np.sqrt(6)*(2*Op0.z@Op1.z-(Op0.x@Op1.x+Op0.y@Op1.y)),
+                            1/2*(Op0.m@Op1.z+Op0.z@Op1.m),
+                            1/2*Op0.p@Op1.p]
+            elif mode=='LF_RF':
+                zero=np.zeros(Op0.eye.shape)
+                self._T[0]=[-1/np.sqrt(3)*(Op0.z*Op1.z)]
+                
+                self._T[1]=[-1/2*(Op0.m@Op1.z),
+                            zero,
+                            -1/2*(Op0.p@Op1.z)]
+                
+                self._T[2]=[zero,
+                            -1/2*(Op0.p@Op1.z),
+                            1/np.sqrt(6)*(2*Op0.z@Op1.z),
+                            1/2*(Op0.m@Op1.z),
+                            zero]
+            elif mode=='RF_LF':
+                zero=np.zeros(Op0.eye.shape)
+                self._T[0]=[-1/np.sqrt(3)*(Op0.z*Op1.z)]
+                
+                self._T[1]=[-1/2*(-Op0.z@Op1.m),
+                            zero,
+                            -1/2*(-Op0.z@Op1.p)]
+                
+                self._T[2]=[zero,
+                            -1/2*(Op0.z@Op1.p),
+                            1/np.sqrt(6)*(2*Op0.z@Op1.z-(Op0.x@Op1.x+Op0.y@Op1.y)),
+                            1/2*(Op0.z@Op1.m),
+                            zero]
+            elif mode=='het':
+                zero=np.zeros(Op0.eye.shape)
+                self._T[0]=[-1/np.sqrt(3)*(Op0.z*Op1.z)]
+                
+                self._T[1]=[zero,
+                            -1/(2*np.sqrt(2))*(Op0.p@Op1.m-Op0.m@Op1.p),
+                            zero]
+                
+                self._T[2]=[zero,
+                            zero,
+                            1/np.sqrt(6)*(2*Op0.z@Op1.z),
+                            zero,
+                            zero]
+            elif mode=='homo':
+                zero=np.zeros(Op0.eye.shape)
+                self._T[0]=[-1/np.sqrt(3)*(Op0.x@Op1.x+Op0.y@Op1.y+Op0.z*Op1.z)]
+                
+                self._T[1]=[zero,
+                            -1/(2*np.sqrt(2))*(Op0.p@Op1.m-Op0.m@Op1.p),
+                            zero]
+                
+                self._T[2]=[zero,
+                            zero,
+                            1/np.sqrt(6)*(2*Op0.z@Op1.z-(Op0.x@Op1.x+Op0.y@Op1.y)),
+                            zero,
+                            zero]
+            else:
+                assert 0,'Unknown mode'
+                
+                
+                    
+                
             
-            self._T[1]=[-1/2*(Op0.m@Op1.z-Op0.z@Op1.m),
-                        -1/(2*np.sqrt(2))*(Op0.p@Op1.m-Op0.m@Op1.p),
-                        -1/2*(Op0.p@Op1.z-Op0.z@Op1.p)]
-            
-            self._T[2]=[1/2*Op0.m@Op1.m,
-                        -1/2*(Op0.p@Op1.z+Op0.z@Op1.p),
-                        1/np.sqrt(6)*(2*Op0.z@Op1.z-(Op0.x@Op1.x+Op0.y@Op1.y)),
-                        1/2*(Op0.m@Op1.z+Op0.z@Op1.m),
-                        1/2*Op0.p@Op1.p]
             
         
     def __getitem__(self,index):
+        if self._T is None:self.set_mode()
         assert isinstance(index,tuple) and len(index)==2,"Spherical tensors should be accessed with a 2-element tuple"
         rank,comp=index
         assert rank<len(self._T),f"This spherical tensor object only contains objects up to rank {len(self._T)-1}"
