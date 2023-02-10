@@ -94,6 +94,8 @@ class OneSpin():
                 setattr(self,Type,op)
         self.T=SphericalTensor(self)
     def __getattribute__(self, name):
+        if name=='T':
+            return super().__getattribute__(name)
         return copy(super().__getattribute__(name))  #Ensure we don't modify the original object
     
 class SphericalTensor():
@@ -175,6 +177,7 @@ class SphericalTensor():
             assert mode in ['1spin','B0_LF'],'1-spin modes are 1spin and B0_LF'
             if mode=='1spin':
                 self._T=[None for _ in range(2)]
+                print('checkpoint')
                 self._T[0]=[Op.eye]
                 self._T[1]=[-1/np.sqrt(2)*Op.p,Op.z,1/np.sqrt(2)*Op.m]
             elif mode=='B0_LF':
@@ -264,7 +267,9 @@ class SphericalTensor():
         
     def __getitem__(self,index):
         if self._T is None:self.set_mode()
-        assert isinstance(index,tuple) and len(index)==2,"Spherical tensors should be accessed with a 2-element tuple"
+        if isinstance(index,int):
+            return self._T[index]
+        assert isinstance(index,tuple) and len(index)==2,"Spherical tensors should be accessed with one element rank index or a 2-element tuple"
         rank,comp=index
         assert rank<len(self._T),f"This spherical tensor object only contains objects up to rank {len(self._T)-1}"
         assert np.abs(comp)<=rank,f"|comp| cannot be greater than rank ({rank})"

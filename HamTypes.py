@@ -13,15 +13,15 @@ from copy import copy
 from . import Defaults
 
 class Ham1inter():
-    def __init__(self,M=None,H=None,isotropic=False,delta=0,eta=0,iso=0,euler=[0,0,0],
+    def __init__(self,M=None,H=None,T=None,isotropic=False,delta=0,eta=0,euler=[0,0,0],
                  rotor_angle=np.arccos(np.sqrt(1/3)),info={}):
         
         self.M=M
+        self.T=T
         self.H=H
         self.isotropic=isotropic
         self.delta=delta
         self.eta=eta
-        self.iso=iso
         self.euler=euler
         self.pwdavg=None
         self.rotInter=None
@@ -53,7 +53,10 @@ class Ham1inter():
             if self.rotInter is None:
                 self.rotInter=RotInter(self.pwdavg,delta=self.delta,eta=self.eta,euler=self.euler,rotor_angle=self.rotor_angle)
             out=copy(self)
-            out.A=self.rotInter.Azz[i]
+            if self.T is None:
+                out.A=self.rotInter.Azz[i]
+            else:
+                out.A=self.rotInter.Afull[i]
             return out
         return self
             
@@ -86,14 +89,16 @@ class Ham1inter():
                 return self.H
             else:
                 return np.zeros(self.H.shape,dtype=self._ctype)
-            
-        if self.A is None:
-            return None
-
-        if self.H is None:
-            return self.M*self.A[n+2]
+        
+        if self.T is None:
+            out=self.M*self.A[n+2]
         else:
-            return self.H[n+2]
+            out=np.sum([A*T*(-1)**q for T,A,q in zip(self.T[2],self.A[n],range(-2,3))],axis=0)
+        
+        if self.H is not None and n==0:
+            out+=self.H
+
+        return out
 
 def dipole(es,i0:int,i1:int,delta:float,eta:float=0,euler=[0,0,0]):
     """
@@ -253,17 +258,32 @@ def hyperfine(es,i0:int,i1:int,Axx:float=0,Ayy:float=0,Azz:float=0,euler=[0,0,0]
     avg=(Axx+Ayy+Azz)/3
     Ayy,Axx,Azz=np.sort([Axx-avg,Ayy-avg,Azz-avg])
     
-    iso=avg*np.sqrt(3/2)  #Cancel out the sqrt(2/3) in M
+    
     delta=Azz
     eta=(Ayy-Axx)/delta if delta else 0
     info={'Type':'Hyperfine','i0':i0,'i1':i1,'Axx':Axx+avg,'Ayy':Ayy+avg,'Azz':Azz+avg,'euler':euler}
 
-    S,I=es.Op[i0],es.Op[i1]
-    M=np.sqrt(2/3)*S.z*I.z
-    if delta:                        
-        return Ham1inter(M=M,isotropic=False,delta=delta,eta=eta,iso=iso,euler=euler,rotor_angle=es.rotor_angle,info=info)
-    else:
-        return Ham1inter(H=M*iso,isotropic=True,info=info)
+    if es.LF[i0] or es.LF[i1]:  #Lab frame calculation
+        T=es.Op[i0].T*es.Op[i1].T
+        H=-np.sqrt(3)*avg*T[0,0]   #Rank-0 contribution
+        if es.LF[i0] and es.LF[i1]:
+            T.set_mode('LF_LF')
+        elif es.LF[i0]:
+            T.set_mode('LF_RF')
+        else:
+            T.set_mode('RF_LF')
+        if delta:
+            return Ham1inter(H=H,T=T,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info)
+        else:
+            return Ham1inter(H=H,isotropic=True,info=info)
+    else:  #Rotating frame calculation
+        S,I=es.Op[i0],es.Op[i1]
+        M=np.sqrt(2/3)*S.z*I.z
+        H=avg*S.z*I.z
+        if delta:                        
+            return Ham1inter(M=M,H=H,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info)
+        else:
+            return Ham1inter(H=H,isotropic=True,info=info)
 
 def quadrupole(es,i:int,delta:float=0,eta:float=0,euler=[0,0,0]):
     """

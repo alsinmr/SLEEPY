@@ -292,12 +292,12 @@ class RotInter():
         pwdavg=self.pwdavg
         rotor_angle=self.rotor_angle
         A=self.MOL
-        alpha,beta,gamma=[getattr(self.pwdavg,x) for x in ['alpha','beta','gamma']]
+        alpha,beta,gamma=[getattr(pwdavg,x) for x in ['alpha','beta','gamma']]
         
         "Now the rotor frame"
         A=np.array([(D2(alpha,beta,gamma,mp=None,m=m)*A).sum(1) for m in range(-2,3)])
         
-        A=np.array([(d2(rotor_angle,mp=None,m=0)*A.T).T for m in range(-2,3)]).T
+        A=np.array([(d2(rotor_angle,mp=None,m=m)*A.T).T for m in range(-2,3)]).T
         
         self.__Afull=A
     
