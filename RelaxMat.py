@@ -7,13 +7,14 @@ Created on Tue Jan 24 13:55:04 2023
 """
 
 import numpy as np
+from scipy.linalg import expm
 from . import Defaults
 from .Tools import Ham2Super
 
 rtype=Defaults['rtype']
 
 #%% Relaxation Functions    
-def T1(expsys,i:int,T1:float,Peq=False):
+def T1(expsys,i:int,T1:float):
     """
     Constructs a T1 matrix for a given spin in the spin-system, and expands it
     to the full size of the Liouville matrix (for 1 Hamiltonian).
@@ -52,38 +53,26 @@ def T1(expsys,i:int,T1:float,Peq=False):
     p*=1/(T1*2)
     
     # Add offset to get desired polarization
-    if Peq:
-        Peq=expsys.Peq[i]
+    # if Peq:
+    #     Peq=expsys.Peq[i]
         
-        peq=np.zeros([N,N])
-        for n in range(N-1):
-            peq[n,n+1]=Peq
-            peq[n+1,n]=-Peq
-        peq-=np.diag(peq.sum(0))
-        peq*=1/(T1*2)
+    #     peq=np.zeros([N,N])
+    #     for n in range(N-1):
+    #         peq[n,n+1]=Peq
+    #         peq[n+1,n]=-Peq
+    #     peq-=np.diag(peq.sum(0))
+    #     peq*=1/(T1*2)
         
-        p+=peq
+    #     p+=peq
     
     
     sz=expsys.Op.Mult.prod()
-    # diag=np.arange(0,sz**2,sz+1)
-    # step=expsys.Op.Mult[i+1:].prod()
-    # Len=expsys.Op.Mult[:i].prod()
 
-    # out=np.zeros([sz**2,sz**2],dtype=Defaults['rtype'])
-    # for m in range(Len):
-    #     diag0=diag[m*Len:(m+1)*Len]
-    #     for k in range(step):
-    #         for q,(d,d1) in enumerate(zip(diag0[k:sz//Len:step],diag0[k+step:sz//Len:step])):
-    #             out[d,d1]=p[q,q+1]
-    #         for q,(d,d1) in enumerate(zip(diag0[k+step:sz//Len:step],diag0[k:sz//Len:step])):
-    #             out[d,d1]=p[q+1,q]
-    #         for q,d in enumerate(diag0[k:sz//Len:step]):
-    #             out[d,d]=p[q,q]
-    
     Lp=Ham2Super(expsys.Op[i].p)
     Lm=Ham2Super(expsys.Op[i].m)
     M=Lp@Lm+Lm@Lp
+    return -M.real/(2*T1)/M[0,0].real
+    
     M-=np.diag(np.diag(M))
     index=np.argwhere(M)
     index.sort()
@@ -98,19 +87,6 @@ def T1(expsys,i:int,T1:float,Peq=False):
         # out[id1,id1]=p[1,1]
     out-=np.diag(out.sum(0))
 
-    
-    # P=np.zeros([N**2,N**2])
-    
-    # index=np.arange(0,N**2,N+1)
-    # for k in range(len(index)-1):
-    #     P[index[k],index[k+1]]=p[k,k+1]
-    #     P[index[k+1],index[k]]=p[k+1,k]
-    #     P[index[k],index[k]]=p[k,k]
-    # P[index[-1],index[-1]]=p[-1,-1]
-    
-    # Expand to the size of the full Liouville space
-    # out=np.kron(np.kron(np.eye(expsys.Op.Mult[:i].prod()**2),P),np.eye(expsys.Op.Mult[i+1:].prod()**2))
-    
     return out
 
 def T2(expsys,i:int,T2:float):
@@ -152,3 +128,33 @@ def T2(expsys,i:int,T2:float):
     out=(Lz@Lz).astype(bool).astype(Defaults['rtype'])*(-1/T2)
     
     return out
+
+def recovery(expsys,L):
+    # L.Lex
+    # d,v=np.linalg.eig(L.kex)
+    # pop=v[:,np.argmax(d)]    #We need to make sure we start at equilibrium
+    # pop/=pop.sum()
+    # N=expsys.Op.Mult.prod()
+    # rho_eq=np.zeros([N**2*len(L.H)],dtype=Defaults['ctype'])
+    # for k,H in enumerate(L[0].H):   #Here, we select the first element of powder average (wrong off magic angle?)
+    #     H0=H.Hn(0)
+    #     for q,b in enumerate(expsys.LF):
+    #         if not(b):
+    #             H0+=expsys.v0[q]*expsys.Op[q].z  #Don't forget the Larmor terms!
+    #     x=(expm(6.62607015e-34*H0/(1.380649e-23*expsys.T_K)))
+    #     Z=np.trace(x@x.conj().T)
+    #     # print(Z)
+    #     x-=np.eye(H0.shape[0])
+    #     x/=Z
+    #     # x/=expsys.Op.Mult.prod()
+        
+    #     rho_eq[k*N**2:(k+1)*N**2]=x.reshape(x.size)
+    
+    rho_eq=L.rho_eq()
+
+    Lrhoeq=(L[0].Ln(0)@rho_eq)
+    out=np.zeros(L[0].Ln(0).shape,dtype=Defaults['ctype'])
+    i=np.arange(0,Lrhoeq.size,expsys.Op.Mult.prod()+1)
+    out[:,i]=np.atleast_2d(Lrhoeq).T.repeat(i.size,axis=1)
+    L.recovery=-out
+    return -out

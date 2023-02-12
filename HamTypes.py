@@ -93,12 +93,32 @@ class Ham1inter():
         if self.T is None:
             out=self.M*self.A[n+2]
         else:
-            out=np.sum([A*T*(-1)**q for T,A,q in zip(self.T[2],self.A[n],range(-2,3))],axis=0)
+            out=np.sum([A*T*(-1)**q for T,A,q in zip(self.T[2],self.A[n+2],range(-2,3))],axis=0)
         
         if self.H is not None and n==0:
             out+=self.H
 
         return out
+
+def _larmor(es,i:int):
+    """
+    Larmor frequency Hamiltonian (for Lab-frame simulation)
+
+    Parameters
+    ----------
+    es : exp_sys
+        Experimental system object.
+    i : int
+        index of the spin.
+
+    Returns
+    -------
+    None.
+
+    """
+    info={'Type':'larmor','i':i}
+    S=es.Op[i]
+    return Ham1inter(H=es.v0[i]*S.z,isotropic=True,info=info)
 
 def dipole(es,i0:int,i1:int,delta:float,eta:float=0,euler=[0,0,0]):
     """

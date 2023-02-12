@@ -77,11 +77,16 @@ class Propagator():
         if self._eig is None:
             self._eig=list()
             Unew=list()
-            for U in self:
+            for k,U in enumerate(self):
                 d,v=np.linalg.eig(U)
                 dabs=np.abs(d)
                 i=dabs>1
                 d[i]/=dabs[i]
+                if self.L.Peq:
+                    i=np.argmax(d)
+                    v[:,i]=self.L.rho_eq(pwdindex=k)
+                    v[:,i]/=(v[:,i].conj()*v[:,i]).sum()
+                    d[i]=1.
                 self._eig.append((d,v))
                 if back_calc:
                     Unew.append(v@np.diag(d)@np.linalg.pinv(v))

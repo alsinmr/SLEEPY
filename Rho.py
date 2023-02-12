@@ -57,20 +57,24 @@ class Rho():
         
         self.rho0=rho0
         self.rho=copy(rho0)
-        if not(isinstance(detect,list)):detect=[detect]  #Make sure a list
+        if not(isinstance(detect,list)) and not(isinstance(detect,tuple)):detect=[detect]  #Make sure a list
         self.detect=detect
         self._L=None
+        
+        
         self._awaiting_detection=False  #Detection hanging because L not defined
         self._taxis=[]
         self._t=0
+        
+        if L is not None:self.L=L
         
         # self._Setup()
         self._apodize=False
     
     def __setattr__(self,name,value):
         if name=="L":
-            if value.L is not self.L and len(self.t_axis):
-                self.L=value.L
+            if value is not self.L and len(self.t_axis):
+                self.L=value
                 warnings.warn("Internal Liouvillian does not match propagator's Liouvillian, although system has already been propagated")
              
             super().__setattr__('_L',value)
@@ -252,7 +256,14 @@ class Rho():
         self._Ipwd=[[list() for _ in range(self.n_det)] for _ in range(self.pwdavg.N)]
         self._taxis=list()
         
-        self._rho0=self.Op2vec(self.strOp2vec(self.rho0))
+        if self.rho0=='Thermal':
+            rhoeq=self.L.rho_eq(sub1=True)
+            if self.L.Peq:
+                eye=np.tile(np.ravel(self.expsys.Op[0].eye),len(self.L.H))
+                rhoeq+=eye/self.expsys.Op.Mult.prod()
+                self._rho0=rhoeq
+        else:
+            self._rho0=self.Op2vec(self.strOp2vec(self.rho0))
         self._detect=[self.Op2vec(self.strOp2vec(det,detect=True),detect=True) for det in self.detect]
         self.reset()
         
@@ -401,7 +412,7 @@ class Rho():
             if self._awaiting_detection:
                 warnings.warn('Detection called twice before applying propagator. Second call ignored')
             self._awaiting_detection=True
-            return
+            return self
         
         self._taxis.append(self.t)
         for k,rho in enumerate(self._rho):
@@ -539,6 +550,9 @@ class Rho():
         elif OpName[-1] in ['x','y','z','p','m']:
             a=OpName[-1]
             Nuc=OpName[:-1]
+        elif len(OpName)>3 and OpName[-3:]=='eye':
+            a='eye'
+            Nuc=OpName[:-3]
         elif 'alpha' in OpName:
             a='alpha'
             Nuc=OpName[:-5]
@@ -547,6 +561,7 @@ class Rho():
             Nuc=OpName[:-4]
         else:
             return None
+        if Nuc=='e':Nuc='e-'
         return Nuc,a
     
     def OpScaling(self,OpName):  
@@ -600,8 +615,8 @@ class Rho():
             
             if self.L.Peq and not(detect):
                 Peq=self.expsys.Peq[i]
-                Op*=np.abs(Peq) #Start out at thermal polarization
-                Op+=self.expsys.Op[0].eye/2
+                Op*=Peq/self.expsys.Op.Mult.prod()*2 #Start out at thermal polarization
+                Op+=self.expsys.Op[0].eye/self.expsys.Op.Mult.prod()
             return Op
         
         if OpName=='Thermal':
@@ -609,7 +624,7 @@ class Rho():
             for op,peq,mult in zip(self.expsys.Op,self.expsys.Peq,self.expsys.Op.Mult):
                 Op+=op.z*peq
             if self.L.Peq:
-                Op+=op.eye/2
+                Op+=op.eye/self.expsys.Op.Mult.prod()
             return Op
         
         
@@ -627,8 +642,8 @@ class Rho():
         
         if self.L.Peq and not(detect):
             Peq=self.expsys.Peq[i0]
-            Op*=Peq  #Start out at thermal polarization
-            Op+=self.expsys.Op[0].eye/2
+            Op*=Peq/self.expsys.Op.Mult.prod()*2  #Start out at thermal polarization
+            Op+=self.expsys.Op[0].eye/self.expsys.Op.Mult.prod()
             # for op0,mult in zip(self.expsys.Op,self.expsys.Op.Mult):
             #     Op+=op0.eye/mult  #Add in the identity for relaxation to thermal equilibrium
 
@@ -656,16 +671,18 @@ class Rho():
         nHam=len(self.L.H)
         if detect:
             Op=Op.T.conj()
-            Op/=np.abs(np.trace(Op.T.conj()@Op))
+            Op/=np.abs(np.trace(Op.T.conj()@Op))/self.expsys.Op.Mult.prod()*2
             return np.tile(Op.reshape(Op.size),nHam)
         else:
-            if nHam==1:
+            if nHam==1 and False:
                 return Op.reshape(Op.size)
             else:
+                # Op/=np.abs(np.trace(Op.T.conj()@Op))
                 Op=Op.reshape(Op.size)
-                d,v=np.linalg.eig(self.L.kex)
-                pop=v[:,np.argmax(d)]    #We need to make sure we start at equilibrium
-                pop/=pop.sum()
+                pop=self.L.ex_pop
+                # d,v=np.linalg.eig(self.L.kex)
+                # pop=v[:,np.argmax(d)]    #We need to make sure we start at equilibrium
+                # pop/=pop.sum()
                 out=np.zeros([Op.size*nHam],dtype=self._ctype)
                 for k,pop0 in enumerate(pop):
                     out[k*Op.size:(k+1)*Op.size]=Op*pop0

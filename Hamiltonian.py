@@ -20,6 +20,7 @@ from copy import copy
 from .Tools import Ham2Super
 import numpy as np
 from . import Defaults
+from scipy.linalg import expm
 
 
 class Hamiltonian():
@@ -35,6 +36,11 @@ class Hamiltonian():
             Ham=getattr(HamTypes,dct.pop('Type'))(expsys,**dct)
             isotropic&=Ham.isotropic
             self.Hinter.append(Ham)
+        for k,b in enumerate(self.expsys.LF):
+            if b:
+                Ham=HamTypes._larmor(es=expsys,i=k)
+                self.Hinter.append(Ham)
+
         if isotropic:
             self.expsys.pwdavg=expsys._iso_powder #set powder average to isotropic average if un-used
             self.expsys.n_gamma=1
@@ -65,6 +71,10 @@ class Hamiltonian():
     @property
     def isotropic(self):
         return self._isotropic
+    
+    @property
+    def static(self):
+        return self.expsys.vr==0 or self.isotropic
     
     @property
     def expsys(self):
@@ -177,6 +187,46 @@ class Hamiltonian():
         """
         
         return Ham2Super(self.Hn(n))
+    
+    def rho_eq(self,Hindex:int=0,pwdindex:int=0,sub1:bool=False):
+        """
+        Returns the equilibrium density operator for a given element of the
+        powder average.
+        
+
+        Parameters
+        ----------
+        pwdindex : int, optional
+            Index of the element of the powder average. Should not have an 
+            influence unless the rotor is not at the magic angle or no 
+            spinning is included (static, anisotropic). The default is 0.
+        sub1 : bool, optional
+            Subtracts the identity from the density matrix. Primarily for
+            internal use.
+            The default is False
+
+        Returns
+        -------
+        None.
+
+        """
+        if self.static and not(self.isotropic): #Include all terms Hn
+            H=np.sum([self[Hindex].Hn(m) for m in range(-2,3)],axis=0)
+        else:
+            H=self[Hindex].Hn(0)
+        for k,LF in enumerate(self.expsys.LF):
+            if not(LF):
+                H+=self.expsys.v0[k]*self.expsys.Op[k].z
+            
+        rho_eq=expm(6.62607015e-34*H/(1.380649e-23*self.expsys.T_K))
+        rho_eq/=np.abs(rho_eq).sum()
+        if sub1:
+            eye=np.eye(rho_eq.shape[0])
+            rho_eq-=np.trace(rho_eq@eye)/rho_eq.shape[0]*eye
+        
+        
+        return rho_eq
+        
     
     def __repr__(self):
         out='Hamiltonian for the following experimental system:\n'

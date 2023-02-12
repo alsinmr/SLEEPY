@@ -38,8 +38,8 @@ class NucInfo(Info):
         if Nuc is None:
             return self
         
-        if Nuc=='D':
-            Nuc='2H'
+        if Nuc=='D':Nuc='2H'
+        if Nuc=='e':Nuc='e-'
  
         #Separate the mass number from the nucleus type       
         mass=re.findall(r'\d+',Nuc)

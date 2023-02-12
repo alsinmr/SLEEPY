@@ -126,9 +126,11 @@ class Liouvillian():
     
     @property
     def Peq(self):
+        # for ri in self.relax_info:
+        #     if 'Peq' in ri[1] and ri[1]['Peq']:
+        #         return True
         for ri in self.relax_info:
-            if 'Peq' in ri[1] and ri[1]['Peq']:
-                return True
+            if ri[0]=='recovery':return True
         return False
     
     @property
@@ -258,8 +260,14 @@ class Liouvillian():
         None.
 
         """
+        if self.Peq:
+            warnings.warn('recovery should always be the last term added to Lrelax')
+            
         if M is None:
-            if hasattr(RelaxMat,Type):
+            if Type=='recovery':
+                M=RelaxMat.recovery(expsys=self.expsys,L=self)
+                self.relax_info.append(('recovery',{}))
+            elif hasattr(RelaxMat,Type):
                 M=getattr(RelaxMat,Type)(expsys=self.expsys,**kwargs)
                 self.relax_info.append((Type,kwargs))
             else:
@@ -267,7 +275,7 @@ class Liouvillian():
                 return
         
         q=np.prod(self.H[0].shape)
-        self.Lrelax  #Call just to pre-allocate
+        self.Lrelax  #Call to make sure it's pre-allocated
         if M.shape[0]==q:
             for k,H0 in enumerate(self.H):
                 self._Lrelax[k*q:(k+1)*q][:,k*q:(k+1)*q]+=M
@@ -317,7 +325,7 @@ class Liouvillian():
     @property
     def Lrelax(self):
         if self._Lrelax is None:
-            self._Lrelax=np.zeros(self.shape,dtype=self._rtype)
+            self._Lrelax=np.zeros(self.shape,dtype=self._ctype)
         return self._Lrelax 
     
     @property
@@ -614,6 +622,65 @@ class Liouvillian():
         """
         return Sequence(self)
     
+    @property
+    def ex_pop(self):
+        """
+        Returns the populations resulting from chemical exchange.
+
+        Returns
+        -------
+        None.
+
+        """
+        self.Lex  #Forces a default kex if not defined
+        d,v=np.linalg.eig(self.kex)
+        pop=v[:,np.argmax(d)]
+        pop/=pop.sum()
+        return pop
+        
+        
+    
+    def rho_eq(self,Hindex:int=None,pwdindex:int=0,sub1:bool=False):
+        """
+        Returns the equilibrium density operator for a given Hamiltonian and
+        element of the powder average.
+        
+
+        Parameters
+        ----------
+        Hindex : int, optional
+            Index of the Hamiltonian, i.e. in case there are multiple 
+            Hamiltonians undergoing exchange. The default is None, which
+            will return the equilibrium density operator weighted by the 
+            populations resulting from the exchange matrix.
+        pwdindex : int, optional
+            Index of the element of the powder average. Should not have an 
+            influence unless the rotor is not at the magic angle or no 
+            spinning is included (static, anisotropic). The default is 0.
+        sub1 : bool, optional
+            Subtracts the identity from the density matrix. Primarily for
+            internal use.
+            The default is False
+
+        Returns
+        -------
+        None.
+
+        """
+        if Hindex is None:
+            pop=self.ex_pop
+            N=self.shape[0]//len(pop)
+            rho_eq=np.zeros(N*len(pop),dtype=self._ctype)
+            for k,p in enumerate(pop):
+                rho_eq[N*k:N*(k+1)]=self.rho_eq(k,pwdindex=pwdindex,sub1=sub1)*p
+            return rho_eq
+        else:
+            return self.H[Hindex].rho_eq(pwdindex=pwdindex,sub1=sub1).reshape(self.shape[0]//len(self.H))
+            
+        
+        
+        
+    
     def __len__(self):
         if self.pwdavg is None:return 1
         return self.pwdavg.N
@@ -652,7 +719,10 @@ class Liouvillian():
         if np.any(self.Lrelax)>0:
             out+='\n\nExplicit relaxation\n'
             for ri in self.relax_info:
-                out+=f'\t{ri[0]} with arguments: '+', '.join([f'{k} = {v}' for k,v in ri[1].items()])+'\n'
+                if len(ri[1]):
+                    out+=f'\t{ri[0]} with arguments: '+', '.join([f'{k} = {v}' for k,v in ri[1].items()])+'\n'
+                else:
+                    out+=f'\t{ri[0]}'
         out+='\n\n'+super().__repr__()
         return out
     
