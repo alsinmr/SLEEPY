@@ -74,7 +74,6 @@ class Rho():
     def __setattr__(self,name,value):
         if name=="L":
             if value is not self.L and len(self.t_axis):
-                self.L=value
                 warnings.warn("Internal Liouvillian does not match propagator's Liouvillian, although system has already been propagated")
              
             super().__setattr__('_L',value)
@@ -261,7 +260,7 @@ class Rho():
             if self.L.Peq:
                 eye=np.tile(np.ravel(self.expsys.Op[0].eye),len(self.L.H))
                 rhoeq+=eye/self.expsys.Op.Mult.prod()
-                self._rho0=rhoeq
+            self._rho0=rhoeq
         else:
             self._rho0=self.Op2vec(self.strOp2vec(self.rho0))
         self._detect=[self.Op2vec(self.strOp2vec(det,detect=True),detect=True) for det in self.detect]

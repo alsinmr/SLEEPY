@@ -292,6 +292,28 @@ def BlockDiagonal(M):
     
     return Blks
             
+
+def twoSite_kex(tc:float,p1:float=0.5):
+    """
+    Returns a matrix for two-site exchange with correlation time tc and 
+    population of the first state p1 (p2=1-p1)
+
+    Parameters
+    ----------
+    tc : float
+        Correlation time
+    p1 : float, optional
+        Population of state 1. The default is 0.5
+        
+
+    Returns
+    -------
+    np.array
+        kex matrix
+
+    """
+    
+    return 1/(2*tc)*(np.array([[-1,1],[1,-1]])+(2*p1-1)*np.array([[1,1],[-1,-1]]))
     
             
     
