@@ -214,7 +214,7 @@ class Liouvillian():
                 value=np.array(value)
                 assert value.shape[0]==value.shape[1],"Exchange matrix must be square"
                 assert value.shape[0]==len(self.H),f"For {len(self.H)} Hamiltonians, exchange matrix must be {len(self.H)}x{len(self.H)}"
-                if np.any(value.sum(0)):
+                if np.any(np.abs(value.sum(0))>1e-6):
                     warnings.warn("Invalid exchange matrix. Columns should sum to 0. Expect unphysical behavior.")
         
         super().__setattr__(name,value)
@@ -633,6 +633,8 @@ class Liouvillian():
 
         """
         self.Lex  #Forces a default kex if not defined
+        if np.abs(self.kex).max()==0:  #All zeros– assume uniform population
+            return np.ones(self.kex.shape[0])/self.kex.shape[0]
         d,v=np.linalg.eig(self.kex)
         pop=v[:,np.argmax(d)]
         pop/=pop.sum()
@@ -677,7 +679,24 @@ class Liouvillian():
         else:
             return self.H[Hindex].rho_eq(pwdindex=pwdindex,sub1=sub1).reshape(self.shape[0]//len(self.H))
             
-        
+    @property    
+    def Energy(self):
+        """
+        Energy for each of the NxNxnHam states in the Liouvillian, including 
+        energy from the Larmor frequency (regardless of whether in lab frame).
+        Neglects rotating terms, Hn, for n!=0
+
+        Returns
+        -------
+        None.
+
+        """
+        Energy=np.zeros(self.shape[0])
+        N=self.H[0].shape[0]**2
+        for k,H in enumerate(self.H):
+            Energy[k*N:(k+1)*N]=H.Energy
+        return Energy
+            
         
         
     

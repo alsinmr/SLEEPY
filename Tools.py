@@ -314,6 +314,24 @@ def twoSite_kex(tc:float,p1:float=0.5):
     """
     
     return 1/(2*tc)*(np.array([[-1,1],[1,-1]])+(2*p1-1)*np.array([[1,1],[-1,-1]]))
+
+def fourSite_sym(tc:float):
+    """
+    Exchange matrix which can be used to mimic isotropic tumbling, replaced
+    with a four site isotropic hopping. Should be coupled with a tetrahedral
+    hopping geometry for isotropic behavior
+
+    Parameters
+    ----------
+    tc : float
+        correlation time.
+
+    Returns
+    -------
+    None.
+
+    """
+    return 1/(4*tc)*(np.ones([4,4])-np.eye(4)*4)
     
             
     

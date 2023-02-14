@@ -45,12 +45,12 @@ def T1(expsys,i:int,T1:float):
     N=expsys.Op.Mult[i]
     
     # Matrix leading to T1 relaxation
-    p=np.zeros([N,N])
-    for n in range(N-1):
-        p[n,n+1]=1
-        p[n+1,n]=1
-    p-=np.diag(p.sum(0))
-    p*=1/(T1*2)
+    # p=np.zeros([N,N])
+    # for n in range(N-1):
+    #     p[n,n+1]=1
+    #     p[n+1,n]=1
+    # p-=np.diag(p.sum(0))
+    # p*=1/(T1*2)
     
     # Add offset to get desired polarization
     # if Peq:
@@ -71,7 +71,9 @@ def T1(expsys,i:int,T1:float):
     Lp=Ham2Super(expsys.Op[i].p)
     Lm=Ham2Super(expsys.Op[i].m)
     M=Lp@Lm+Lm@Lp
-    return -M.real/(2*T1)/M[0,0].real
+    M=Lp@Lm
+    # return -M.real/(2*T1)/M[0,0].real
+    
     
     M-=np.diag(np.diag(M))
     index=np.argwhere(M)
@@ -79,11 +81,13 @@ def T1(expsys,i:int,T1:float):
     index=np.unique(index,axis=0)
 
     out=np.zeros([sz**2,sz**2],dtype=Defaults['rtype'])
-    # This is only valid for spin-1/2!!!
+    # I'm not sure how valid this is for spin>1/2
     for id0,id1 in index:
+        out[id0,id1]=1/(T1*2)
+        out[id1,id0]=1/(T1*2)
         # out[id0,id0]=p[0,0]
-        out[id0,id1]=p[0,-1]
-        out[id1,id0]=p[-1,0]
+        # out[id0,id1]=p[0,-1]
+        # out[id1,id0]=p[-1,0]
         # out[id1,id1]=p[1,1]
     out-=np.diag(out.sum(0))
 
@@ -155,6 +159,34 @@ def recovery(expsys,L):
     Lrhoeq=(L[0].Ln(0)@rho_eq)
     out=np.zeros(L[0].Ln(0).shape,dtype=Defaults['ctype'])
     i=np.arange(0,Lrhoeq.size,expsys.Op.Mult.prod()+1)
-    out[:,i]=np.atleast_2d(Lrhoeq).T.repeat(i.size,axis=1)
-    L.recovery=-out
-    return -out
+    out[:,i]=-np.atleast_2d(Lrhoeq).T.repeat(i.size,axis=1)
+    # L.recovery=-out
+    
+    index=np.argwhere(L.Lrelax-np.diag(np.diag(L.Lrelax)))
+    index.sort(-1)
+    index=np.unique(index,axis=0)
+    
+    Ln_H=L[0].Ln_H(0)/1j/(2*np.pi)
+    for LF,v0,Op in zip(expsys.LF,expsys.v0,expsys.Op):
+        if not(LF):
+            n=L.H[0].shape[0]**2
+            for k in range(len(L.H)):
+                Ln_H[k*n:(k+1)*n][:,k*n:(k+1)*n]+=Ham2Super(v0*Op.z)
+        
+    
+    for i0,i1 in index:
+        if out[i0,i1]==0:
+            DelE=(L.Energy[i0]-L.Energy[i1])
+            rat=np.exp(DelE/(1.380649e-23*expsys.T_K))
+            Del=L.Lrelax[i0,i1]*(1-rat)/(1+rat)
+            out[i0,i1]=-Del
+            out[i1,i1]=Del
+            out[i1,i0]=Del
+            out[i0,i0]=-Del
+
+    L.recovery=out
+    return out
+
+    
+    
+    

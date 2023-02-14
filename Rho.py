@@ -172,6 +172,56 @@ class Rho():
             return 1
         return 2
     
+    def downmix(self,t0:float=None):
+        """
+        Takes the stored signals and downmixes them if they were recorded in the
+        lab frame (result replaces Ipwd). Only applied to signals detected with
+        + or - (i.e., the complex signal is required!)
+        
+        Not heavily tested. I think it's possible to end up with the double-
+        frequency signal being back-folded to the middle of the spectrum and
+        therefore impossible to filter out.
+        
+        Parameters
+        ----------
+        t0  : float, optional
+            Effectively a phase-correction parameter. By default, t0 is None,
+            which means we will subtract away self.t_axis[0] from the time
+            axis. The parameter to be subtracted may be adjusted by setting t0
+            Default is None
+
+        Returns
+        -------
+        None.
+
+        """
+        assert self._tstatus==1,"Uniform time-axis spacing required for downmixing"
+        
+        # from scipy.signal import butter,filtfilt
+        
+        if t0 is None:t0=self.t_axis[0]
+        
+        for k,detect in enumerate(self.detect):
+            OpName,_=self.OpScaling(detect)
+            v0=None
+            if OpName[0]=='S':
+                i=int(OpName[1])   #At the moment, I'm assuming this program won't work with 11 spins...
+                if self.expsys.LF[i] and OpName[2:] in ['p','m']: #Downmix required
+                    v0=self.expsys.v0[i]*(-1 if OpName[2:]=='p' else 1)
+            else:
+                Nuc,a=self.parseOp(OpName)
+                i=self.expsys.Nucs.tolist().index(Nuc)
+                if self.expsys.LF[i] and a in ['p','m']:
+                    v0=self.expsys.v0[i]*(-1 if a=='p' else 1)
+                    
+            if v0 is not None:
+                Ipwd=self.Ipwd[:,k]
+                Idm=Ipwd*np.exp(1j*v0*2*np.pi*(self.t_axis-t0))
+                for m in range(self.pwdavg.N):
+                    self._Ipwd[m][k]=Idm[m]
+                
+                
+    
     @property
     def Ipwd(self):
         """
@@ -236,6 +286,7 @@ class Rho():
             I*=np.exp(-np.arange(I.shape[-1])/I.shape[-1]*5)
         if self._tstatus!=1:
             warnings.warn('Time points are not equally spaced. FT will be incorrect')
+            
         return np.fft.fftshift(np.fft.fft(I,n=I.shape[1]*2,axis=1),axes=[1])
         
     
@@ -563,7 +614,26 @@ class Rho():
         if Nuc=='e':Nuc='e-'
         return Nuc,a
     
-    def OpScaling(self,OpName):  
+    def OpScaling(self,OpName):
+        """
+        Determines if the operator (given as string) contains a scaling factor.
+        Can be indicated by presence of * operator in string, or simply a
+        minus sign may be included.
+
+        Parameters
+        ----------
+        OpName : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        OpName : TYPE
+            DESCRIPTION.
+        scale : TYPE
+            DESCRIPTION.
+
+        """
+        
         scale=1.
         if '*' in OpName:
             p,q=OpName.split('*')
@@ -618,13 +688,13 @@ class Rho():
                 Op+=self.expsys.Op[0].eye/self.expsys.Op.Mult.prod()
             return Op
         
-        if OpName=='Thermal':
-            Op=np.zeros(self.Op.Mult.prod()*np.ones(2,dtype=int),dtype=self._ctype)
-            for op,peq,mult in zip(self.expsys.Op,self.expsys.Peq,self.expsys.Op.Mult):
-                Op+=op.z*peq
-            if self.L.Peq:
-                Op+=op.eye/self.expsys.Op.Mult.prod()
-            return Op
+        # if OpName=='Thermal':
+        #     Op=np.zeros(self.Op.Mult.prod()*np.ones(2,dtype=int),dtype=self._ctype)
+        #     for op,peq,mult in zip(self.expsys.Op,self.expsys.Peq,self.expsys.Op.Mult):
+        #         Op+=op.z*peq
+        #     if self.L.Peq:
+        #         Op+=op.eye/self.expsys.Op.Mult.prod()
+        #     return Op
         
         
         Op=np.zeros(self.Op.Mult.prod()*np.ones(2,dtype=int),dtype=self._ctype)
@@ -670,25 +740,23 @@ class Rho():
         nHam=len(self.L.H)
         if detect:
             Op=Op.T.conj()
-            Op/=np.abs(np.trace(Op.T.conj()@Op))/self.expsys.Op.Mult.prod()*2
+            # Op/=np.abs(np.trace(Op.T.conj()@Op))*self.expsys.Op.Mult.prod()/2
+            Op/=np.abs(np.trace(Op.T.conj()@Op))
             return np.tile(Op.reshape(Op.size),nHam)
         else:
-            if nHam==1 and False:
-                return Op.reshape(Op.size)
-            else:
-                # Op/=np.abs(np.trace(Op.T.conj()@Op))
-                Op=Op.reshape(Op.size)
-                pop=self.L.ex_pop
-                # d,v=np.linalg.eig(self.L.kex)
-                # pop=v[:,np.argmax(d)]    #We need to make sure we start at equilibrium
-                # pop/=pop.sum()
-                out=np.zeros([Op.size*nHam],dtype=self._ctype)
-                for k,pop0 in enumerate(pop):
-                    out[k*Op.size:(k+1)*Op.size]=Op*pop0
-                return out
+            # Op/=np.abs(np.trace(Op.T.conj()@Op))
+            Op=Op.reshape(Op.size)
+            pop=self.L.ex_pop
+            # d,v=np.linalg.eig(self.L.kex)
+            # pop=v[:,np.argmax(d)]    #We need to make sure we start at equilibrium
+            # pop/=pop.sum()
+            out=np.zeros([Op.size*nHam],dtype=self._ctype)
+            for k,pop0 in enumerate(pop):
+                out[k*Op.size:(k+1)*Op.size]=Op*pop0
+            return out
         
         
-    def plot(self,det_num:int=0,ax=None,FT:bool=False,imag:bool=True,apodize=False,axis='kHz/ms',**kwargs):
+    def plot(self,det_num:int=None,ax=None,FT:bool=False,mode:str='Real',apodize=False,axis='kHz/ms',**kwargs):
         """
         Plots the amplitudes as a function of time or frequency
 
@@ -700,8 +768,9 @@ class Rho():
             Specify the axis to plot into. The default is None.
         FT : bool, optional
             Plot the Fourier transform if true. The default is False.
-        imag : bool, optional
-            Plot the imaginary components. The default is True
+        mode : str, optional
+            Determines what to plot. Options are 'Real', 'Imag', 'Abs', and 'ReIm'
+            The default is 'Real'
         apodize : bool, optional
             Apodize the signal with decaying exponential, with time constant 1/5
             of the time axis (FT signal only)
@@ -715,6 +784,12 @@ class Rho():
 
         """
         if ax is None:ax=plt.figure().add_subplot(111)
+        
+        if det_num is None:
+            for det_num in range(len(self._detect)):
+                self.plot(det_num=det_num,ax=ax,FT=FT,mode=mode,apodize=apodize,axis=axis)
+            if det_num:ax.set_ylabel('<Op>')
+            return ax
         
         ap=self._apodize
         self._apodize=apodize
@@ -736,19 +811,38 @@ class Rho():
             else:
                 v_axis=self.v_axis
                 label=r'$\nu$ / Hz'
-            ax.plot(v_axis,self.FT[det_num].real,**kwargs)
-            if imag:
+            
+            if mode.lower()=='reim':
+                ax.plot(v_axis,self.FT[det_num].real,**kwargs)
                 ax.plot(v_axis,self.FT[det_num].imag,**kwargs)
                 ax.legend(('Re','Im'))
+            elif mode[0].lower()=='r':
+                ax.plot(v_axis,self.FT[det_num].real,**kwargs)
+            elif mode[0].lower()=='a':
+                ax.plot(v_axis,np.abs(self.FT[det_num]),**kwargs)
+            elif mode[0].lower()=='i':
+                ax.plot(v_axis,self.FT[det_num].imag,**kwargs)
+            else:
+                assert 0,'Unrecognized plotting mode'
+                
             ax.set_xlabel(label)
             ax.set_ylabel('I / a.u.')
             ax.invert_xaxis()
         else:
             if self._tstatus==0:
-                ax.plot(np.arange(len(self.t_axis)),self.I[det_num].real,**kwargs)
-                if not(isinstance(self.detect[det_num],str)) or self.detect[det_num][-1] in ['p','m'] and imag:
+                if mode.lower()=='reim':
+                    ax.plot(np.arange(len(self.t_axis)),self.I[det_num].real,**kwargs)
                     ax.plot(np.arange(len(self.t_axis)),self.I[det_num].imag,**kwargs)
                     ax.legend(('Re','Im'))
+                elif mode[0].lower()=='r':
+                    ax.plot(np.arange(len(self.t_axis)),self.I[det_num].real,**kwargs)
+                elif mode[0].lower()=='a':
+                    ax.plot(np.arange(len(self.t_axis)),np.abs(self.I[det_num]),**kwargs)
+                elif mode[0].lower()=='i':
+                    ax.plot(np.arange(len(self.t_axis)),self.I[det_num].imag,**kwargs)
+                else:
+                    assert 0,'Unrecognized plotting mode'
+                
                 ax.set_ylabel('<'+self.detect[det_num]+'>')
                 ax.set_xlabel('Acquisition Number')
                 
@@ -765,11 +859,24 @@ class Rho():
                 else:
                     t_axis=self.t_axis*1e3
                     label=r'$t$ / ms'
-                ax.plot(t_axis,self.I[det_num].real,**kwargs)
-                if not(isinstance(self.detect[det_num],str)) or self.detect[det_num][-1] in ['p','m'] and imag:
-                    ax.plot(t_axis,self.I[det_num].imag,**kwargs)
+                    
+                if mode.lower()=='reim':
+                    ax.plot(self.t_axis,self.I[det_num].real,**kwargs)
+                    ax.plot(np.arange(len(self.t_axis)),self.I[det_num].imag,**kwargs)
                     ax.legend(('Re','Im'))
-                ax.set_ylabel('<'+self.detect[det_num]+'>')
+                elif mode[0].lower()=='r':
+                    ax.plot(self.t_axis,self.I[det_num].real,**kwargs)
+                elif mode[0].lower()=='a':
+                    ax.plot(self.t_axis,np.abs(self.I[det_num]),**kwargs)
+                elif mode[0].lower()=='i':
+                    ax.plot(self.t_axis,self.I[det_num].imag,**kwargs)
+                else:
+                    assert 0,'Unrecognized plotting mode'
+                
+                if isinstance(self.detect[det_num],str):
+                    ax.set_ylabel('<'+self.detect[det_num]+'>')
+                else:
+                    ax.set_ylabel('<Op>')
                 ax.set_xlabel(label)
         self._apodize=ap
         return ax
@@ -936,7 +1043,7 @@ class Rho():
         
     def __repr__(self):
         out='Density Matrix/Detection Operator\n'
-        out+=f'rho0: '+(f'{self.rho}' if isinstance(self.rho,str) else 'user-defined matrix')+'\n'
+        out+='rho0: '+(f'{self.rho}' if isinstance(self.rho,str) else 'user-defined matrix')+'\n'
         for k,d in enumerate(self.detect):
             out+=f'detect[{k}]: '+(f'{d}' if isinstance(d,str) else 'user-defined matrix')+'\n'
         out+=f'Current time is {self.t*1e6:.3f} microseconds\n'

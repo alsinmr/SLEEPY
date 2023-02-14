@@ -11,6 +11,7 @@ import warnings
 from .PowderAvg import RotInter
 from copy import copy
 from . import Defaults
+from .Tools import NucInfo
 
 class Ham1inter():
     def __init__(self,M=None,H=None,T=None,isotropic=False,delta=0,eta=0,euler=[0,0,0],
@@ -285,13 +286,16 @@ def hyperfine(es,i0:int,i1:int,Axx:float=0,Ayy:float=0,Azz:float=0,euler=[0,0,0]
 
     if es.LF[i0] or es.LF[i1]:  #Lab frame calculation
         T=es.Op[i0].T*es.Op[i1].T
-        H=-np.sqrt(3)*avg*T[0,0]   #Rank-0 contribution
+        
         if es.LF[i0] and es.LF[i1]:
             T.set_mode('LF_LF')
         elif es.LF[i0]:
             T.set_mode('LF_RF')
         else:
             T.set_mode('RF_LF')
+        
+        H=-np.sqrt(3)*avg*T[0,0]   #Rank-0 contribution
+        
         if delta:
             return Ham1inter(H=H,T=T,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info)
         else:
@@ -341,6 +345,68 @@ def quadrupole(es,i:int,delta:float=0,eta:float=0,euler=[0,0,0]):
     print('Quadrupole Hamiltonian does not include 2nd order terms')
     return Ham1inter(M=M,isotropic=False,delta=delta,eta=eta,iso=0,euler=euler,
                       rotor_angle=es.rotor_angle,info=info)
+
+def g(es,i:int,gxx:float=0,gyy:float=0,gzz:float=0,euler=[0,0,0]):
+    """
+    electron g-tensor Hamiltonian. Note that the g-tensor values should be 
+    typically positive.
+    
+
+    Parameters
+    ----------
+    es : exp_sys
+        Experimental system object.
+    i : int
+        index of the spin.
+    gxx : float, optional
+        xx-component of the electron g-tensor. The default is 0.
+    gyy : float, optional
+        yy-component of the electron g-tensor. The default is 0.
+    gzz : float, optional
+        xx-component of the electron g-tensor. The default is 0.
+    euler : TYPE, optional
+        3 elements giving the euler angles for the g-tensor
+        The default is [0,0,0].
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    if es.Nucs[i][0]!='e':
+        warnings.warn('g-tensor is being applied to a nucleus')
+    
+    avg=(gxx+gyy+gzz)/3
+    if avg<0:
+        warnings.warn('Expected a positive g-tensor')
+        
+    gyy,gxx,gzz=np.sort([gxx-avg,gyy-avg,gzz-avg])
+    
+    mub=-9.2740100783e-24/6.62607015e-34  #Bohr magneton in Hz. Take positive g-values by convention
+    
+    avg=mub*avg-NucInfo('e-')            #Values in Hz. Note that we take this in the rotating frame
+    delta=gzz*mub
+    eta=(gyy-gxx)/delta if delta else 0
+    info={'Type':'g','i':i,'gxx':gxx+avg,'gyy':gyy+avg,'gzz':gzz+avg,'euler':euler}
+    
+    if es.LF[i]:  #Lab frame calculation
+        T=es.Op[i].T
+        T.set_mode('B0_LF')
+        H=-np.sqrt(3)*avg*T[0,0]   #Rank-0 contribution
+        if delta:
+            return Ham1inter(H=H,T=T,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info)
+        else:
+            return Ham1inter(H=H,isotropic=True,info=info)
+    else:  #Rotating frame calculation
+        S=es.Op[i]
+        M=np.sqrt(2/3)*S.z
+        H=avg*S.z
+        if delta:                        
+            return Ham1inter(M=M,H=H,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info)
+        else:
+            return Ham1inter(H=H,isotropic=True,info=info)
+
 
 
 
