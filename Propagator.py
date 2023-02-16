@@ -85,7 +85,7 @@ class Propagator():
                 if self.L.Peq:
                     i=np.argmax(d)
                     v[:,i]=self.L.rho_eq(pwdindex=k)
-                    v[:,i]/=(v[:,i].conj()*v[:,i]).sum()
+                    v[:,i]/=np.sqrt((v[:,i].conj()*v[:,i]).sum())
                     d[i]=1.
                 self._eig.append((d,v))
                 if back_calc:

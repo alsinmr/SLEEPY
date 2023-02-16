@@ -85,6 +85,23 @@ class NucInfo(Info):
             for k,(v,fs) in enumerate(zip(nucs.values(),fstring)):
                 out+=fs.format(v*(1e-6 if k==3 else 1))+'\t'
         return out
+    
+    def __getitem__(self,index):
+        if isinstance(index,str):
+            if index=='D':   #Deuterium
+                return self[1]
+            if index in ['e','e-']: #Electron
+                return self[-1]
+            mass=re.findall(r'\d+',index)
+            Nuc=re.findall(r'[A-Z]',index.upper())
+            if len(mass) and len(Nuc):
+                Nuc=Nuc[0].capitalize()
+                i=np.logical_and(self['Nuc']==Nuc,self['mass']==int(mass[0]))
+                if np.any(i):
+                    return super().__getitem__(i)
+        return super().__getitem__(index)
+        
+        
 NucInfo=NucInfo()
 NucInfo.new_exper(Nuc='e-',mass=0,spin=1/2,gyro=-1.76085963023e11/2/np.pi,abundance=1)
 

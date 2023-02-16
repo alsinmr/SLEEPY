@@ -214,7 +214,9 @@ class Liouvillian():
                 value=np.array(value)
                 assert value.shape[0]==value.shape[1],"Exchange matrix must be square"
                 assert value.shape[0]==len(self.H),f"For {len(self.H)} Hamiltonians, exchange matrix must be {len(self.H)}x{len(self.H)}"
-                if np.any(np.abs(value.sum(0))>1e-6):
+                if np.any(np.diag(value)>0):
+                    warnings.warn("Diagonals of exchange matrix should not be positive")
+                elif np.any(np.abs(value.sum(0))>1e-10*np.mean(-np.diag(value))):
                     warnings.warn("Invalid exchange matrix. Columns should sum to 0. Expect unphysical behavior.")
         
         super().__setattr__(name,value)
@@ -574,7 +576,7 @@ class Liouvillian():
     
     def Udelta(self,channel,phi:float=np.pi,phase:float=0,t0:float=None):
         """
-        Provides a delta pulse on the chosen channel. Channel 
+        Provides a delta pulse on the chosen channel. 
 
         Parameters
         ----------
@@ -670,11 +672,34 @@ class Liouvillian():
 
         """
         if Hindex is None:
+            # pop=self.ex_pop
+            # N=self.shape[0]//len(pop)
+            # rho_eq=np.zeros(N*len(pop),dtype=self._ctype)
+            # for k,p in enumerate(pop):
+            #     rho_eq[N*k:N*(k+1)]=self.rho_eq(k,pwdindex=pwdindex,sub1=sub1)*p
+            # return rho_eq
             pop=self.ex_pop
-            N=self.shape[0]//len(pop)
-            rho_eq=np.zeros(N*len(pop),dtype=self._ctype)
+            
+            H0=list()
+            for H in self.H:
+                if self.static and not(self.isotropic): #Include all terms Hn
+                    H0.append(np.sum([H[pwdindex].Hn(m) for m in range(-2,3)],axis=0))
+                else:
+                    H0.append(H[pwdindex].Hn(0))
+                for k,LF in enumerate(self.expsys.LF):
+                    if not(LF):
+                        H0[-1]+=H.expsys.v0[k]*self.expsys.Op[k].z
+            H=(np.array(H0).T*pop).sum(-1).T
+                    
+            rho_eq0=expm(6.62607015e-34*H/(1.380649e-23*self.expsys.T_K))
+            rho_eq0/=np.trace(rho_eq0)
+            if sub1:
+                eye=np.eye(rho_eq0.shape[0])
+                rho_eq0-=np.trace(rho_eq0@eye)/rho_eq0.shape[0]*eye
+            rho_eq=np.zeros(self.shape[0],dtype=self._ctype)
+            n=self.H[0].shape[0]**2
             for k,p in enumerate(pop):
-                rho_eq[N*k:N*(k+1)]=self.rho_eq(k,pwdindex=pwdindex,sub1=sub1)*p
+                rho_eq[k*n:(k+1)*n]=rho_eq0.flatten()*p
             return rho_eq
         else:
             return self.H[Hindex].rho_eq(pwdindex=pwdindex,sub1=sub1).reshape(self.shape[0]//len(self.H))

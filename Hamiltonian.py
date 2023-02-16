@@ -209,7 +209,7 @@ class Hamiltonian():
         
         return Ham2Super(self.Hn(n))
     
-    def rho_eq(self,Hindex:int=0,pwdindex:int=0,sub1:bool=False):
+    def rho_eq(self,pwdindex:int=0,sub1:bool=False):
         """
         Returns the equilibrium density operator for a given element of the
         powder average.
@@ -232,9 +232,9 @@ class Hamiltonian():
 
         """
         if self.static and not(self.isotropic): #Include all terms Hn
-            H=np.sum([self[Hindex].Hn(m) for m in range(-2,3)],axis=0)
+            H=np.sum([self[pwdindex].Hn(m) for m in range(-2,3)],axis=0)
         else:
-            H=self[Hindex].Hn(0)
+            H=self[pwdindex].Hn(0)
         for k,LF in enumerate(self.expsys.LF):
             if not(LF):
                 H+=self.expsys.v0[k]*self.expsys.Op[k].z

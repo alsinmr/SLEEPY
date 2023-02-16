@@ -64,7 +64,7 @@ class Rho():
         
         self._awaiting_detection=False  #Detection hanging because L not defined
         self._taxis=[]
-        self._t=0
+        self._t=None
         
         if L is not None:self.L=L
         
@@ -93,6 +93,10 @@ class Rho():
     @property
     def isotropic(self):
         return self.L.isotropic
+    
+    @property
+    def static(self):
+        return self.L.static
         
     @property
     def L(self):
@@ -317,7 +321,7 @@ class Rho():
         self._detect=[self.Op2vec(self.strOp2vec(det,detect=True),detect=True) for det in self.detect]
         self.reset()
         
-    def reset(self,t0=0):
+    def reset(self):
         """
         Resets the density matrices back to rho0
 
@@ -328,7 +332,7 @@ class Rho():
         """
         if self.L is not None:
             self._rho=[self._rho0 for _ in range(self.pwdavg.N)]
-        self._t=t0
+        self._t=None
     
     def clear(self):
         """
@@ -349,7 +353,7 @@ class Rho():
 
         """
         
-        self._t=0
+        self._t=None
         
         self._Ipwd=[[]]
         self._taxis=list()
@@ -382,8 +386,11 @@ class Rho():
             self._awaiting_detection=False
             self()
             
-               
-        if not(self.isotropic) and np.abs((self.t-U.t0)%self.taur)>tol and np.abs((U.t0-self.t)%self.taur)>tol:
+         
+        if self._t is None:
+            self._t=U.t0
+            
+        if not(self.static) and np.abs((self.t-U.t0)%self.taur)>tol and np.abs((U.t0-self.t)%self.taur)>tol:
             warnings.warn('The initial time of the propagator is not equal to the current time of the density matrix')
         
             
@@ -523,6 +530,14 @@ class Rho():
                 self.L=U.L
             else:
                 self.L=seq.L
+        
+        
+        if U is not None:
+            if self._t is None:self._t=U.t0
+            if not(self.static) and np.abs((self.t-U.t0)%self.taur)>tol and np.abs((U.t0-self.t)%self.taur)>tol:
+                warnings.warn('The initial time of the propagator is not equal to the current time of the density matrix')
+        elif self._t is None:
+            self._t=0
         
         if U is not None:
             if n>=100:
@@ -785,10 +800,39 @@ class Rho():
         """
         if ax is None:ax=plt.figure().add_subplot(111)
         
+        def det2label(detect):
+            if isinstance(detect,str):
+                if detect[0]=='S':
+                    x='S'+r'$_'+detect[1]+'$'
+                    a=detect[2:]
+                else:
+                    Nuc,a=self.parseOp(detect)
+                    mass=re.findall(r'\d+',Nuc)
+                    if Nuc!='e-':
+                        Nuc=re.findall(r'[A-Z]',Nuc.upper())[0]
+                    else:
+                        Nuc='e'
+                    x=(r'^{'+mass[0]+'}$' if len(mass) else r'')+(Nuc if Nuc=='e' else Nuc.capitalize())
+                
+                if a in ['x','y','z']:
+                    a=r'$_'+a
+                elif a in ['alpha','beta']:
+                    a=r'$^\alpha' if a=='alpha' else r'$^\beta'
+                elif a in ['p','m']:
+                    a=r'$^+' if a=='p' else r'$^-'
+                else:
+                    a=a+r'$'
+                return r'<'+x+a+'$>' if Nuc=='e' else r'<$'+x+a+'$>'
+            else:
+                return r'<Op>'
+                
+        
         if det_num is None:
             for det_num in range(len(self._detect)):
                 self.plot(det_num=det_num,ax=ax,FT=FT,mode=mode,apodize=apodize,axis=axis)
-            if det_num:ax.set_ylabel('<Op>')
+            if det_num:
+                ax.set_ylabel(r'<Op>')
+                ax.legend([det2label(detect) for detect in self.detect])
             return ax
         
         ap=self._apodize
@@ -861,22 +905,19 @@ class Rho():
                     label=r'$t$ / ms'
                     
                 if mode.lower()=='reim':
-                    ax.plot(self.t_axis,self.I[det_num].real,**kwargs)
+                    ax.plot(t_axis,self.I[det_num].real,**kwargs)
                     ax.plot(np.arange(len(self.t_axis)),self.I[det_num].imag,**kwargs)
                     ax.legend(('Re','Im'))
                 elif mode[0].lower()=='r':
-                    ax.plot(self.t_axis,self.I[det_num].real,**kwargs)
+                    ax.plot(t_axis,self.I[det_num].real,**kwargs)
                 elif mode[0].lower()=='a':
-                    ax.plot(self.t_axis,np.abs(self.I[det_num]),**kwargs)
+                    ax.plot(t_axis,np.abs(self.I[det_num]),**kwargs)
                 elif mode[0].lower()=='i':
-                    ax.plot(self.t_axis,self.I[det_num].imag,**kwargs)
+                    ax.plot(t_axis,self.I[det_num].imag,**kwargs)
                 else:
                     assert 0,'Unrecognized plotting mode'
                 
-                if isinstance(self.detect[det_num],str):
-                    ax.set_ylabel('<'+self.detect[det_num]+'>')
-                else:
-                    ax.set_ylabel('<Op>')
+                ax.set_ylabel(det2label(self.detect[det_num]))
                 ax.set_xlabel(label)
         self._apodize=ap
         return ax
