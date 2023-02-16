@@ -906,7 +906,7 @@ class Rho():
                     
                 if mode.lower()=='reim':
                     ax.plot(t_axis,self.I[det_num].real,**kwargs)
-                    ax.plot(np.arange(len(self.t_axis)),self.I[det_num].imag,**kwargs)
+                    ax.plot(t_axis,self.I[det_num].imag,**kwargs)
                     ax.legend(('Re','Im'))
                 elif mode[0].lower()=='r':
                     ax.plot(t_axis,self.I[det_num].real,**kwargs)
