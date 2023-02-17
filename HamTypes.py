@@ -60,6 +60,24 @@ class Ham1inter():
                 out.A=self.rotInter.Afull[i]
             return out
         return self
+    
+    def __repr__(self):
+        dct=copy(self.info)
+        out='Hamiltonian for a single interaction\n'
+        out+=f'Type: {dct.pop("Type")} '
+        out+=f'on spin {dct.pop("i")}\n' if 'i' in dct else f'between spins {dct.pop("i0")} and {dct.pop("i1")}\n'
+        
+        def ef(euler):
+            if hasattr(euler[0],'__iter__'):
+                return ','.join([ef(e) for e in euler])
+            else:
+                return '['+','.join([f'{a*180/np.pi:.2f}' for a in euler])+']'
+        
+        if len(dct):
+            out+='Arguments:\n\t'+\
+                '\n\t'.join([f'{key}={ef(value) if key=="euler" else value}' for key,value in dct.items()])+'\n'
+        out+='\n'+super().__repr__()    
+        return out
             
             
     def Hn(self,n=0,t=None):

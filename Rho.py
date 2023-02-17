@@ -384,6 +384,7 @@ class Rho():
 
         if self._awaiting_detection:  #Use this if detect was called before L was assigned
             self._awaiting_detection=False
+            if self._t is None:self._t=U.t0
             self()
             
          
@@ -653,10 +654,10 @@ class Rho():
         if '*' in OpName:
             p,q=OpName.split('*')
             if len(re.findall('[A-Z]',p)):
-                scale=float(q)
+                scale=complex(q) if 'j' in q else float(q)
                 OpName=p
             else:
-                scale=float(p)
+                scale=complex(p) if 'j' in p else float(p)
                 OpName=q
         elif OpName[0]=='-':
             scale=-1

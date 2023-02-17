@@ -158,7 +158,11 @@ def recovery(expsys,L):
 
     Lrhoeq=(L[0].Ln(0)@rho_eq)
     out=np.zeros(L[0].Ln(0).shape,dtype=Defaults['ctype'])
-    i=np.arange(0,Lrhoeq.size,expsys.Op.Mult.prod()+1)
+    
+    n=np.prod(L[0].H[0].shape)
+    i0=np.arange(0,n,expsys.Op.Mult.prod()+1)
+    i=np.concatenate([i0+k*n for k in range(len(L.H))])
+    
     out[:,i]=-np.atleast_2d(Lrhoeq).T.repeat(i.size,axis=1)
     # L.recovery=-out
     

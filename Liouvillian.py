@@ -399,13 +399,6 @@ class Liouvillian():
             self._Ln[2]+=self.Lex+self.Lrelax
             
         return self._Ln[n+2]
-        
-        # out=self.Ln_H(n)
-        # if n==0:  #Only add these terms to the n=0 term
-        #     out+=self.Lex
-        #     if self.Lrelax is not None:
-        #         out+=self.Lrelax
-        # return out
     
     @property
     def Lrf(self):

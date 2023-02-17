@@ -246,7 +246,7 @@ class ExpSys():
             for i in np.argwhere(index)[0][::-1]:
                 self.inter.pop(i)
                 
-    def __repr__(self):
+    def __repr__(self): 
         out=f'{len(self.Nucs)}-spin system ('+','.join([f'{Nuc}' for Nuc in self.Nucs])+')\n'
         out+=f'B0 = {self.B0:.3f} T ({self.v0H/1e6:.3f} MHz 1H frequency)\n'
         out+=f'rotor angle = {self.rotor_angle*180/np.pi:.3f} degrees\n'
@@ -255,14 +255,21 @@ class ExpSys():
         out+=self.pwdavg.__repr__().rsplit('\n',2)[0].replace('\nType:\t',': ')
         # out+=f'Powder average with {self.pwdavg.N} angles, {self.n_gamma} steps per rotor period\n'
         out+='\nInteractions:\n'
+        
+        def ef(euler):
+            if hasattr(euler[0],'__iter__'):
+                return ','.join([ef(e) for e in euler])
+            else:
+                return '['+','.join([f'{a*180/np.pi:.2f}' for a in euler])+']'
+        
         for i in self.inter:
             dct=copy(i)
             if 'i' in dct:
                 out+=f'\t{dct.pop("Type")} on spin {dct.pop("i")} with arguments: ('+\
-                    ','.join([f'{key}={value}' for key,value in dct.items()])+')\n'
+                    ','.join([f'{key}={ef(value) if key=="euler" else value}' for key,value in dct.items()])+')\n'
             else:
                 out+=f'\t{dct.pop("Type")} between spins {dct.pop("i0")},{dct.pop("i1")} with arguments:\n\t\t('+\
-                    ','.join([f'{key}={value}' for key,value in dct.items()])+')\n'
+                    ','.join([f'{key}={ef(value) if key=="euler" else value}' for key,value in dct.items()])+')\n'
         out+='\n'+super().__repr__()    
         return out
         
