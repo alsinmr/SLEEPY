@@ -31,3 +31,4 @@ if not(hasattr(_Subplot,'is_first_col')):
     def _fun(self):
         return self.get_subplotspec().is_last_row()
     _Subplot.is_last_row=_fun
+

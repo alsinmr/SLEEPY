@@ -89,14 +89,26 @@ class OneSpin():
                 Type=k[3:]
                 Mult=(S*2+1).astype(int)
                 op0=getattr(Op0,'so_'+Type)(S[n])
-                op=np.kron(np.kron(np.eye(Mult[:n].prod(),dtype=Defaults['ctype']),op0),
-                            np.eye(Mult[n+1:].prod(),dtype=Defaults['ctype']))
+                op=(np.kron(np.kron(np.eye(Mult[:n].prod(),dtype=Defaults['ctype']),op0),
+                            np.eye(Mult[n+1:].prod(),dtype=Defaults['ctype'])))
                 setattr(self,Type,op)
         self.T=SphericalTensor(self)
     def __getattribute__(self, name):
         if name=='T':
             return super().__getattribute__(name)
         return copy(super().__getattribute__(name))  #Ensure we don't modify the original object
+
+#Doesn't work below. Not sure why
+# class OpMat(np.ndarray):
+#     def __new__(cls, x):
+#         return super().__new__(cls, shape=x.shape,dtype=x.dtype)
+#     def __init__(self,x):
+#         self[:]=x
+#     def __mul__(self,x):
+#         if x.ndim==2 and x.shape[0]==x.shape[1] and x.shape[0]==self.shape[0]:
+#             return self@x
+#         else:
+#             return self*x
     
 class SphericalTensor():
     def __init__(self,Op0,S0:float=None,Op1=None):
