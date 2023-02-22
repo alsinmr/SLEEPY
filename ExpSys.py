@@ -179,7 +179,7 @@ class ExpSys():
     def __next__(self):
         self._index+=1
         if self._index==len(self):
-            self._index==-1
+            self._index=-1
             raise StopIteration
         else:
             return self[self._index]
