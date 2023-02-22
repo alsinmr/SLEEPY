@@ -14,3 +14,19 @@ from .Hamiltonian import Hamiltonian
 from .Liouvillian import Liouvillian
 from .Sequence import Sequence
 from .Rho import Rho
+
+
+import matplotlib as _matplotlib
+if not(hasattr(_matplotlib.axes._subplots.Subplot,'is_first_row')):
+    def is_first_row(self):
+        return self.get_subplotspec().is_first_row()
+    _matplotlib.axes._subplots.Subplot.is_first_row=is_first_row
+    def is_first_col(self):
+        return self.get_subplotspec().is_first_col()
+    _matplotlib.axes._subplots.Subplot.is_first_col=is_first_col
+    def is_last_row(self):
+        return self.get_subplotspec().is_last_row()
+    _matplotlib.axes._subplots.Subplot.is_last_row=is_last_row
+    def is_last_col(self):
+        return self.get_subplotspec().is_last_col()
+    _matplotlib.axes._subplots.Subplot.is_last_col=is_last_col

@@ -682,17 +682,33 @@ class Liouvillian():
                 for k,LF in enumerate(self.expsys.LF):
                     if not(LF):
                         H0[-1]+=H.expsys.v0[k]*self.expsys.Op[k].z
-            H=(np.array(H0).T*pop).sum(-1).T
-                    
-            rho_eq0=expm(6.62607015e-34*H/(1.380649e-23*self.expsys.T_K))
-            rho_eq0/=np.trace(rho_eq0)
-            if sub1:
-                eye=np.eye(rho_eq0.shape[0])
-                rho_eq0-=np.trace(rho_eq0@eye)/rho_eq0.shape[0]*eye
+            
+            
+            ##Approach 1: same rho_eq0 for all states in exchange
+            # H=(np.array(H0).T*pop).sum(-1).T
+            # rho_eq0=expm(6.62607015e-34*H/(1.380649e-23*self.expsys.T_K))
+            # rho_eq0/=np.trace(rho_eq0)
+            # if sub1:
+            #     eye=np.eye(rho_eq0.shape[0])
+            #     rho_eq0-=np.trace(rho_eq0@eye)/rho_eq0.shape[0]*eye
+            # rho_eq=np.zeros(self.shape[0],dtype=self._ctype)
+            # n=self.H[0].shape[0]**2
+            # for k,p in enumerate(pop):
+            #     rho_eq[k*n:(k+1)*n]=rho_eq0.flatten()*p
+            
+            ##Approach 2: different rho_eq0 for each state in exchange
+            
             rho_eq=np.zeros(self.shape[0],dtype=self._ctype)
             n=self.H[0].shape[0]**2
-            for k,p in enumerate(pop):
+            for k,(H,p) in enumerate(zip(H0,pop)):
+                rho_eq0=expm(6.62607015e-34*H/(1.380649e-23*self.expsys.T_K))
+                rho_eq0/=np.trace(rho_eq0)
+                if sub1:
+                    eye=np.eye(rho_eq0.shape[0])
+                    rho_eq0-=np.trace(rho_eq0@eye)/rho_eq0.shape[0]*eye
                 rho_eq[k*n:(k+1)*n]=rho_eq0.flatten()*p
+                
+        
             return rho_eq
         else:
             return self.H[Hindex].rho_eq(pwdindex=pwdindex,sub1=sub1).reshape(self.shape[0]//len(self.H))

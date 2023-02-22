@@ -146,7 +146,7 @@ class Hamiltonian():
         np.array
 
         """
-        assert self.sub or self.pwdavg is None,'Calling Hn requires indexing to a specific element of the powder average'
+        assert self.sub or self.isotropic,'Calling Hn requires indexing to a specific element of the powder average'
         
         
         out=np.zeros(self.shape,dtype=self._ctype)
