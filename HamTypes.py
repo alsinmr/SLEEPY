@@ -163,15 +163,29 @@ def dipole(es,i0:int,i1:int,delta:float,eta:float=0,euler=[0,0,0]):
     -------
     Ham1inter
 
-    """
-    
-    S,I=es.Op[i0],es.Op[i1]
-    if es.Nucs[i0]==es.Nucs[i1]:
-        M=np.sqrt(2/3)*(S.z*I.z-0.5*(S.x@I.x+S.y@I.y))     #Be careful. S.z*I.z is ok, but S.x*I.x is not (diag vs. non-diag)
-    else:
-        M=np.sqrt(2/3)*S.z*I.z
-        
+    """    
     info={'Type':'dipole','i0':i0,'i1':i1,'delta':delta,'eta':eta,'euler':euler}
+    
+    if es.LF[i0] or es.LF[i1]:  #Lab frame calculation
+        T=es.Op[i0].T*es.Op[i1].T
+        
+        if es.LF[i0] and es.LF[i1]:
+            T.set_mode('LF_LF')
+        elif es.LF[i0]:
+            T.set_mode('LF_RF')
+        else:
+            T.set_mode('RF_LF')
+        
+        return Ham1inter(T=T,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info)
+
+    else:
+        S,I=es.Op[i0],es.Op[i1]
+        if es.Nucs[i0]==es.Nucs[i1]:
+            M=np.sqrt(2/3)*(S.z*I.z-0.5*(S.x@I.x+S.y@I.y))     #Be careful. S.z*I.z is ok, but S.x*I.x is not (diag vs. non-diag)
+        else:
+            M=np.sqrt(2/3)*S.z*I.z
+        
+    
     
     return Ham1inter(M=M,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info)
 

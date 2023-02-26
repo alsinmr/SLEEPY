@@ -14,7 +14,7 @@ from . import HamTypes as HamTypes
 # import pyRelaxSim.HamTypes as HamTypes
 from copy import deepcopy as DC
 from copy import copy
-from .Hamiltonian import RF
+from .Hamiltonian import RF,Hamiltonian
 
 class ExpSys():
     """
@@ -140,6 +140,18 @@ class ExpSys():
         out.__dict__.update(self.__dict__)
         out.inter=[copy(i) for i in self.inter]
         return out
+    
+    def Hamiltonian(self):
+        """
+        Creates a Hamiltonian from the ExpSys object.
+
+        Returns
+        -------
+        Hamiltonian.
+
+        """
+        return Hamiltonian(self)
+        
                 
     def set_inter(self,Type,**kwargs):
         """
