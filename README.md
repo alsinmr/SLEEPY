@@ -1,4 +1,4 @@
-# SLEEP
+# SLEEPY
 Spin-simulation in Liouville space for rElaxation and Exchange in PYthon
 
 Currently under development. Requires standard python packages plus numpy/scipy/matplotlib.
