@@ -146,17 +146,20 @@ class Rho():
             Array of all times at which the detection was performed.
 
         """
-        return np.sort(self._taxis)
+        if self._tstatus:
+            return np.sort(self._taxis)
+        else:
+            return np.array(self._taxis)
     
     @property
     def _tstatus(self):
         """
         Returns an integer indicating what the time axis can be used for.
         
-        0   :   Unusable (likely constant time experiment)
+        0   :   Unusable (possibly constant time experiment)
         1   :   Ideal usage (uniformly spaced)
         2   :   Acceptable usage (unique values)
-        3   :   Non-ideal usage (1-2 duplicate value- likely due to poor coding)
+        3   :   Non-ideal usage (1-2 duplicate values- likely due to poor coding)
 
         Returns
         -------
@@ -164,7 +167,7 @@ class Rho():
 
         """
         
-        if len(self._taxis)==1:return 1
+        if len(self._taxis)==1 or len(self._taxis)==0:return 1
         
         unique=np.unique(self._taxis)
         if unique.size+2<len(self._taxis):  #3 or more non-unique values
@@ -298,7 +301,7 @@ class Rho():
         """
         At initialization, we do not require Rho to know the spin-system yet. 
         However, for most functions, this is in fact required. Therefore, at
-        the first operation with a propagator, we will run _setup to finalize
+        the first operation with a propagator, we will run _Setup to finalize
         the Rho setup.
 
         Returns
@@ -754,6 +757,12 @@ class Rho():
         
         """
         nHam=len(self.L.H)
+        
+        # I'm not 100% sure that I shouldn't be taking the transpose of both the 
+        # initial and detection operators. Or maybe I should not be taking the 
+        # transpose of either operator.
+        
+        
         if detect:
             Op=Op.T.conj()
             # Op/=np.abs(np.trace(Op.T.conj()@Op))*self.expsys.Op.Mult.prod()/2

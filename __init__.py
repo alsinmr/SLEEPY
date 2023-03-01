@@ -7,14 +7,14 @@ from numpy import complex128 as _ctype    #Also, overflow errors become common a
 Defaults.update({'rtype':_rtype,'ctype':_ctype,'parallel':True})
 
 from . import Tools
-from .PowderAvg import PowderAvg as PowderAvg
-from .SpinOp import SpinOp as Spinop
-from .ExpSys import ExpSys as ExpSys
-from .Hamiltonian import Hamiltonian as Hamiltonian
+from .PowderAvg import PowderAvg
+from .SpinOp import SpinOp
+from .ExpSys import ExpSys
+from .Hamiltonian import Hamiltonian
 # from .Hamiltonian import Hamiltonian
-from .Liouvillian import Liouvillian as Liouvillian
-from .Sequence import Sequence as Sequence
-from .Rho import Rho as Rho
+from .Liouvillian import Liouvillian
+from .Sequence import Sequence
+from .Rho import Rho
 
 
 from matplotlib.axes import Subplot as _Subplot
