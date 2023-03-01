@@ -1,7 +1,7 @@
-# pyRelaxSim
-Relaxation calculations for NMR
+# SLEEP
+Spin-simulation in Liouville space for rElaxation and Exchange in PYthon
 
-Currently under development. Only uses standard python packages plus numpy/scipy/matplotlib.
+Currently under development. Requires standard python packages plus numpy/scipy/matplotlib.
 
 Next steps:
 1) Deal with powder averaging. Currently, only the JCP59 powder average is really valid because the others do not include gamma angles.
