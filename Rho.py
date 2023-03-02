@@ -185,9 +185,7 @@ class Rho():
         lab frame (result replaces Ipwd). Only applied to signals detected with
         + or - (i.e., the complex signal is required!)
         
-        Not heavily tested. I think it's possible to end up with the double-
-        frequency signal being back-folded to the middle of the spectrum and
-        therefore impossible to filter out.
+        Not heavily tested. 
         
         Parameters
         ----------
@@ -361,8 +359,9 @@ class Rho():
         self._Ipwd=[[]]
         self._taxis=list()
         self._rho=list() #Storage for numerical rho
-        if self._L is not None:
-            self._Setup()
+        self._L=None
+        # if self._L is not None:
+        #     self._Setup()
         
     def prop(self,U):
         """
@@ -813,8 +812,9 @@ class Rho():
         def det2label(detect):
             if isinstance(detect,str):
                 if detect[0]=='S':
-                    x='S'+r'$_'+detect[1]+'$'
+                    x='S'+r'_'+detect[1]
                     a=detect[2:]
+                    Nuc=''
                 else:
                     Nuc,a=self.parseOp(detect)
                     mass=re.findall(r'\d+',Nuc)
@@ -822,16 +822,16 @@ class Rho():
                         Nuc=re.findall(r'[A-Z]',Nuc.upper())[0]
                     else:
                         Nuc='e'
-                    x=(r'^{'+mass[0]+'}$' if len(mass) else r'')+(Nuc if Nuc=='e' else Nuc.capitalize())
+                    x=(r'^{'+mass[0]+'}' if len(mass) else r'')+(Nuc if Nuc=='e' else Nuc.capitalize())
                 
                 if a in ['x','y','z']:
-                    a=r'$_'+a
+                    a=r'_'+a
                 elif a in ['alpha','beta']:
-                    a=r'$^\alpha' if a=='alpha' else r'$^\beta'
+                    a=r'^\alpha' if a=='alpha' else r'^\beta'
                 elif a in ['p','m']:
-                    a=r'$^+' if a=='p' else r'$^-'
+                    a=r'^+' if a=='p' else r'^-'
                 else:
-                    a=a+r'$'
+                    a=a+r''
                 return r'<'+x+a+'$>' if Nuc=='e' else r'<$'+x+a+'$>'
             else:
                 return r'<Op>'

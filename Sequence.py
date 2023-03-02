@@ -174,6 +174,7 @@ class Sequence():
                 self._spin_specific=True
             else:
                 getattr(self,name)[channel==self.expsys.Nucs]=new
+        return self
                 
         
             
@@ -282,7 +283,7 @@ class Sequence():
         return ax
             
         
-    def U(self,t0:float=None,Dt:float=None):
+    def U(self,Dt:float=None,t0:float=None):
         """
         Returns the propagator corresponding to the stored sequence. If Dt is
         not specified, then Dt will extend to the last specified point in the
@@ -301,12 +302,12 @@ class Sequence():
 
         Parameters
         ----------
-        t0 : float, optional
-            Initial time for the propagator. The default is None, which sets t0
-            to the end of the last calculated propagator
         Dt : float, optional
             Length of the propagator. The default is None, which sets it to
             return the full pulse sequence
+        t0 : float, optional
+            Initial time for the propagator. The default is None, which sets t0
+            to the end of the last calculated propagator
 
         Returns
         -------

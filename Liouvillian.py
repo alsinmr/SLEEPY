@@ -448,7 +448,7 @@ class Liouvillian():
         return np.sum([self.Ln(m)*(ph**(-m)) for m in range(-2,3)],axis=0)+self.Lrf
     
     
-    def U(self,t0:float=None,Dt:float=None,calc_now:bool=False):
+    def U(self,Dt:float=None,t0:float=None,calc_now:bool=False):
         """
         Calculates the propagator between times t0 and t0+Dt. By default, t0 will
         be set to align with the end of the last propagator calculated for 
@@ -459,10 +459,11 @@ class Liouvillian():
 
         Parameters
         ----------
-        t0 : float, optional
-            Initial time for the propagator. The default is 0.
         Dt : float, optional
             Length of the propagator. 
+        t0 : float, optional
+            Initial time for the propagator. The default is None, which sets t0
+            to the end of the last calculated propagator
         calc_now : bool, optional.
             Calculates the propagator immediately, as opposed to only when required
 
