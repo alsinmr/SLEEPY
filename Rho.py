@@ -839,7 +839,7 @@ class Rho():
         
         if det_num is None:
             for det_num in range(len(self._detect)):
-                self.plot(det_num=det_num,ax=ax,FT=FT,mode=mode,apodize=apodize,axis=axis)
+                self.plot(det_num=det_num,ax=ax,FT=FT,mode=mode,apodize=apodize,axis=axis,**kwargs)
             if det_num:
                 ax.set_ylabel(r'<Op>')
                 ax.legend([det2label(detect) for detect in self.detect])
