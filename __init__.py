@@ -18,7 +18,7 @@ from .Rho import Rho
 
 
 from matplotlib.axes import Subplot as _Subplot
-from matplotlib.axes import SubplotSpec as _SubplotSpec
+from matplotlib.gridspec import SubplotSpec as _SubplotSpec
 if hasattr(_SubplotSpec,'is_first_col'):
     def _fun(self):
         return self.get_subplotspec().is_first_col()
