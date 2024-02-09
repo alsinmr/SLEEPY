@@ -22,7 +22,11 @@ class ExpSys():
     all nuclei in the spin system.
     """
     _iso_powder=PowderAvg('alpha0beta0')
-    def __init__(self,v0H=None,B0=None,Nucs=[],vr=10000,T_K=298,rotor_angle=np.arccos(np.sqrt(1/3)),n_gamma=100,pwdavg=PowderAvg(),LF:list=None):
+    def __init__(self,v0H=None,B0=None,Nucs=[],vr=10000,T_K=298,rotor_angle:float=None,n_gamma=100,pwdavg=PowderAvg(),LF:list=None):
+        
+        if rotor_angle is None:
+            rotor_angle=0 if vr==0 else np.arccos(np.sqrt(1/3))
+        if vr==0:n_gamma=1
         
         assert B0 is not None or v0H is not None,"B0 or v0H must be specified"
         self.B0=B0 if B0 is not None else v0H*1e6/NucInfo('1H')
@@ -42,8 +46,8 @@ class ExpSys():
         self.vr=vr
         self.T_K=T_K
         self.rotor_angle=rotor_angle
-        self.n_gamma=n_gamma
         self.pwdavg=pwdavg
+        self.n_gamma=n_gamma
         self.inter=[]
         self._rf=RF(expsys=self)
         self._tprop=0
@@ -55,7 +59,16 @@ class ExpSys():
             if hasattr(fun,'__code__') and fun.__code__.co_varnames[0]=='es':
                 self.inter_types[k]=fun.__code__.co_varnames[1:fun.__code__.co_argcount]
                 setattr(self,k,[])
-        
+    
+    @property
+    def n_gamma(self):
+        return self._n_gamma
+    
+    @n_gamma.setter
+    def n_gamma(self,n_gamma):
+        self._n_gamma=n_gamma
+        self.pwdavg.n_gamma=n_gamma
+    
     @property
     def v0H(self):
         return self.B0*NucInfo('1H')
@@ -70,6 +83,7 @@ class ExpSys():
     
     @property
     def taur(self):
+        if self.vr==0:return
         return 1/self.vr
     
     @property
@@ -91,6 +105,10 @@ class ExpSys():
         """
 
         return np.tanh(self.gamma*6.62607015e-34*self.B0/(2*1.380649e-23*self.T_K))
+    
+    @property
+    def current_time(self):
+        return self._tprop
     
     def reset_prop_time(self,t:float=0):
         """

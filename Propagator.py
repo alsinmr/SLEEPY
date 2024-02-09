@@ -10,6 +10,8 @@ import numpy as np
 from fractions import Fraction
 import warnings
 from copy import copy
+from scipy.linalg import expm
+from . import Defaults
 
 tol=1e-10
 
@@ -168,6 +170,11 @@ class Propagator():
         if not(self.pwdavg):Uout=Uout[0]
         return Propagator(Uout,t0=U.t0,tf=U.tf+self.Dt,taur=self.taur,L=self.L,isotropic=self.isotropic)
     
+    # def __rmul__(self,U):
+    #     if U==1:
+    #         return self
+        
+    
     def __pow__(self,n):
         """
         Raise the operator to a given power
@@ -262,5 +269,159 @@ class Propagator():
         out+=self.L.__repr__().replace('\n','\n\t')
         return out
                 
+    
+import multiprocessing as mp
+if 'shared_memory' in dir(mp):
+    from multiprocessing.shared_memory import SharedMemory
+    SM=True
+else:
+    SM=False
+
+class PropCache():
+    def __init__(self,L):
+        """
+        Stores propagators that may be later recycled.
+
+        Parameters
+        ----------
+        L : TYPE
+            DESCRIPTION.
+        active : bool, optional
+            DESCRIPTION. The default is True.
+
+        Returns
+        -------
+        None.
+
+        """
+        self.L=L
+        
+        self.reset()
+        
+        
+    def reset(self):
+        self.fields=[]
+        
+        self._U=[]
+        self._calc_index=[]
+        self._sm0=[]
+        self._sm1=[]
+        self.cache=Defaults['cache']
+        return self
+        
+        
+    @property
+    def pwdavg(self):
+        return self.L.pwdavg
+    
+    
+    #%% Return the applied-field specific information
+    @property
+    def field(self):
+        return tuple(x for x in self.L.rf.fields.values())
+    
+    @property
+    def field_index(self):
+        if self.field not in self.fields:
+            self.add_field()
+        return self.fields.index(self.field)
+    
+    @property
+    def U(self):
+        return self._U[self.field_index]
+    @U.setter
+    def U(self,U):
+        self._U.append(U)
+    
+    @property
+    def calc_index(self):
+        if not(self.cache):return None
+        return self._calc_index[self.field_index]
+    @calc_index.setter
+    def calc_index(self,x):
+        self._calc_index.append(x)
+    
+    @property
+    def sm0(self):
+        if not(self.cache):return None
+        return self._sm0[self.field_index]
+    @sm0.setter
+    def sm0(self,sm0):
+        self._sm0.append(sm0)
+    
+    @property
+    def sm1(self):
+        if not(self.cache):return None
+        return self._sm1[self.field_index]
+    @sm1.setter
+    def sm1(self,sm1):
+        self._sm1.append(sm1)
+    
+    
+    @property
+    def nbytes(self):
+        nb=np.zeros(1,dtype=Defaults['ctype']).nbytes
+        return np.prod(self.SZ)*nb
+        
+    #%% Sizes/indices
+    @property
+    def SZ(self):
+        return (self.pwdavg.N,(self.pwdavg.n_gamma if self.pwdavg._gamma_incl else 1),*self.L.shape)
+    
+    def index(self,n):
+        if self.pwdavg._gamma_incl:
+            return self.L._index
+        return (self.L._index+n*self.pwdavg.n_alpha)%self.pwdavg.N
+    
+    def step_index(self,n):
+        if self.pwdavg._gamma_incl:
+            return n
+        return 0
+ 
+    #%% Add field + data management
+    def add_field(self):
+        if not(self.cache):return
+        if self.field not in self.fields:
+            self.fields.append(self.field)
+            if Defaults['parallel'] and SM:
+                self.sm0=SharedMemory(create=True,size=np.prod(self.SZ[:2]))
+                self.sm1=SharedMemory(create=True,size=self.nbytes)
+                self.calc_index=np.ndarray(shape=self.SZ[:2],dtype=bool,buffer=self.sm0.buf)
+                self.U=np.ndarray(shape=self.SZ,dtype=Defaults['ctype'],buffer=self.sm1.buf)
+            else:
+                self.sm0=None
+                self.sm1=None
+                self.calc_index=np.zeros(self.SZ[:2],dtype=bool)
+                self.U=np.zeros(self.SZ,dtype=Defaults['ctype'])
+            self._calc_index.append(np.zeros(self.SZ[:2],dtype=bool))
+        return self
+    
+    def __del__(self,*args):
+        for sm in [*self._sm0,*self._sm1]:
+            if sm is None:continue
+            sm.unlink()
+        
+    
+    #%% Return propagators
+    def __getitem__(self,n:int):
+        return self.get_prop(n%len(self))
+    
+    def __len__(self):
+        return self.pwdavg.n_gamma
+    
+    def get_prop(self,n:int):
+        if not(self.cache):return expm(self.L.L(n)*self.L.dt)
+        U=self.U
+        i0,i1=self.index(n),self.step_index(n)
+        if not(self.calc_index[i0,i1]):
+            U[i0,i1]=expm(self.L.L(n)*self.L.dt)
+            self.calc_index[i0,i1]=True
+            
+        return U[i0,i1]
+
+            
+    
+        
+    
             
         

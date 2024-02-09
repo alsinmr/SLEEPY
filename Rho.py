@@ -562,6 +562,9 @@ class Rho():
                 for _ in range(n):
                     U*self()
         else:
+            if self.static:
+                return self.DetProp(U=seq.U(),n=n)
+            
             if seq.Dt%seq.taur<tol or -seq.Dt%seq.taur<tol:
                 U=seq.U(t0=self.t,Dt=self.t+seq.Dt)  #Just generate the propagator and call with U
                 self.DetProp(U=U,n=n)
@@ -574,8 +577,40 @@ class Rho():
             
             U=[seq.U() for _ in range(nsteps)]
             
-            for k in range(n):
-                U[k%nsteps]*self()
+            
+            if n//nsteps>100:
+                self()  #Detect once before propagation
+                U0=[]
+                Ipwd=np.zeros([len(self),len(self._detect),n],dtype=Defaults['ctype'])
+                
+                rho00=copy(self._rho)
+                for q in range(nsteps):  #Loop over the starting time
+                    n0=n//nsteps+(q<n%nsteps)
+                    U0=U[q]
+                    for m in range(q+1,q+nsteps):U0=U[m%nsteps]*U0 #Calculate propagator for 1 rotor period starting U[q]
+                    U0.eig()
+                    for k,((d,v),rho0) in enumerate(zip(U0._eig,rho00)):  #Sweep over the powder average
+                        rho0=np.linalg.pinv(v)@rho0
+                        dp=np.cumprod(np.repeat([d],n0,axis=0),axis=0)
+                        rho_d=dp*rho0
+                        for m,det in enumerate(self._detect):
+                            det_d=det@v
+                            Ipwd[k][m][q::nsteps]=(det_d*rho_d).sum(-1)
+                        if q==nsteps-1:
+                            self._rho[k]=v@rho_d[-1]
+                            
+                        rho00[k]=U[q][k]@rho00[k] #Step forward by 1/nsteps rotor period for the next step
+                        
+                for k in range(len(self)):
+                    for m in range(len(self._detect)):
+                        self._Ipwd[k][m].extend(Ipwd[k][m][:-1].tolist())
+                        
+                self._taxis.extend([self.t+k*seq.Dt for k in range(1,n)])
+                self._t+=n*seq.Dt
+                        
+            else:
+                for k in range(n):
+                    U[k%nsteps]*self()
             # t0,rho0=self.t,copy(self._rho)  #We need to keep the starting state in case this has already been propagated
             
             # Ua=seq.L.Ueye(t0=t0)
@@ -816,7 +851,7 @@ class Rho():
                     a=detect[2:]
                     Nuc=''
                 else:
-                    Nuc,a=self.parseOp(detect)
+                    Nuc,a=self.parseOp(self.OpScaling(detect)[0])
                     mass=re.findall(r'\d+',Nuc)
                     if Nuc!='e-':
                         Nuc=re.findall(r'[A-Z]',Nuc.upper())[0]
@@ -832,7 +867,7 @@ class Rho():
                     a=r'^+' if a=='p' else r'^-'
                 else:
                     a=a+r''
-                return r'<'+x+a+'$>' if Nuc=='e' else r'<$'+x+a+'$>'
+                return r'<'+x+a+'>' if Nuc=='e' else r'<$'+x+a+'$>'
             else:
                 return r'<Op>'
                 

@@ -108,6 +108,7 @@ class Hamiltonian():
         None.
 
         """
+        
         i%=len(self)
         out=copy(self)
         for k,H0 in enumerate(self.Hinter):

@@ -18,20 +18,20 @@ import numpy as np
 from copy import copy
 import warnings
 from scipy.linalg import expm
-from .Propagator import Propagator
+from .Propagator import Propagator,PropCache
 from . import Defaults
 from .Tools import Ham2Super
 from .Hamiltonian import Hamiltonian
 from . import RelaxMat
 from .Sequence import Sequence
-
+from .Para import ParallelManager
 
 # import importlib.util
 # numba=importlib.util.find_spec('numba') is not None
 # if numba:
 #     from .Parallel import prop
 
-from .Parallel import prop
+from .Parallel import prop,prop_static
 
 class Liouvillian():
     def __init__(self,H:list,kex=None):
@@ -63,8 +63,9 @@ class Liouvillian():
             if H.rf is not self.rf:
                 H.expsys._rf=self.rf
 
+        self._PropCache=PropCache(self)
         
-        self.kex=kex
+        
         # self.sub=False
         
         self._Lex=None
@@ -72,10 +73,19 @@ class Liouvillian():
         self._Lrelax=None
         self._Lrf=None
         self._Ln=None
+        self._Ln_H=None
+        if Defaults['cache']:self._Ln_H=[[None for _ in range(5)] for _ in range(len(self))]
+        
         self._fields=self.fields
+        
+        self.kex=kex
+        
         self.relax_info=[]  #Keeps a short record of what kind of relaxation is used
     
-
+    def clear_cache(self):
+        self._Ln_H=None
+        self._PropCache.reset()
+        return self
         
     @property
     def sub(self):
@@ -210,6 +220,7 @@ class Liouvillian():
         
         if name=='kex':
             self._Lex=None
+            self._PropCache.reset()
             if value is not None:
                 value=np.array(value)
                 assert value.shape[0]==value.shape[1],"Exchange matrix must be square"
@@ -239,6 +250,8 @@ class Liouvillian():
         
         out.H=[H0[i] for H0 in self.H]
         out._index=i
+        out._PropCache=self._PropCache
+        out._PropCache.L=out
         # out.sub=True
         return out
     
@@ -370,12 +383,19 @@ class Liouvillian():
 
         """
         assert self.sub,"Calling Ln_H requires indexing to a specific element of the powder average"
+        # self._Ln_H=None
+        if self._Ln_H is not None and self._Ln_H[self._index][n+2] is not None:
+            return copy(self._Ln_H[self._index][n+2])
+        
         out=np.zeros(self.shape,dtype=self._ctype)
         q=np.prod(self.H[0].shape)
         for k,H0 in enumerate(self.H):
             out[k*q:(k+1)*q][:,k*q:(k+1)*q]=H0.Ln(n)
         out*=-1j*2*np.pi
-        return out
+        
+        if self._Ln_H is not None:self._Ln_H[self._index][n+2]=out
+        
+        return copy(out)
     
     def Ln(self,n:int):
         """
@@ -509,33 +529,57 @@ class Liouvillian():
                     
                     if tm1<=0:tm1=dt
                     
-                    L=self.L(n0)
-                    U=expm(L*tm1)
+                    
+                    if tm1==dt:
+                        U=self._PropCache(n0)
+                    else:
+                        L=self.L(n0)
+                        U=expm(L*tm1)
+                        
                         
                     for n in range(n0+1,nf):
-                        L=self.L(n)
-                        U=expm(L*dt)@U
+                        U=self._PropCache(n)@U
+                        # L=self.L(n)
+                        # U=expm(L*dt)@U
+
                     if tp1>1e-10:
-                        L=self.L(nf)
-                        U=expm(L*tp1)@U
+                        if tp1==dt:
+                            U=self._PropCache(nf)@U
+                        else:
+                            L=self.L(nf)
+                            U=expm(L*tp1)@U
                     return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
             else:
-                if self._parallel and not(self.static):
-                    dt=self.dt
-                    n0=int(t0//dt)
-                    nf=int(tf//dt)
-                    
-                    tm1=t0-n0*dt
-                    tp1=tf-nf*dt
-                    
-                    if tm1<=0:tm1=dt
-                    Ln=[[L0.Ln(k) for k in range(-2,3)] for L0 in self]
-                    U=prop(Ln,Lrf=np.array(self.Lrf),n0=n0,nf=nf,tm1=tm1,tp1=tp1,dt=dt,n_gamma=int(self.expsys.n_gamma))
-                    return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
-                    
-                else:
+                if self.isotropic:
                     U=[L0.U(t0=t0,Dt=Dt,calc_now=calc_now).U for L0 in self]
-                return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
+                    return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
+                else:
+                    pm=ParallelManager(L=self,t0=t0,Dt=Dt)
+                    U=pm()
+                    return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
+                # if self._parallel and not(self.static):
+                #     dt=self.dt
+                #     n0=int(t0//dt)
+                #     nf=int(tf//dt)
+                    
+                #     tm1=t0-n0*dt
+                #     tp1=tf-nf*dt
+                    
+                #     if tm1<=0:tm1=dt
+                #     # Ln=[[L0.Ln(k) for k in range(-2,3)] for L0 in self]
+                #     # U=prop(Ln,Lrf=np.array(self.Lrf),n0=n0,nf=nf,tm1=tm1,tp1=tp1,dt=dt,n_gamma=int(self.expsys.n_gamma))
+                    
+                #     pm=ParallelManager(L=self,n0=n0,nf=nf,tm1=tm1,tp1=tp1,dt=dt,n_gamma=self.pwdavg.n_gamma)
+                #     U=pm()
+                    
+                    
+                #     return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
+                # elif self._parallel and not(self.isotropic) and False:  #Why doesn't this work?
+                #     L=[L0.L(0) for L0 in self]
+                #     U=prop_static(L,Dt=tf-t0)
+                # else:
+                #     U=[L0.U(t0=t0,Dt=Dt,calc_now=calc_now).U for L0 in self]
+                # return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
         else:
             dct=dict()
             dct['t']=[t0,tf]

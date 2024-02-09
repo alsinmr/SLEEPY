@@ -212,6 +212,8 @@ def J(es,i0:int,i1:int,J:float):
     S,I=es.Op[i0],es.Op[i1]
     if es.Nucs[i0]==es.Nucs[i1]:
         H=J*(S.x@I.x+S.y@I.y+S.z*I.z)
+    else:
+        H=J*S.z*I.z
         
     info={'Type':'J','i0':i0,'i1':i1,'J':J}
     

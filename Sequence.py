@@ -319,7 +319,8 @@ class Sequence():
 
         if Dt is None:Dt=self.Dt
         if self.isotropic:t0=0
-        if t0 is None:t0=self.expsys._tprop%self.taur
+        if t0 is None:
+            t0=0 if self.L.static else self.expsys._tprop%self.taur
             
         tf=t0+Dt
         
