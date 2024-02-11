@@ -118,8 +118,6 @@ class Propagator():
             t=dct['t']
             
             L=self.L
-            U=L.Ueye(t[0])
-            
             
             ini_fields=copy(L.fields)
     
@@ -249,7 +247,7 @@ class Propagator():
     
     def __len__(self):
         if not(self.pwdavg):return 1
-        return len(self.U)
+        return self.L.pwdavg.N
     
     def __next__(self):
         self._index+=1
@@ -270,13 +268,13 @@ class Propagator():
         return out
                 
     
-import multiprocessing as mp
-if 'shared_memory' in dir(mp):
+
+try:
     from multiprocessing.shared_memory import SharedMemory
     SM=True
-else:
+except:
     SM=False
-
+    
 class PropCache():
     def __init__(self,L):
         """
@@ -294,16 +292,22 @@ class PropCache():
         None.
 
         """
-        self.L=L
+        self.shared_memory=SM
+
         
+        self.L=L
+        self._sm0=[]
+        self._sm1=[]
         self.reset()
         
         
     def reset(self):
         self.fields=[]
-        
         self._U=[]
         self._calc_index=[]
+        for sm in [*self._sm0,*self._sm1]:
+            if sm is None:continue
+            sm.unlink()
         self._sm0=[]
         self._sm1=[]
         self.cache=Defaults['cache']
@@ -383,7 +387,7 @@ class PropCache():
         if not(self.cache):return
         if self.field not in self.fields:
             self.fields.append(self.field)
-            if Defaults['parallel'] and SM:
+            if Defaults['parallel'] and self.shared_memory:
                 self.sm0=SharedMemory(create=True,size=np.prod(self.SZ[:2]))
                 self.sm1=SharedMemory(create=True,size=self.nbytes)
                 self.calc_index=np.ndarray(shape=self.SZ[:2],dtype=bool,buffer=self.sm0.buf)
@@ -392,8 +396,7 @@ class PropCache():
                 self.sm0=None
                 self.sm1=None
                 self.calc_index=np.zeros(self.SZ[:2],dtype=bool)
-                self.U=np.zeros(self.SZ,dtype=Defaults['ctype'])
-            self._calc_index.append(np.zeros(self.SZ[:2],dtype=bool))
+                self.U=np.zeros(self.SZ,dtype=Defaults['ctype'])          
         return self
     
     def __del__(self,*args):

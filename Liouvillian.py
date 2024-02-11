@@ -24,7 +24,7 @@ from .Tools import Ham2Super
 from .Hamiltonian import Hamiltonian
 from . import RelaxMat
 from .Sequence import Sequence
-from .Para import ParallelManager
+from .Para import ParallelManager, StepCalculator
 
 # import importlib.util
 # numba=importlib.util.find_spec('numba') is not None
@@ -78,6 +78,7 @@ class Liouvillian():
         
         self._fields=self.fields
         
+        if kex is None:kex=np.zeros([len(self.H),len(self.H)])
         self.kex=kex
         
         self.relax_info=[]  #Keeps a short record of what kind of relaxation is used
@@ -243,7 +244,7 @@ class Liouvillian():
 
         Returns
         -------
-        Liouvillian
+        Liouvillian''
 
         """
         out=copy(self)
@@ -520,31 +521,32 @@ class Liouvillian():
     
                     return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
                 else:
+                    # dt=self.dt
+                    # n0=int(t0//dt)
+                    # nf=int(tf//dt)
+                    
+                    # tm1=t0-n0*dt
+                    # tp1=tf-nf*dt
+                    
+                    # if tm1<=0:tm1=dt
                     dt=self.dt
-                    n0=int(t0//dt)
-                    nf=int(tf//dt)
-                    
-                    tm1=t0-n0*dt
-                    tp1=tf-nf*dt
-                    
-                    if tm1<=0:tm1=dt
-                    
+                    n0,nf,tm1,tp1=StepCalculator(t0=t0,Dt=Dt,dt=dt)
                     
                     if tm1==dt:
-                        U=self._PropCache(n0)
+                        U=self._PropCache[n0]
                     else:
                         L=self.L(n0)
                         U=expm(L*tm1)
                         
                         
                     for n in range(n0+1,nf):
-                        U=self._PropCache(n)@U
+                        U=self._PropCache[n]@U
                         # L=self.L(n)
                         # U=expm(L*dt)@U
 
                     if tp1>1e-10:
                         if tp1==dt:
-                            U=self._PropCache(nf)@U
+                            U=self._PropCache[nf]@U
                         else:
                             L=self.L(nf)
                             U=expm(L*tp1)@U
@@ -823,4 +825,3 @@ class Liouvillian():
                     out+=f'\t{ri[0]}'
         out+='\n\n'+super().__repr__()
         return out
-    

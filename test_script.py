@@ -8,6 +8,7 @@
 # """
 
 import SLEEPY as RS
+import SLEEPY as sl
 import numpy as np
 import matplotlib.pyplot as plt
 from time import time
@@ -222,3 +223,82 @@ rho=RS.Rho(rho0='13Cz',detect='13Cz',L=L)
 rho.DetProp(U1,n=100)
 
 rho.plot()
+
+#%% Decoupling
+
+import sys
+sys.path.append('/Users/albertsmith/Documents/GitHub.nosync/')
+import SLEEPY as sl
+import numpy as np
+import matplotlib.pyplot as plt
+
+sl.Defaults['parallel']=False
+sl.Defaults['cache']=True
+ex=sl.ExpSys(850,Nucs=['15N','1H'],vr=5000,pwdavg=sl.PowderAvg(q=3),n_gamma=30)
+ex.set_inter('dipole',delta=22000,i0=0,i1=1)
+L=sl.Liouvillian(ex)
+
+seq=L.Sequence()
+
+v1=60000
+dt=1/v1/4
+seq.add_channel('1H',t=[0,dt,3*dt,6*dt],v1=v1,phase=[0,np.pi,0,0],voff=30000)
+# seq.plot()
+
+rho=sl.Rho('15Nx', '15Np')
+rho.clear()
+rho.DetProp(seq=seq,n=4096)
+rho.plot(FT=True)
+
+voff0=np.linspace(-30000,30000,7)
+waltz=L.Sequence()
+cw=L.Sequence()
+Iwaltz=[]
+Icw=[]
+rhoHz=sl.Rho(rho0='1Hz',detect='1Hz')
+for voff in voff0:
+    waltz.add_channel('1H',t=[0,dt,3*dt,6*dt],v1=v1,phase=[0,np.pi,0,0],voff=voff)
+    cw.add_channel('1H',t=[0,6*dt],v1=v1,voff=voff)
+    rhoHz.clear()
+    (waltz.U()*rhoHz)()
+    Iwaltz.append(rhoHz.I[0][0].real)
+    rhoHz.clear()
+    (cw.U()*rhoHz)()
+    Icw.append(rhoHz.I[0][0].real)
+    
+ax=plt.subplots()[1]
+ax.plot(voff0,Iwaltz)
+ax.plot(voff0,Icw)
+
+
+#%% Quick Test
+import SLEEPY as sl
+sl.Defaults['cache']=True
+sl.Defaults['parallel']=False
+ex=sl.ExpSys(850,Nucs=['15N','1H'],vr=5000,pwdavg=sl.PowderAvg(q=1),n_gamma=48)
+ex.set_inter('dipole',delta=0,i0=0,i1=1)
+L=sl.Liouvillian(ex)
+v1=60000
+dt=1/v1/4
+seq=L.Sequence()
+seq.add_channel('1H',t=[0,dt,3*dt,6*dt],v1=v1,phase=[0,np.pi,0,0],voff=0)
+# seq.add_channel('1H',t=[0,3*dt,6*dt],v1=plw1,phase=0,voff=0)
+
+
+# L.reset_prop_time()
+U=seq.U()
+print(U.t0)
+rhoHz=sl.Rho(rho0='1Hz',detect='1Hz')
+
+
+
+
+# L.rf.add_field(1,v1=60000)
+# U0=L.U(Dt=L.taur/16)
+# U1=L.U(Dt=L.taur/16)
+
+# U=U1*U0
+
+(U*rhoHz)()
+print(rhoHz.I)
+

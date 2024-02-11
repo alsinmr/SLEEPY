@@ -360,6 +360,8 @@ class Rho():
         self._taxis=list()
         self._rho=list() #Storage for numerical rho
         self._L=None
+        
+        return self
         # if self._L is not None:
         #     self._Setup()
         
@@ -578,7 +580,7 @@ class Rho():
             U=[seq.U() for _ in range(nsteps)]
             
             
-            if n//nsteps>100:
+            if n//nsteps>100 and False:
                 self()  #Detect once before propagation
                 U0=[]
                 Ipwd=np.zeros([len(self),len(self._detect),n],dtype=Defaults['ctype'])
@@ -1132,7 +1134,7 @@ class Rho():
         out+='rho0: '+(f'{self.rho}' if isinstance(self.rho,str) else 'user-defined matrix')+'\n'
         for k,d in enumerate(self.detect):
             out+=f'detect[{k}]: '+(f'{d}' if isinstance(d,str) else 'user-defined matrix')+'\n'
-        out+=f'Current time is {self.t*1e6:.3f} microseconds\n'
+        if self.t is not None:out+=f'Current time is {self.t*1e6:.3f} microseconds\n'
         out+=f'{len(self.t_axis)} time points have been recorded'
         if self.L is None:
             out+='\n[Currently uninitialized (L is None)]'

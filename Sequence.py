@@ -346,5 +346,10 @@ class Sequence():
         self.expsys._tprop=0 if self.taur is None else tf%self.taur
         
         return Propagator(U=dct,t0=t0,tf=tf,taur=self.taur,L=self.L,isotropic=self.isotropic)
+    
+    
+    
+    
+    
+    
                 
-            

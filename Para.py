@@ -17,26 +17,37 @@ from copy import copy
 New attempt at parallel processing including shared memory and a cache for
 propagators
 """
-
+def StepCalculator(t0,Dt,dt):
+    tf=t0+Dt
+    # n0=int(np.round(t0/dt,2))
+    # nf=int(np.round(tf/dt,2))
+    
+    n0=int(t0//dt)
+    nf=int(tf//dt)
+    
+    tm1=dt-(t0-n0*dt)
+    tp1=tf-nf*dt
+    if nf==n0:
+        tm1=Dt
+        tp1=0
+    
+    return n0,nf,tm1,tp1
 
 class ParallelManager():
     def __init__(self,L,t0,Dt):
         self.L=L
         
         
-        
+        self.cache=Defaults['cache']
+        self.parallel=Defaults['parallel']
         
         if L.static:
             self.pars=(Dt,)
         else:
-            tf=t0+Dt
-            dt=L.dt
-            n0=int(t0//dt)
-            nf=int(tf//dt)
             
-            tm1=t0-n0*dt
-            tp1=tf-nf*dt
-            if tm1<=0:tm1=dt
+            dt=L.dt
+            n0,nf,tm1,tp1=StepCalculator(t0=t0,Dt=Dt,dt=dt)
+            # print(n0,nf,tm1,tp1)
             n_gamma=L.pwdavg.n_gamma
             self.pars=(n0,nf,tm1,tp1,dt,n_gamma)
         
@@ -93,17 +104,26 @@ class ParallelManager():
     
     @property
     def sm0(self):
-        return self.PropCache.sm0
+        if self.parallel and self.cache:
+            return self.PropCache.sm0
+        elif self.cache:
+            return self.PropCache.calc_index
     
     @property
     def sm1(self):
-        return self.PropCache.sm1
+        if self.parallel and self.cache:
+            return self.PropCache.sm1
+        elif self.cache:
+            return self.PropCache.U
     
     @property
     def setup(self):
         if self.L.static:
             return [(pm.L.L(0),*self.pars) for pm in self]
+        
         return [(pm.Ln,self.L.Lrf,*self.pars,self.sm0,self.sm1,self.index,self.step_index,self.PropCache.SZ) for pm in self]
+        # FIGURE OUT HOW TO GET THE CACHE TO NON-PARALLEL PROCESSES!
+
     
     @property
     def cpu_count(self):
@@ -131,37 +151,51 @@ class ParallelManager():
 def prop(X):
     Ln0,Lrf,n0,nf,tm1,tp1,dt,n_gamma,sm0,sm1,index,step_index,SZ=X
     
+    
     # Setup if using the shared cache
-    if sm0 is not None:
+    if sm0 is None:
+        ci=None
+    elif hasattr(sm0,'buf'):
         ci=np.ndarray(SZ[:2],dtype=bool,buffer=sm0.buf)
         Ucache=np.ndarray(SZ,dtype=Defaults['ctype'],buffer=sm1.buf)
     else:
-        ci=None
+        ci=sm0
+        Ucache=sm1
         
     #Initial propagator
-    if tm1:
+    # count0,count1=0,0
+    if ci is not None and tm1==dt and ci[index[n0],step_index[n0]]:
+        U=Ucache[index[n0],step_index[n0]]
+        # count0+=1
+    else:
         ph=np.exp(1j*2*np.pi*n0/n_gamma)
         L=np.sum([Ln0[m+2]*(ph**(-m)) for m in range(-2,3)],axis=0)+Lrf
         U=expm(L*tm1)
-    else:
-        U=np.eye(Ln0[2].shape[0],dtype=Ln0[2].dtype)
-        
-    for n,i,si in zip(range(n0+1,nf),index,step_index):
+        if tm1==dt and ci is not None:
+            # count1+=1
+            Ucache[index[n0],step_index[n0]]=U
+            ci[index[n0],step_index[n0]]=True
+
+    for n in range(n0+1,nf):
+        i,si=index[n],step_index[n]
         if ci is None or not(ci[i,si]): #Not cached
             ph=np.exp(1j*2*np.pi*n/n_gamma)
             L=np.sum([Ln0[m+2]*(ph**(-m)) for m in range(-2,3)],axis=0)+Lrf
             U0=expm(L*dt)
             if ci is not None:
+                # count1+=1
                 Ucache[i,si]=U0
                 ci[i,si]=True
         else:
+            # count0+=1
             U0=Ucache[i,si]
         U=U0@U
+    # print(count0,count1)
             
     if tp1>1e-10: #Last propagator
         ph=np.exp(1j*2*np.pi*nf/n_gamma)
         L=np.sum([Ln0[m+2]*(ph**(-m)) for m in range(-2,3)],axis=0)+Lrf
-        U=expm(L*dt)@U
+        U=expm(L*tp1)@U
     
     return U
 

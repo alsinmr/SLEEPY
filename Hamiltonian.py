@@ -300,7 +300,7 @@ class RF():
         self.fields={}
         self.expsys=expsys
     
-        self.fields={k:(0.,0.,0.) for k in range(len(expsys.S))}
+        self.fields={k:(float(0.),float(0.),float(0.)) for k in range(len(expsys.S))}
         
         
     @property
@@ -353,7 +353,7 @@ class RF():
 
         """
         
-        self.fields.update({channel:(v1,phase,voff)})
+        self.fields.update({channel:(float(v1),float(phase),float(voff))})
                 
         
         
