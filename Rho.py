@@ -824,7 +824,7 @@ class Rho():
         Parameters
         ----------
         det_num : int, optional
-            Which detection operator to plot. The default is 0.
+            Which detection operator to plot. The default is None (all detectors).
         ax : plt.axis, optional
             Specify the axis to plot into. The default is None.
         FT : bool, optional
