@@ -60,6 +60,7 @@ class PowderAvg():
     @alpha.setter
     def alpha(self,alpha):
         self._alpha=alpha
+        self.n_alpha=len(alpha)
         
     @property
     def beta(self):
@@ -138,7 +139,7 @@ class PowderAvg():
                 if 'pwd_' in fname:
                     fun=getattr(PwdAvgFuns,fname)
                     print(fname[4:]+' with args: '+','.join(fun.__code__.co_varnames[:fun.__code__.co_argcount]))
-        self.n_alpha=len(self._alpha)
+        # self.n_alpha=len(self._alpha)
     
     
     
@@ -172,7 +173,7 @@ class PowderAvg():
         out.alpha=self.alpha[i:i+1]
         out.beta=self.beta[i:i+1]
         out.gamma=self.gamma[i:i+1]
-        out.N=1
+        # out.N=1
         out.weight=np.ones([1])
         return out
     

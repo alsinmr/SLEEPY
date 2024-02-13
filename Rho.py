@@ -510,8 +510,8 @@ class Rho():
     def DetProp(self,U=None,seq=None,n:int=1):
         """
         Executes a series of propagation/detection steps. Detection occurs first,
-        followed by propagation for n steps. If n>100, then we will use
-        eigenvalue decomposition for the propagation
+        followed by propagation, with the sequence repeated for n steps. 
+        If n>100, then we will use eigenvalue decomposition for the propagation
 
         Parameters
         ----------
@@ -527,6 +527,11 @@ class Rho():
         """
         
         assert not(U is None and seq is None),"Either U or seq must be defined"
+        
+        if seq is None and not(hasattr(U,'calcU')):
+            seq=U
+            U=None
+        
         if U is not None and seq is not None:
             warnings.warn('Both U and seq are defined. seq will not be used')
         
@@ -572,8 +577,16 @@ class Rho():
                 self.DetProp(U=U,n=n)
                 return self
             
-            nsteps=np.round(seq.taur/seq.Dt,0).astype(int)
-            assert np.abs(nsteps*seq.Dt-seq.taur)<tol,"Sequences shorter than a rotor period can only be propagated via DetProp if seq.Dt fits an integer number of times into the rotor period"
+            for k in range(1,n):
+                nsteps=np.round(k*seq.taur/seq.Dt,0).astype(int)
+                if nsteps*seq.Dt%seq.taur < tol:break
+                if seq.taur-(nsteps*seq.Dt%seq.taur) < tol:break
+            else:
+                nsteps=n
+            print(f'Prop: {nsteps} step{"" if nsteps==1 else "s"} per every {k} rotor period{"" if k==1 else "s"}')
+            
+            # nsteps=np.round(seq.taur/seq.Dt,0).astype(int)
+            # assert np.abs(nsteps*seq.Dt-seq.taur)<tol,"Sequences shorter than a rotor period can only be propagated via DetProp if seq.Dt fits an integer number of times into the rotor period"
             
             seq.reset_prop_time(self.t)
             
@@ -731,6 +744,10 @@ class Rho():
         
         if not(isinstance(OpName,str)):return OpName #Just return if already a matrix
         
+        if '+' in OpName:
+            OpNames=OpName.split('+')
+            return np.sum([self.strOp2vec(op) for op in OpNames],axis=0)
+        
         OpName,scale=self.OpScaling(OpName)
         
         if OpName[0]=='S':
@@ -869,6 +886,10 @@ class Rho():
                     a=r'^+' if a=='p' else r'^-'
                 else:
                     a=a+r''
+                if '_' in x and '_' in a:
+                    x=x.replace('_','_{')
+                    a=a[1:]+'}'
+                
                 return r'<'+x+a+'>' if Nuc=='e' else r'<$'+x+a+'$>'
             else:
                 return r'<Op>'
@@ -938,7 +959,7 @@ class Rho():
                 ax.set_xlabel('Acquisition Number')
                 
             else:
-                if axis.lower()=='microseconds':
+                if axis.lower() in ['microseconds','us']:
                     t_axis=self.t_axis*1e6
                     label=r'$t$ / $\mu$s'
                 elif axis.lower()=='s':
