@@ -15,6 +15,7 @@ from . import HamTypes as HamTypes
 from copy import deepcopy as DC
 from copy import copy
 from .Hamiltonian import RF,Hamiltonian
+from .Liouvillian import Liouvillian
 
 class ExpSys():
     """
@@ -170,6 +171,17 @@ class ExpSys():
         """
         return Hamiltonian(self)
         
+    def Liouvillian(self):
+        """
+        Creates a Liouvillian from the ExpSys Object
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        """
+        return Liouvillian(self)
                 
     def set_inter(self,Type,**kwargs):
         """

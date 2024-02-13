@@ -30,7 +30,7 @@ def StepCalculator(t0,Dt,dt):
     if nf==n0:
         tm1=Dt
         tp1=0
-    
+        
     return n0,nf,tm1,tp1
 
 class ParallelManager():
@@ -46,9 +46,10 @@ class ParallelManager():
         else:
             
             dt=L.dt
+            n_gamma=L.expsys.n_gamma
             n0,nf,tm1,tp1=StepCalculator(t0=t0,Dt=Dt,dt=dt)
             # print(n0,nf,tm1,tp1)
-            n_gamma=L.pwdavg.n_gamma
+            
             self.pars=(n0,nf,tm1,tp1,dt,n_gamma)
         
         self._calc_index=None
@@ -164,8 +165,8 @@ def prop(X):
         
     #Initial propagator
     # count0,count1=0,0
-    if ci is not None and tm1==dt and ci[index[n0],step_index[n0]]:
-        U=Ucache[index[n0],step_index[n0]]
+    if ci is not None and tm1==dt and ci[index[n0%n_gamma],step_index[n0%n_gamma]]:
+        U=Ucache[index[n0%n_gamma],step_index[n0%n_gamma]]
         # count0+=1
     else:
         ph=np.exp(1j*2*np.pi*n0/n_gamma)
@@ -173,11 +174,11 @@ def prop(X):
         U=expm(L*tm1)
         if tm1==dt and ci is not None:
             # count1+=1
-            Ucache[index[n0],step_index[n0]]=U
-            ci[index[n0],step_index[n0]]=True
+            Ucache[index[n0%n_gamma],step_index[n0%n_gamma]]=U
+            ci[index[n0%n_gamma],step_index[n0%n_gamma]]=True
 
     for n in range(n0+1,nf):
-        i,si=index[n],step_index[n]
+        i,si=index[n%n_gamma],step_index[n%n_gamma]
         if ci is None or not(ci[i,si]): #Not cached
             ph=np.exp(1j*2*np.pi*n/n_gamma)
             L=np.sum([Ln0[m+2]*(ph**(-m)) for m in range(-2,3)],axis=0)+Lrf
