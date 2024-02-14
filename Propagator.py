@@ -155,8 +155,8 @@ class Propagator():
         
         
         if not(self.static) and np.abs((self.t0-U.tf)%self.taur)>tol and np.abs((U.tf-self.t0)%self.taur)>tol:
-            warnings.warn(f'\nFirst propagator ends at {U.tf%self.taur} but second propagator starts at {self.t0%U.taur}')
-            # print(f'Warning: First propagator ends at {U.tf%self.taur} but second propagator starts at {self.t0%U.taur}')
+            if not(self.tf==self.t0 or U.tf==U.t0):
+                warnings.warn(f'\nFirst propagator ends at {U.tf%self.taur} but second propagator starts at {self.t0%U.taur}')
         
         if self.pwdavg:
             assert U.pwdavg,"Both propagators should have a powder average or bot not"

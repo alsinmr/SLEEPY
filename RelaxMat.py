@@ -31,7 +31,7 @@ def T1(expsys,i:int,T1:float):
     i : int
         Index of the spin.
     T1 : float
-        Desired T1 relaxation rate.
+        Desired T1 relaxation time.
     Peq : bool, optional
         Use relaxation toward thermal equilibrium. By default, relaxation simply
         goes to zero. Temperature taken from expsys.
@@ -93,6 +93,35 @@ def T1(expsys,i:int,T1:float):
 
     return out
 
+def SpinDiffusion(expsys,i:int,k:float):
+    """
+    Constructs a "spin-diffusion" operator, as suggested by Ernst et al.
+    
+    Ernst, Zimmermann, Meier, Chem. Phys. Lett. 2000, 317, 581
+
+    Parameters
+    ----------
+    expsys : TYPE
+        DESCRIPTION.
+    i : int
+        Index of the spin.
+    k : float
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    Lx=Ham2Super(expsys.Op[i].x)
+    Ly=Ham2Super(expsys.Op[i].y)
+    Lz=Ham2Super(expsys.Op[i].z)
+    
+    M=Lx@Lx+Ly@Ly+Lz@Lz
+    
+    return -k*M
+
 def T2(expsys,i:int,T2:float):
     """
     Constructs the T2 relaxation matrix for a given spin in the spin-system. For
@@ -106,7 +135,7 @@ def T2(expsys,i:int,T2:float):
     i : int
         Index of the spin.
     T2 : float
-        Desired relaxation rate constant.
+        Desired relaxation time constant.
 
     Returns
     -------

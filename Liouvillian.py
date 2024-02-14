@@ -258,7 +258,16 @@ class Liouvillian():
     
     def add_relax(self,M=None,Type:str=None,**kwargs):
         """
-        Add explicit relaxation to the Liouvillian. This is provided by a matrix,
+        Add explicit relaxation to the Liouvillian. This is either provided
+        directly by the user via a matrix, or by type, where currently T1, T2, 
+        and recovery are provided, where recovery forces the simulation to go 
+        towards thermal equilibrium.
+        
+        T1: provide T1 and i, specifying the spin's index
+        T2: provide T2 and i, specifying the spin's index
+        
+        
+        This is provided by a matrix,
         M, directly. The matrix itself can be produced with the RelaxationMatrix
         class. Note that the matrix can either have the same shape as the full
         Liouvillian, or the shape for just one Hamiltonian. For example, for
@@ -276,6 +285,8 @@ class Liouvillian():
         None.
 
         """
+        self._PropCache.reset()
+        
         if self.Peq:
             warnings.warn('recovery should always be the last term added to Lrelax')
             
@@ -299,6 +310,8 @@ class Liouvillian():
             self._Lrelax+=M
         else:
             assert False,f"M needs to have size ({q},{q}) or {self.shape}"   
+            
+        return self
     
     def clear_relax(self):
         """
@@ -309,8 +322,12 @@ class Liouvillian():
         None.
 
         """
+        self._PropCache.reset()
+        
         self.relax_info=[]
         self._Lrelax=None
+        
+        return self
         
     def validate_relax(self):
         """
@@ -616,7 +633,10 @@ class Liouvillian():
     
     def Udelta(self,channel,phi:float=np.pi,phase:float=0,t0:float=None):
         """
-        Provides a delta pulse on the chosen channel. 
+        Provides a delta pulse on the chosen channel or specific spin. Channel
+        is provided with the nucleus name ('1H','13C','etc'), a specific spin
+        or spins is provided by setting channel to an integer or list or 
+        integers
 
         Parameters
         ----------
@@ -634,7 +654,32 @@ class Liouvillian():
         None.
 
         """
-        pass
+        
+        if self.isotropic:
+            t0=0
+        else:
+            if t0 is None:t0=self.expsys._tprop%self.taur
+        
+        if isinstance(channel,str):
+            i=np.argwhere([channel==Nuc for Nuc in self.expsys.Nucs])[:,0]
+        else:
+            i=np.atleast_1d(channel)
+                
+        H=np.zeros(self.H[0].shape,dtype=self._ctype)
+        for i0 in i:
+            Op=self.expsys.Op[i0]
+            H+=np.cos(phase)*Op.x+np.sin(phase)*Op.y
+            
+        L0=Ham2Super(H)
+        L=np.zeros(self.shape,dtype=self._ctype)
+        
+        n=self.H[0].shape[0]**2
+        for k in range(len(self.H)):
+            L[k*n:(k+1)*n][:,k*n:(k+1)*n]=L0
+        U=expm(-1j*phi*L)
+        
+        return Propagator(U=[U for _ in range(len(self))],
+                          t0=t0,tf=t0,taur=self.taur,L=self,isotropic=self.isotropic)
 
     def Ueig(self):
         """

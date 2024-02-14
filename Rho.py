@@ -69,7 +69,7 @@ class Rho():
         if L is not None:self.L=L
         
         # self._Setup()
-        self._apodize=False
+        self.apodize=False
     
     def __setattr__(self,name,value):
         if name=="L":
@@ -287,7 +287,7 @@ class Rho():
 
         """
         I=np.concatenate((self.I[:,:1]/2,self.I[:,1:]),axis=1)
-        if self._apodize:
+        if self.apodize:
             I*=np.exp(-np.arange(I.shape[-1])/I.shape[-1]*5)
         if self._tstatus!=1:
             warnings.warn('Time points are not equally spaced. FT will be incorrect')
@@ -396,7 +396,8 @@ class Rho():
             self._t=U.t0
             
         if not(self.static) and np.abs((self.t-U.t0)%self.taur)>tol and np.abs((U.t0-self.t)%self.taur)>tol:
-            warnings.warn('The initial time of the propagator is not equal to the current time of the density matrix')
+            if not(U.t0==U.tf):
+                warnings.warn('The initial time of the propagator is not equal to the current time of the density matrix')
         
             
         if U.calculated:
@@ -903,8 +904,8 @@ class Rho():
                 ax.legend([det2label(detect) for detect in self.detect])
             return ax
         
-        ap=self._apodize
-        self._apodize=apodize
+        ap=self.apodize
+        self.apodize=apodize
         
         
         if FT:
@@ -987,7 +988,7 @@ class Rho():
                 
                 ax.set_ylabel(det2label(self.detect[det_num]))
                 ax.set_xlabel(label)
-        self._apodize=ap
+        self.apodize=ap
         return ax
             
     def extract_decay_rates(self,U,det_num:int=0,avg:bool=True,pwdavg:bool=False,reweight=False):
