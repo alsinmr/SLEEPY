@@ -189,7 +189,7 @@ class SphericalTensor():
             assert mode in ['1spin','B0_LF'],'1-spin modes are 1spin and B0_LF'
             if mode=='1spin':
                 self._T=[None for _ in range(2)]
-                print('checkpoint')
+                # print('checkpoint')
                 self._T[0]=[Op.eye]
                 self._T[1]=[-1/np.sqrt(2)*Op.p,Op.z,1/np.sqrt(2)*Op.m]
             elif mode=='B0_LF':

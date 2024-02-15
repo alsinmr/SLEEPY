@@ -547,6 +547,9 @@ class Rho():
             if self._t is None:self._t=U.t0
             if not(self.static) and np.abs((self.t-U.t0)%self.taur)>tol and np.abs((U.t0-self.t)%self.taur)>tol:
                 warnings.warn('The initial time of the propagator is not equal to the current time of the density matrix')
+            if not(self.static) and np.abs(U.Dt%self.taur)>tol and np.abs((self.taur-U.Dt)%self.taur)>tol:
+                warnings.warn('The propagator length is not an integer multiple of the rotor period')
+         
         elif self._t is None:
             self._t=0
         

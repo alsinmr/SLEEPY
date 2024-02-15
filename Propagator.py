@@ -197,8 +197,8 @@ class Propagator():
 
         """
 
-        if not(self.static) and self.Dt%self.taur>tol:
-            warnings.warn('Power of a propagator should only be used if the propagator is exactly one rotor period')
+        if not(self.static) and (self.Dt%self.taur>tol or (self.taur-self.Dt)%self.taur>tol):
+            warnings.warn('Power of a propagator should only be used if the propagator length is an integer multiple of rotor periods')
 
         if not(self.static) and not(isinstance(n,int)):
             warnings.warn('Warning: non-integer powers may not accurately reflect state of propagator in the middle of a rotor period')
