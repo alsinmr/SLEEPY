@@ -283,7 +283,7 @@ class Sequence():
         return ax
             
         
-    def U(self,Dt:float=None,t0:float=None):
+    def U(self,Dt:float=None,t0:float=None,t0_seq:float=0):
         """
         Returns the propagator corresponding to the stored sequence. If Dt is
         not specified, then Dt will extend to the last specified point in the
@@ -308,6 +308,12 @@ class Sequence():
         t0 : float, optional
             Initial time for the propagator. The default is None, which sets t0
             to the end of the last calculated propagator
+            
+        t0_seq : float, optional
+            Initial time relative to the sequence start. That is, t0 tells where
+            in the rotor period to start, and t0_seq tells where in the sequence
+            to start. Note that if t0_seq is greater than seq.Dt, then the
+            modulo of t0_seq%seq.Dt is used
 
         Returns
         -------
@@ -324,13 +330,20 @@ class Sequence():
             
         tf=t0+Dt
         
-        t=self.t+t0 #Absolute time axis
+        t0_seq%=self.Dt
+        i=np.argmax(self.t>t0_seq)-1
+        t=copy(self.t)[i:]-t0_seq
+        t[0]=0
+        
+        t=t+t0 #Absolute time axis (relative to rotor period)
+        
+        
         
 
         
-        ini_fields=copy(self.fields)
+        # ini_fields=copy(self.fields)
 
-        U=self.L.Ueye(t[0])
+        # U=self.L.Ueye(t[0])
         i1=np.argwhere(t>=tf)[0,0] #First time after tf
         t=np.concatenate((t[:i1],[tf]))
         
@@ -342,7 +355,7 @@ class Sequence():
          
         # self.L.rf.fields=ini_fields        
         
-        dct={'t':t,'v1':copy(self.v1),'phase':copy(self.phase),'voff':copy(self.voff)}
+        dct={'t':t,'v1':copy(self.v1)[:,i:],'phase':copy(self.phase)[:,i:],'voff':copy(self.voff)[:,i:]}
         self.expsys._tprop=0 if self.taur is None else tf%self.taur
         
         return Propagator(U=dct,t0=t0,tf=tf,taur=self.taur,L=self.L,isotropic=self.isotropic)

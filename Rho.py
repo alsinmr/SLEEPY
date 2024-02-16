@@ -508,7 +508,7 @@ class Rho():
         if self.L is not None:
             return self.L.__len__()
     
-    def DetProp(self,U=None,seq=None,n:int=1):
+    def DetProp(self,U=None,seq=None,n:int=1,n_per_seq:int=1):
         """
         Executes a series of propagation/detection steps. Detection occurs first,
         followed by propagation, with the sequence repeated for n steps. 
@@ -518,15 +518,20 @@ class Rho():
         ----------
         U : Propagator
             Propagator applied. Should be an integer number of rotor periods
+        seq : Sequence 
+             Alternative to providing a propagator, which does not need to
+             be an integer multiple of rotor periods
         n : int, optional
-            Number of steps. The default is 1.
+            Number of time steps. The default is 1.
+        n_per_seq : int, optional 
+            Allows one to break a sequence into steps, e.g. to obtain a larger
+            spectral width.
 
         Returns
         -------
         self
 
         """
-        
         assert not(U is None and seq is None),"Either U or seq must be defined"
         
         if seq is None and not(hasattr(U,'calcU')):
@@ -573,31 +578,45 @@ class Rho():
                 for _ in range(n):
                     U*self()
         else:
+            # TODO set n_per_seq functionality here
             if self.static:
                 return self.DetProp(U=seq.U(),n=n)
             
-            if seq.Dt%seq.taur<tol or -seq.Dt%seq.taur<tol:
+            if (seq.Dt%seq.taur<tol or -seq.Dt%seq.taur<tol) and n_per_seq==1:
                 U=seq.U(t0=self.t,Dt=self.t+seq.Dt)  #Just generate the propagator and call with U
                 self.DetProp(U=U,n=n)
                 return self
             
-            for k in range(1,n):
-                nsteps=np.round(k*seq.taur/seq.Dt,0).astype(int)
-                if nsteps*seq.Dt%seq.taur < tol:break
-                if seq.taur-(nsteps*seq.Dt%seq.taur) < tol:break
+            if seq.Dt<seq.taur:
+                for k in range(1,n):
+                    nsteps=np.round(k*seq.taur/seq.Dt,0).astype(int)
+                    if nsteps*seq.Dt%seq.taur < tol:break
+                    if seq.taur-(nsteps*seq.Dt%seq.taur) < tol:break
+                else:
+                    nsteps=n
+                                    
             else:
-                nsteps=n
+                for k in range(1,n):
+                    nsteps=np.round(k*seq.Dt/seq.taur,0).astype(int)
+                    if nsteps*seq.Dt%seq.taur < tol:break
+                    if seq.taur-(nsteps*seq.Dt%seq.taur) < tol:break
+                else:
+                    nsteps=n
+                k,nsteps=nsteps,k
+            nsteps*=n_per_seq if nsteps<n else n
+                
             print(f'Prop: {nsteps} step{"" if nsteps==1 else "s"} per every {k} rotor period{"" if k==1 else "s"}')
             
-            # nsteps=np.round(seq.taur/seq.Dt,0).astype(int)
-            # assert np.abs(nsteps*seq.Dt-seq.taur)<tol,"Sequences shorter than a rotor period can only be propagated via DetProp if seq.Dt fits an integer number of times into the rotor period"
             
             seq.reset_prop_time(self.t)
             
-            U=[seq.U() for _ in range(nsteps)]
+            
+            Dt=seq.Dt/n_per_seq
+            
+            U=[seq.U(Dt=Dt,t0_seq=k*Dt) for k in range(nsteps)]
             
             
-            if n//nsteps>100 and False:
+            if n//nsteps>100:
                 self()  #Detect once before propagation
                 U0=[]
                 Ipwd=np.zeros([len(self),len(self._detect),n],dtype=Defaults['ctype'])
@@ -623,9 +642,9 @@ class Rho():
                 for k in range(len(self)):
                     for m in range(len(self._detect)):
                         self._Ipwd[k][m].extend(Ipwd[k][m][:-1].tolist())
-                        
-                self._taxis.extend([self.t+k*seq.Dt for k in range(1,n)])
-                self._t+=n*seq.Dt
+                
+                self._taxis.extend([self.t+k*Dt for k in range(1,n)])
+                self._t+=n*Dt
                         
             else:
                 for k in range(n):
