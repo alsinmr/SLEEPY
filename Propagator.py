@@ -153,17 +153,26 @@ class Propagator():
         if str(U.__class__)!=str(self.__class__):
             return NotImplemented
         
+        if self.tf==self.t0:
+            self.t0=U.tf
+            self.tf=U.tf
+        if U.tf==U.t0:
+            U.t0=self.t0
+            U.tf=self.t0
         
         if not(self.static) and np.abs((self.t0-U.tf)%self.taur)>tol and np.abs((U.tf-self.t0)%self.taur)>tol:
-            if not(self.tf==self.t0 or U.tf==U.t0):
-                warnings.warn(f'\nFirst propagator ends at {U.tf%self.taur} but second propagator starts at {self.t0%U.taur}')
+            warnings.warn(f'\nFirst propagator ends at {U.tf%self.taur} but second propagator starts at {self.t0%U.taur}')
+                
         
         if self.pwdavg:
             assert U.pwdavg,"Both propagators should have a powder average or bot not"
         else:
             assert not(U.pwdavg),"Both propagators should have a powder average or bot not"
 
-        Uout=[U1@U2 for U1,U2 in zip(self,U)]
+        if U is self:
+            Uout=[U1@U1 for U1 in self]
+        else:
+            Uout=[U1@U2 for U1,U2 in zip(self,U)]
         
         if not(self.pwdavg):Uout=Uout[0]
         return Propagator(Uout,t0=U.t0,tf=U.tf+self.Dt,taur=self.taur,L=self.L,isotropic=self.isotropic)

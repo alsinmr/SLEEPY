@@ -184,9 +184,7 @@ def dipole(es,i0:int,i1:int,delta:float,eta:float=0,euler=[0,0,0]):
             M=np.sqrt(2/3)*(S.z*I.z-0.5*(S.x@I.x+S.y@I.y))     #Be careful. S.z*I.z is ok, but S.x*I.x is not (diag vs. non-diag)
         else:
             M=np.sqrt(2/3)*S.z*I.z
-        
-    
-    
+            
     return Ham1inter(M=M,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info)
 
 def J(es,i0:int,i1:int,J:float):

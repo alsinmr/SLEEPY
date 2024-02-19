@@ -71,17 +71,6 @@ class Rho():
         # self._Setup()
         self.apodize=False
     
-    def __setattr__(self,name,value):
-        if name=="L":
-            if value is not self.L and len(self.t_axis):
-                warnings.warn("Internal Liouvillian does not match propagator's Liouvillian, although system has already been propagated")
-             
-            super().__setattr__('_L',value)
-            self._Setup()
-            return
-        
-        super().__setattr__(name,value)
-    
     @property
     def _rtype(self):
         return Defaults['rtype']
@@ -101,6 +90,15 @@ class Rho():
     @property
     def L(self):
         return self._L
+    
+    @L.setter
+    def L(self,L):
+        if L is not self.L and len(self.t_axis):
+            warnings.warn("Internal Liouvillian does not match propagator's Liouvillian, although system has already been propagated")
+         
+        self._L=L
+        self._Setup()
+        
     
     @property
     def n_det(self):
@@ -133,7 +131,7 @@ class Rho():
             time.
 
         """
-        return self._t
+        return self._t if self._t is not None else 0
     
     @property
     def t_axis(self):
@@ -334,6 +332,7 @@ class Rho():
         if self.L is not None:
             self._rho=[self._rho0 for _ in range(self.pwdavg.N)]
         self._t=None
+        return self
     
     def clear(self):
         """

@@ -161,6 +161,8 @@ class Sequence():
             elif np.all(t==self.t):
                 new=np.array(x)
             else:
+                if len(x)==len(t)-1:
+                    x=np.concatenate([x,[0]])
                 assert len(x)==len(t),f"{name[1:]} has a different length than t"
                 new=np.zeros(self.t.shape)
                 for k,t0 in enumerate(self.t):

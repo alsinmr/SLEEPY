@@ -48,7 +48,6 @@ class ParallelManager():
             dt=L.dt
             n_gamma=L.expsys.n_gamma
             n0,nf,tm1,tp1=StepCalculator(t0=t0,Dt=Dt,dt=dt)
-            # print(n0,nf,tm1,tp1)
             
             self.pars=(n0,nf,tm1,tp1,dt,n_gamma)
         

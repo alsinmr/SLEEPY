@@ -10,6 +10,7 @@ import os
 import numpy as np
 import re
 from .Info import Info
+from .vft import Spher2pars
 
 #%% Some useful tools (Gyromagnetic ratios, spins, dipole couplings)
 class NucInfo(Info):
@@ -123,7 +124,7 @@ def dipole_coupling(r,Nuc1,Nuc2):
 def d2(c=0,s=None,m=None,mp=0):
     """
     Calculates components of the d2 matrix. By default only calculates the components
-    starting at m=0 and returns five components, from -2,-1,0,1,2. One may also
+    starting at mp=0 and returns five components, from -2,-1,0,1,2. One may also
     edit the starting component and select a specific final component 
     (mp=None returns all components, whereas mp may be specified between -2 and 2)
     
@@ -350,7 +351,39 @@ def fourSite_sym(tc:float):
     """
     return 1/(4*tc)*(np.ones([4,4])-np.eye(4)*4)
     
+
+def twoSite_S_eta(theta:float,p:float=0.5):
+    """
+    Calculates S and eta for a two-site hop. Provide one or more opening angles
+    (theta) and optionally the population of the first site (p)
+
+    Parameters
+    ----------
+    theta : float (or list of floats)
+        Opening angle or angles.
+    p     : float, optional
+        Population of the first site. The default is 0.5
+        
+        
+
+    Returns
+    -------
+    Tuple
+    S and eta for the two site hop
+
+    """
+    
+    oneD=hasattr(theta,'__len__')
+    theta=np.atleast_1d(theta)
+    
+    A=(p*np.array([0,0,np.sqrt(3/2),0,0])+(1-p)*np.sqrt(3/2)*d2(theta).T).T
+    
+    S,eta=Spher2pars(A)[:2]
             
+    if oneD:return S,eta
+    
+    return S[0],eta[0]
+
     
     
     
