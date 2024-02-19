@@ -698,7 +698,7 @@ class Liouvillian():
         d[i]/=np.abs(d[i])
         return d,v
     
-    def Sequence(self):
+    def Sequence(self,cyclic=False):
         """
         Returns a Sequence object initialized from this Liouvillian
 
@@ -707,7 +707,7 @@ class Liouvillian():
         None.
 
         """
-        return Sequence(self)
+        return Sequence(self,cyclic=cyclic)
     
     @property
     def ex_pop(self):

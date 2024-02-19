@@ -12,7 +12,7 @@ from copy import copy
 from .Propagator import Propagator
 
 class Sequence():
-    def __init__(self,L):
+    def __init__(self,L,cyclic=False):
         """
         Generates a propagator for a specific pulse sequence. If the generated
         propagator is an integer number of rotor periods, then we can expect
@@ -43,6 +43,7 @@ class Sequence():
         self._phase=np.zeros([ns,2])
         
         self._spin_specific=False
+        self.cyclic=cyclic
     
     @property
     def isotropic(self):
@@ -285,7 +286,7 @@ class Sequence():
         return ax
             
         
-    def U(self,Dt:float=None,t0:float=None,t0_seq:float=0):
+    def U(self,Dt:float=None,t0:float=None,t0_seq:float=None):
         """
         Returns the propagator corresponding to the stored sequence. If Dt is
         not specified, then Dt will extend to the last specified point in the
@@ -324,19 +325,47 @@ class Sequence():
 
         """
         
+        
 
         if Dt is None:Dt=self.Dt
         if self.isotropic:t0=0
         if t0 is None:
             t0=0 if self.L.static else self.expsys._tprop%self.taur
             
+ 
+            
         tf=t0+Dt
         
-        t0_seq%=self.Dt
-        i=np.argmax(self.t>t0_seq)-1
-        t=copy(self.t)[i:]-t0_seq
+        if t0_seq is None:
+            t0_seq=t0 if self.cyclic else 0
+        
+        
+        if self.cyclic:
+            t0_seq%=self.Dt
+            nreps=int((Dt+t0_seq)/self.Dt)+1
+            t=copy(self.t)
+            t=np.tile(self.t[:-2],nreps)+(np.arange(nreps)*self.Dt).repeat(len(t)-2)
+            t=np.concatenate((t,self.t[-2:-1]+self.Dt*(nreps-1)))
+            v1=np.tile(self.v1[:,:-2],nreps)
+            v1=np.concatenate((v1,self.v1[:,-2:-1]),axis=-1)
+            phase=np.tile(self.phase[:,:-2],nreps)
+            phase=np.concatenate((phase,self.phase[:,-2:-1]),axis=-1)
+            voff=np.tile(self.voff[:,:-2],nreps)
+            voff=np.concatenate((voff,self.voff[:,-2:-1]),axis=-1)
+            
+        else:
+            t=copy(self.t)
+            v1=copy(self.v1)
+            phase=copy(self.phase)
+            voff=copy(self.voff)
+        
+
+        i=np.argmax(t>t0_seq)-1
+        t=t[i:]-t0_seq
         t[0]=0
         
+        
+        #WHY DO THESE SOMETIMES ONLY GET ONE ELEMENT????
         t=t+t0 #Absolute time axis (relative to rotor period)
         
         
@@ -346,7 +375,7 @@ class Sequence():
         # ini_fields=copy(self.fields)
 
         # U=self.L.Ueye(t[0])
-        i1=np.argwhere(t>=tf)[0,0] #First time after tf
+        i1=np.argmax(t>=tf) #First time after tf
         t=np.concatenate((t[:i1],[tf]))
         
         # for m,(ta,tb) in enumerate(zip(t[:-1],t[1:])):
@@ -357,7 +386,8 @@ class Sequence():
          
         # self.L.rf.fields=ini_fields        
         
-        dct={'t':t,'v1':copy(self.v1)[:,i:],'phase':copy(self.phase)[:,i:],'voff':copy(self.voff)[:,i:]}
+        # dct={'t':t,'v1':copy(self.v1)[:,i:],'phase':copy(self.phase)[:,i:],'voff':copy(self.voff)[:,i:]}
+        dct={'t':t,'v1':v1[:,i:i+i1+1],'phase':phase[:,i:i+i1+1],'voff':voff[:,i:i+i1+1]}
         self.expsys._tprop=0 if self.taur is None else tf%self.taur
         
         return Propagator(U=dct,t0=t0,tf=tf,taur=self.taur,L=self.L,isotropic=self.isotropic)
