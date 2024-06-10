@@ -10,7 +10,7 @@ Quadrupole relaxation is not included
 
 Relaxation towards thermal equilibrium occurs with a fixed value. For a spin that the equilibrium polarization varies throughout the rotor period, this will not be correct (relevant for DNP, and effects such as pseudocontact shift in solid-state NMR).
 
-T1 relaxation towards equilibrium may not be fully correct for high polarization.
+Frequency offsets are not handled correctly in the case that the offset is changed during the simulation
 
 Copyright 2023 Albert Smith-Penzel
 
