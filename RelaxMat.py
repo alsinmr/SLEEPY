@@ -196,6 +196,7 @@ def recovery(expsys,L):
     
     # out[:,i]=-np.atleast_2d(Lrhoeq).T.repeat(i.size,axis=1)
     # L.recovery=-out
+    # print('updated')
     # return out
     
     
@@ -214,18 +215,18 @@ def recovery(expsys,L):
         
     rho_eq=L.rho_eq()
     for i0,i1 in index:
-        if out[i0,i1]==0:
-            # DelE=(L.Energy[i0]-L.Energy[i1])
-            # rat=np.exp(DelE/(1.380649e-23*expsys.T_K))
-            if rho_eq[i0]==0 or rho_eq[i1]==0:continue
-            rat=rho_eq[i0]/rho_eq[i1]
-            Del=L.Lrelax[i0,i1]*(1-rat)/(1+rat)
-            out[i0,i1]=-Del
-            out[i1,i1]=Del
-            out[i1,i0]=Del
-            out[i0,i0]=-Del
+        # if out[i0,i1]==0:
+        # DelE=(L.Energy[i0]-L.Energy[i1])
+        # rat=np.exp(DelE/(1.380649e-23*expsys.T_K))
+        if rho_eq[i0]==0 or rho_eq[i1]==0:continue
+        rat=rho_eq[i0]/rho_eq[i1]
+        Del=L.Lrelax[i0,i1]*(1-rat)/(1+rat)
+        out[i0,i1]=-Del
+        out[i1,i1]+=Del
+        out[i1,i0]=Del
+        out[i0,i0]+=-Del
 
-    L.recovery=-out
+    L.recovery=out
     return out
 
 # (1-(1-rat)/(1+rat))/(1+(1-rat)/(1+rat))

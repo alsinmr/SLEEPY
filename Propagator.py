@@ -81,10 +81,21 @@ class Propagator():
             Unew=list()
             for k,U in enumerate(self):
                 d,v=np.linalg.eig(U)
-                dabs=np.abs(d)
+                # We do this because anything above 1 would be producing magnetization
+                # The most we can have is 1, which represents equilibrium
+                # under the current conditions
+                dabs=np.abs(d) 
                 i=dabs>1
-                d[i]/=dabs[i]
+                d[i]/=d.real[i]
                 if self.L.Peq:
+                    # We do this because there does indeed need to be an equilibrium
+                    # state. It is possible, however, that without relaxation,
+                    # the equilibrium state is never accessed. Still, it
+                    # doesn't hurt to enforce it's existence. Note that we're
+                    # just cleaning up numerical error that might have the
+                    # equilibrium deviate slightly from 1, leading to slow
+                    # decay of all magnetization. It won't increase only because
+                    # we already cleaned that up several lines above.
                     i=np.argmax(d)
                     v[:,i]=self.L.rho_eq(pwdindex=k)
                     v[:,i]/=np.sqrt((v[:,i].conj()*v[:,i]).sum())

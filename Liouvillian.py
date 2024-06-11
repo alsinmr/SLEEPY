@@ -25,6 +25,7 @@ from .Hamiltonian import Hamiltonian
 from . import RelaxMat
 from .Sequence import Sequence
 from .Para import ParallelManager, StepCalculator
+import matplotlib.pyplot as plt
 
 # import importlib.util
 # numba=importlib.util.find_spec('numba') is not None
@@ -806,24 +807,160 @@ class Liouvillian():
             return rho_eq
         else:
             return self.H[Hindex].rho_eq(pwdindex=pwdindex,sub1=sub1).reshape(self.shape[0]//len(self.H))
-            
-    @property    
-    def Energy(self):
+        
+        
+    # @property    
+    # def Energy(self):
+    #     """
+    #     Energy for each of the NxNxnHam states in the Liouvillian, including 
+    #     energy from the Larmor frequency (regardless of whether in lab frame).
+    #     Neglects rotating terms, Hn, for n!=0
+
+    #     Returns
+    #     -------
+    #     None.
+
+    #     """
+    #     Energy=np.zeros(self.shape[0])
+    #     N=self.H[0].shape[0]**2
+    #     for k,H in enumerate(self.H):
+    #         Energy[k*N:(k+1)*N]=H.Energy
+    #     return Energy
+    
+    def plot(self,what:str='L',cmap:str=None,mode:str='log',colorbar:bool=True,
+             step:int=0,ax=None):
         """
-        Energy for each of the NxNxnHam states in the Liouvillian, including 
-        energy from the Larmor frequency (regardless of whether in lab frame).
-        Neglects rotating terms, Hn, for n!=0
+        Visualizes the Liouvillian matrix. Options are what to view (what) and 
+        how to display it (mode), as well as colormaps and one may optionally
+        provide the axis.
+        
+        Note, one should index the Liouvillian before running. If this is not
+        done, then we jump to the halfway point of the powder average
+        
+        what:
+        'L' : Full Liouvillian. Optionally specify time step
+        'Lrelax' : Full relaxation matrix
+        'Lrf' : Applied field matrix
+        'recovery' : Component of relaxation matrix responsible for magnetizaton recovery
+        'L0', 'L1', 'L2', 'L-1', 'L-2' : Liouvillians from different components of the
+        Hamiltonian (does not include relaxaton / RF)
+        
+        mode:
+        'abs' : Colormap of the absolute value of the plot
+        'log' : Similar to abs, but on a logarithmic scale
+        'signed' : Usually applied for real matrices (i.e. relaxation), which
+                    shifts the data to show both negative and positive values
+                    (imaginary part will be omitted)
+        'spy' : Black/white for nonzero/zero (threshold applied at 1/1e6 of the max)
+
+
+
+        Parameters
+        ----------
+        what : str, optional
+            DESCRIPTION. The default is 'L'.
+        cmap : str, optional
+            DESCRIPTION. The default is 'YOrRd'.
+        mode : str, optional
+            DESCRIPTION. The default is 'abs'.
+        colorbar : bool, optional
+            DESCRIPTION. The default is True.
+        step : int, optional
+            DESCRIPTION. The default is 0.
+        ax : TYPE, optional
+            DESCRIPTION. The default is None.
 
         Returns
         -------
         None.
 
         """
-        Energy=np.zeros(self.shape[0])
-        N=self.H[0].shape[0]**2
-        for k,H in enumerate(self.H):
-            Energy[k*N:(k+1)*N]=H.Energy
-        return Energy
+    
+        if ax is None:
+            fig,ax=plt.subplots()
+        else:
+            fig=None
+        
+        if cmap is None:
+            if mode == 'abs' or mode=='log':
+                cmap='YlOrRd'
+            elif mode == 'signed':
+                cmap='BrBG'
+            elif mode == 'spy':
+                cmap= 'binary'
+                
+        if what in ['L0','L1','L-1','L-2']:
+            x=self.Ln_H(int(what[1:]))
+        else:
+            x=getattr(self[len(self)//2] if self._index==-1 else self,what)
+            if hasattr(x,'__call__'):
+                x=x(step)
+            
+        if mode=='abs':
+            x=np.abs(x)
+            sc=x.max()
+            x/=sc
+        elif mode=='signed':
+            x=x.real
+            sc=np.abs(x).max()
+            x/=sc*2
+            x+=.5
+        elif mode=='spy':
+            cutoff=np.abs(x).max()*1e-6
+            x=np.abs(x)>cutoff
+        elif mode=='log':
+            x=np.abs(x)
+            i=np.logical_not(x==0)
+            if i.sum()!=0:
+                x[i]=np.log10(x[i])
+                sc0=x[i].min()
+                x[i]-=sc0
+                x[i]+=x[i].max()*.2
+                sc1=x[i].max()
+                x[i]/=sc1
+                
+                sc1=sc1/1.2+sc0
+            
+        hdl=ax.imshow(x,cmap=cmap)
+        
+        if colorbar and mode!='spy':
+            hdl=plt.colorbar(hdl)
+            if mode=='abs':
+                hdl.set_ticks(np.linspace(0,1,6))
+                hdl.set_ticklabels([f'{q:.2e}' for q in np.linspace(0,sc,6)])
+                hdl.set_label(r'$|L_{n,n}|$')
+            elif mode=='log':
+                hdl.set_ticks(np.linspace(0,1,6))
+                labels=['0',*[f'{10**q:.2e}' for q in np.linspace(sc0,sc1,5)]]
+                hdl.set_ticklabels(labels)
+                hdl.set_label(r'$|L_{n,n}|$')
+            elif mode=='signed':
+                pass
+            
+        labels=self.expsys.Op.labels
+        if labels is not None:
+            def format_func(value,tick_number):
+                value=int(value)
+                if value>=len(labels):return ''
+                elif value<0:return ''
+                return '|'+labels[value]+r'$\rangle$'
+
+            
+            ax.set_xticklabels('',rotation=-90)
+            ax.xaxis.set_major_formatter(plt.FuncFormatter(format_func))
+            
+            def format_func(value,tick_number):
+                value=int(value)
+                if value>=len(labels):return ''
+                elif value<0:return ''
+                return r'$\langle$'+labels[value]+'|'
+            ax.yaxis.set_major_formatter(plt.FuncFormatter(format_func))
+        if fig is not None:fig.tight_layout()
+            
+        return ax
+            
+            
+                
             
         
         

@@ -81,6 +81,37 @@ class SpinOp:
         self._index=-1
         return self
     
+    @property
+    def labels(self):
+        """
+        State labels (Ialpha*Sz, for example). Provided as a list
+
+        Returns
+        -------
+        None.
+
+        """
+        if not(np.all(self.Mult==2)):
+            return None
+        
+        labels=[]
+        N=len(self.Mult)
+        for k in range(4**N):
+            index=[]
+            for q in range(N):
+                index.append(np.mod(k,4))
+                k-=index[-1]
+                k//=4
+            labels.append('')
+            for q in range(N):
+                s=N-q
+                labels[-1]=[rf'S$_{s}^\alpha$',rf'S$_{s}^+$',rf'S$_{s}^-$',rf'S$_{s}^\beta$'][index[q]]+labels[-1]
+                
+        return labels
+            
+        
+        
+    
 from copy import copy    
 class OneSpin():
     def __init__(self,S,n):
