@@ -26,6 +26,7 @@ from . import RelaxMat
 from .Sequence import Sequence
 from .Para import ParallelManager, StepCalculator
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 
 # import importlib.util
 # numba=importlib.util.find_spec('numba') is not None
@@ -895,13 +896,14 @@ class Liouvillian():
             x=getattr(self[len(self)//2] if self._index==-1 else self,what)
             if hasattr(x,'__call__'):
                 x=x(step)
-            
+        
+        sc0,sc1,sc=1,1,1
         if mode=='abs':
             x=np.abs(x)
             sc=x.max()
             x/=sc
         elif mode=='signed':
-            x=x.real
+            x=copy(x.real)
             sc=np.abs(x).max()
             x/=sc*2
             x+=.5
@@ -921,7 +923,7 @@ class Liouvillian():
                 
                 sc1=sc1/1.2+sc0
             
-        hdl=ax.imshow(x,cmap=cmap)
+        hdl=ax.imshow(x,cmap=cmap,vmin=0,vmax=1)
         
         if colorbar and mode!='spy':
             hdl=plt.colorbar(hdl)
@@ -935,9 +937,12 @@ class Liouvillian():
                 hdl.set_ticklabels(labels)
                 hdl.set_label(r'$|L_{n,n}|$')
             elif mode=='signed':
-                pass
+                hdl.set_ticks(np.linspace(0,1,5))
+                labels=[f'{q:.2e}' for q in np.linspace(-sc,sc,5)]
+                hdl.set_ticklabels(labels)
+                hdl.set_label(r'$L_{n,n}$')
             
-        labels=self.expsys.Op.labels
+        labels=self.expsys.Op.Llabels
         if labels is not None:
             def format_func(value,tick_number):
                 value=int(value)
@@ -955,6 +960,11 @@ class Liouvillian():
                 elif value<0:return ''
                 return r'$\langle$'+labels[value]+'|'
             ax.yaxis.set_major_formatter(plt.FuncFormatter(format_func))
+            
+        
+
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
         if fig is not None:fig.tight_layout()
             
         return ax

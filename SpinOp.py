@@ -82,7 +82,7 @@ class SpinOp:
         return self
     
     @property
-    def labels(self):
+    def Llabels(self):
         """
         State labels (Ialpha*Sz, for example). Provided as a list
 
@@ -109,6 +109,41 @@ class SpinOp:
                 
         return labels
             
+    @property
+    def Hlabels(self):
+        """
+        State labels (Ialpha*Sz, for example). Provided as a list
+
+        Returns
+        -------
+        None.
+
+        """
+        if not(np.all(self.Mult==2)):
+            return None
+        
+        labels=[]
+        N=len(self.Mult)
+        for k in range(np.prod(self.Mult)):
+            index=[]
+            labels.append('')
+            for q in range(N):
+                mult=self.Mult[N-q-1]
+                i=np.mod(k,mult)
+                k-=i
+                k//=mult
+                if np.mod(mult,2):
+                    start=(mult-1)//2
+                    labels[-1]=f'{start-i}'+labels[-1]
+                else:
+                    start=mult//2
+                    if start-2*i<0:
+                        labels[-1]=rf'$-\dfrac{{{np.abs(start-2*i)}}}{{2}}$,'+labels[-1]
+                    else:
+                        labels[-1]=rf'$\dfrac{{{start-2*i}}}{{2}}$,'+labels[-1]
+            labels[-1]=labels[-1][:-1]
+                
+        return labels
         
         
     

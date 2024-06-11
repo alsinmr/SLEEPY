@@ -86,7 +86,7 @@ class Propagator():
                 # under the current conditions
                 dabs=np.abs(d) 
                 i=dabs>1
-                d[i]/=d.real[i]
+                d[i]/=dabs[i]
                 if self.L.Peq:
                     # We do this because there does indeed need to be an equilibrium
                     # state. It is possible, however, that without relaxation,
@@ -97,8 +97,8 @@ class Propagator():
                     # decay of all magnetization. It won't increase only because
                     # we already cleaned that up several lines above.
                     i=np.argmax(d)
-                    v[:,i]=self.L.rho_eq(pwdindex=k)
-                    v[:,i]/=np.sqrt((v[:,i].conj()*v[:,i]).sum())
+                    # v[:,i]=self.L.rho_eq(pwdindex=k)
+                    # v[:,i]/=np.sqrt((v[:,i].conj()*v[:,i]).sum())
                     d[i]=1.
                 self._eig.append((d,v))
                 if back_calc:
