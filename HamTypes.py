@@ -267,7 +267,7 @@ def CSA(es,i:int,delta:float,eta:float=0,euler=[0,0,0]):
     """
     
     S=es.Op[i]
-    M=np.sqrt(2/3)*S.z    #Is the multiplication factor correct?
+    M=np.sqrt(2/3)*S.z    
     delta=delta*es.v0[i]/1e6
     
     info={'Type':'CSA','i':i,'delta':delta,'eta':eta,'euler':euler}

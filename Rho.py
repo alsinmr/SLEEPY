@@ -912,7 +912,7 @@ class Rho():
                     x=x.replace('_','_{')
                     a=a[1:]+'}'
                 
-                return r'<'+x+a+'>' if Nuc=='e' else r'<$'+x+a+'$>'
+                return r'<$'+x+a+'$>' if Nuc=='e' else r'<$'+x+a+'$>'
             else:
                 return r'<Op>'
                 
