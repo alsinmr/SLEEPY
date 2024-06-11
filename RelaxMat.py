@@ -183,43 +183,54 @@ def recovery(expsys,L):
         
     #     rho_eq[k*N**2:(k+1)*N**2]=x.reshape(x.size)
     
-    rho_eq=L.rho_eq()
+    
+    ## Version 2
+    # rho_eq=L.rho_eq()
 
-    Lrhoeq=(L[0].Ln(0)@rho_eq)
-    out=np.zeros(L[0].Ln(0).shape,dtype=Defaults['ctype'])
+    # Lrhoeq=(L[0].Ln(0)@rho_eq)
+    # out=np.zeros(L[0].Ln(0).shape,dtype=Defaults['ctype'])
     
-    n=np.prod(L[0].H[0].shape)
-    i0=np.arange(0,n,expsys.Op.Mult.prod()+1)
-    i=np.concatenate([i0+k*n for k in range(len(L.H))])
+    # n=np.prod(L[0].H[0].shape)
+    # i0=np.arange(0,n,expsys.Op.Mult.prod()+1)
+    # i=np.concatenate([i0+k*n for k in range(len(L.H))])
     
-    out[:,i]=-np.atleast_2d(Lrhoeq).T.repeat(i.size,axis=1)
+    # out[:,i]=-np.atleast_2d(Lrhoeq).T.repeat(i.size,axis=1)
     # L.recovery=-out
+    # return out
     
+    
+    # ## Versiou 3
+    out=np.zeros(L[0].Ln(0).shape,dtype=Defaults['ctype'])
     index=np.argwhere(L.Lrelax-np.diag(np.diag(L.Lrelax)))
     index.sort(-1)
     index=np.unique(index,axis=0)
     
-    Ln_H=L[0].Ln_H(0)/1j/(2*np.pi)
-    for LF,v0,Op in zip(expsys.LF,expsys.v0,expsys.Op):
-        if not(LF):
-            n=L.H[0].shape[0]**2
-            for k in range(len(L.H)):
-                Ln_H[k*n:(k+1)*n][:,k*n:(k+1)*n]+=Ham2Super(v0*Op.z)
+    # Ln_H=L[0].Ln_H(0)/1j/(2*np.pi)
+    # for LF,v0,Op in zip(expsys.LF,expsys.v0,expsys.Op):
+    #     if not(LF):
+    #         n=L.H[0].shape[0]**2
+    #         for k in range(len(L.H)):
+    #             Ln_H[k*n:(k+1)*n][:,k*n:(k+1)*n]+=Ham2Super(v0*Op.z)
         
-    
+    rho_eq=L.rho_eq()
     for i0,i1 in index:
         if out[i0,i1]==0:
-            DelE=(L.Energy[i0]-L.Energy[i1])
-            rat=np.exp(DelE/(1.380649e-23*expsys.T_K))
+            # DelE=(L.Energy[i0]-L.Energy[i1])
+            # rat=np.exp(DelE/(1.380649e-23*expsys.T_K))
+            if rho_eq[i0]==0 or rho_eq[i1]==0:continue
+            rat=rho_eq[i0]/rho_eq[i1]
             Del=L.Lrelax[i0,i1]*(1-rat)/(1+rat)
             out[i0,i1]=-Del
             out[i1,i1]=Del
             out[i1,i0]=Del
             out[i0,i0]=-Del
 
-    L.recovery=out
+    L.recovery=-out
     return out
 
+# (1-(1-rat)/(1+rat))/(1+(1-rat)/(1+rat))
+# = (1+rat-(1-rat))/(1+rat+(1-rat))
+# = 2*rat/2=rat
     
     
     

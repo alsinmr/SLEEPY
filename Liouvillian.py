@@ -534,6 +534,8 @@ class Liouvillian():
                     # U=expm(L*Dt)
     
                     d,v=np.linalg.eig(L)
+                    
+                    
                     U=v@np.diag(np.exp(d*Dt))@np.linalg.pinv(v)
     
                     return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)

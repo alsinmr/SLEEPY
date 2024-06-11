@@ -152,6 +152,7 @@ class Sequence():
         None.
 
         """
+        if channel=='e':channel='e-'
         t=np.array(t)
         self.new_t(t)
         
