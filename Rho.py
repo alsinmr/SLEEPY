@@ -559,6 +559,8 @@ class Rho():
         
         if U is not None:
             if n>=100:
+                # TODO
+                # Something is going wrong here when using recovery to equilibrium!
                 self()
                 U.eig()
                 for k,((d,v),rho) in enumerate(zip(U._eig,self)):
@@ -912,7 +914,7 @@ class Rho():
                     x=x.replace('_','_{')
                     a=a[1:]+'}'
                 
-                return r'<'+x+a+'>' if Nuc=='e' else r'<$'+x+a+'$>'
+                return r'<'+x+'$'+a+'$>' if Nuc=='e' else r'<$'+x+a+'$>'
             else:
                 return r'<Op>'
                 

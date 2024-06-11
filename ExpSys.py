@@ -32,6 +32,7 @@ class ExpSys():
         assert B0 is not None or v0H is not None,"B0 or v0H must be specified"
         self.B0=B0 if B0 is not None else v0H*1e6/NucInfo('1H')
         self.Nucs=np.atleast_1d(Nucs)
+        self.Nucs[self.Nucs=='e']='e-'
         S=np.array([NucInfo(nuc,'spin') for nuc in self.Nucs])
         self.gamma=np.array([NucInfo(nuc,'gyro') for nuc in self.Nucs])
         self.Op=SpinOp(S)

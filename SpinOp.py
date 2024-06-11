@@ -239,7 +239,7 @@ class SphericalTensor():
                 
                 self._T[2]=[zero,
                             -1/2*(Op0.z@Op1.p),
-                            1/np.sqrt(6)*(2*Op0.z@Op1.z-(Op0.x@Op1.x+Op0.y@Op1.y)),
+                            1/np.sqrt(6)*(2*Op0.z@Op1.z),
                             1/2*(Op0.z@Op1.m),
                             zero]
             elif mode=='het':

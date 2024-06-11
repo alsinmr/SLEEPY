@@ -352,6 +352,7 @@ class RF():
         None.
 
         """
+        if channel=='e':channel='e-'
         
         self.fields.update({channel:(float(v1),float(phase),float(voff))})
                 
