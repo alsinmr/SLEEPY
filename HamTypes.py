@@ -564,7 +564,7 @@ def g(es,i:int,gxx:float=0,gyy:float=0,gzz:float=0,euler=[0,0,0]):
     
     mub=-9.2740100783e-24/6.62607015e-34  #Bohr magneton in Hz. Take positive g-values by convention
     
-    avg=mub*avg-NucInfo('e-')            #Values in Hz. Note that we take this in the rotating frame
+    avg1=mub*avg-NucInfo('e-')            #Values in Hz. Note that we take this in the rotating frame
     delta=gzz*mub
     eta=(gyy-gxx)/delta if delta else 0
     info={'Type':'g','i':i,'gxx':gxx+avg,'gyy':gyy+avg,'gzz':gzz+avg,'euler':euler}
@@ -572,7 +572,7 @@ def g(es,i:int,gxx:float=0,gyy:float=0,gzz:float=0,euler=[0,0,0]):
     if es.LF[i]:  #Lab frame calculation
         T=es.Op[i].T
         T.set_mode('B0_LF')
-        H=-np.sqrt(3)*avg*T[0,0]   #Rank-0 contribution
+        H=-np.sqrt(3)*avg1*T[0,0]   #Rank-0 contribution
         if delta:
             return Ham1inter(H=H,T=T,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
         else:
@@ -580,7 +580,7 @@ def g(es,i:int,gxx:float=0,gyy:float=0,gzz:float=0,euler=[0,0,0]):
     else:  #Rotating frame calculation
         S=es.Op[i]
         M=np.sqrt(2/3)*S.z
-        H=(avg-2)*S.z
+        H=(avg1)*S.z
         if delta:                        
             return Ham1inter(M=M,H=H,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
         else:
