@@ -1085,9 +1085,9 @@ class Rho():
             rhod=np.linalg.pinv(v)@rho0
             det_d=self._detect[det_num]@v
             
-            A[k]=(rhod*det_d).real
-            R[k]=-np.log(d).real/U.Dt
-            f[k]=np.log(d).imag/U.Dt
+            A[k]=(rhod*det_d).real  #Amplitude
+            R[k]=-np.log(d).real/U.Dt #Decay rate
+            f[k]=np.log(d).imag/U.Dt #Frequency
             
 
         if avg:

@@ -896,6 +896,9 @@ class Liouvillian():
             x=getattr(self[len(self)//2] if self._index==-1 else self,what)
             if hasattr(x,'__call__'):
                 x=x(step)
+                
+        if mode=='log' and np.max(np.abs(x[x!=0]))==np.min(np.abs(x[x!=0])):
+            mode='abs'
         
         sc0,sc1,sc=1,1,1
         if mode=='abs':
@@ -945,20 +948,34 @@ class Liouvillian():
         labels=self.expsys.Op.Llabels
         if labels is not None:
             def format_func(value,tick_number):
+                if len(self.H)>1:
+                    label0=[]
+                    for k in range(len(self.H)):
+                        for l in labels:
+                            label0.append('|'+l+fr'$\rangle_{{{k+1}}}$')
+                else:
+                    label0=['|'+l+r'$\rangle$' for k in range(len(self.H))]
                 value=int(value)
-                if value>=len(labels):return ''
+                if value>=len(label0):return ''
                 elif value<0:return ''
-                return '|'+labels[value]+r'$\rangle$'
+                return label0[value]
 
             
             ax.set_xticklabels('',rotation=-90)
             ax.xaxis.set_major_formatter(plt.FuncFormatter(format_func))
             
             def format_func(value,tick_number):
+                if len(self.H)>1:
+                    label0=[]
+                    for k in range(len(self.H)):
+                        for l in labels:
+                            label0.append(r'$\langle$'+l+fr'$|_{{{k+1}}}$')
+                else:
+                    label0=[r'$\langle$'+l+'|' for k in range(len(self.H))]
                 value=int(value)
-                if value>=len(labels):return ''
+                if value>=len(label0):return ''
                 elif value<0:return ''
-                return r'$\langle$'+labels[value]+'|'
+                return label0[value]
             ax.yaxis.set_major_formatter(plt.FuncFormatter(format_func))
             
         
