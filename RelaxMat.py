@@ -233,5 +233,53 @@ def recovery(expsys,L):
 # = (1+rat-(1-rat))/(1+rat+(1-rat))
 # = 2*rat/2=rat
     
+
+#%% Spin-swap/spin exchange
+def SpinSwap(expsys,i0:int,i1:int,tc:float):
+    """
+    Allows exchange between two spins, where the Hamiltonian only changes in the
+    sense that the spin-indexing is changed.
+
+    Parameters
+    ----------
+    expsys : TYPE
+        DESCRIPTION.
+    i0 : int
+        DESCRIPTION.
+    i1 : int
+        DESCRIPTION.
+    tc : float
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    mult=expsys.Op.Mult**2
+    
+    si=np.arange(mult.prod())
+    
+    
+    
+    out=np.zeros([mult.prod(),mult.prod()],dtype=Defaults['rtype'])
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
