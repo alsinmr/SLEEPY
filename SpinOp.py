@@ -46,7 +46,9 @@ class SpinOp:
         
         self._index=-1
         
+        self._state_index=None
         self._initialized=True
+        
             
     def __setattr__(self,name,value):
         if hasattr(self,'_initialized') and self._initialized and \
@@ -96,16 +98,10 @@ class SpinOp:
         
         labels=[]
         N=len(self.Mult)
-        for k in range(4**N):
-            index=[]
-            for q in range(N):
-                index.append(np.mod(k,4))
-                k-=index[-1]
-                k//=4
+        for index in self.state_index:
             labels.append('')
-            for q in range(N):
-                s=N-q
-                labels[-1]=[rf'S$_{s}^\alpha$',rf'S$_{s}^+$',rf'S$_{s}^-$',rf'S$_{s}^\beta$'][index[q]]+labels[-1]
+            for s,i in enumerate(index):
+                labels[-1]=labels[-1]+[rf'S$_{s+1}^\alpha$',rf'S$_{s+1}^+$',rf'S$_{s+1}^-$',rf'S$_{s+1}^\beta$'][i]
                 
         return labels
             
@@ -125,7 +121,6 @@ class SpinOp:
         labels=[]
         N=len(self.Mult)
         for k in range(np.prod(self.Mult)):
-            index=[]
             labels.append('')
             for q in range(N):
                 mult=self.Mult[N-q-1]
@@ -144,6 +139,50 @@ class SpinOp:
             labels[-1]=labels[-1][:-1]
                 
         return labels
+    
+    @property
+    def state_index(self):
+        """
+        Returns the index (0:mult) for each spin state as a function of the
+        overall state        
+        e.g.
+        spin state (1/2):
+            0:Ialpha
+            1:I+
+            2:I-
+            3:Ibeta
+
+        Returns
+        -------
+        np.array
+
+        """
+        mult=self.Mult**2
+        N=len(mult)
+        i=np.arange(mult.prod())
+        
+        index=np.zeros([mult.prod(),N],dtype=int)
+        for i0 in i:
+            mat=np.ones([1,1],dtype=bool)
+            i00=i0
+            index0=[]
+            for k in range(N):
+                index0.append(np.mod(i00,mult[k]))
+                i00=i00-index0[-1]
+                i00//=mult[k]
+                mat0=np.zeros(mult[k],dtype=bool)
+                mat0[index0[-1]]=1
+                
+                mat=np.kron(mat,mat0.reshape([self.Mult[k],self.Mult[k]]))
+                
+            index[mat.reshape(mult.prod())]=index0
+        super().__setattr__('_state_index', index)
+        
+            
+        return self._state_index
+            
+            
+    
         
         
     
