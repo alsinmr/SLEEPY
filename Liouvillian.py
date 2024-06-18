@@ -258,6 +258,46 @@ class Liouvillian():
         # out.sub=True
         return out
     
+    def add_SpinEx(self,i:list,tc:float):
+        """
+        Allows exchange among spins, for example, if a water molecule experiences
+        a two-site hop. The hop does not change the values in the overall Hamiltonian,
+        but changes the spin indexing. We can treat this kind of dynamics without
+        rebuilding the entire Liouvillian; instead we just introduce exchange 
+        within a single Liouvillian.
+        
+        One provides a list of the spins in exchange. Usually, this is just two 
+        elements, but more is also possible. For example, methyl 3-site hopping
+        would have a list such as [1,2,3]. This means that we either have the
+        exchange process 1–>2, 2->3, and 3->1, or 1->3, 2->1, 3->2. The process must
+        always be cyclic, with equal populations.
+        
+        The correlation time is the inverse of the mean hopping rate constant. For
+        two- and three-site exchange, there is only one unique hopping rate, but for
+        higher numbers of states, the mean will be calculated.
+        
+        Note that this is implemented via the relaxation module (RelaxMat), and
+        can equivalently be introduced by running add_relax with Type='SpinExchange'
+    
+        Parameters
+        ----------
+        i : list
+            List of the spins in exchange. E.g. i=[1,2] would cause swaps between
+            spins 1 and 2. i=[1,2,3] might represent a methyl rotation, yielding
+            exchange such that either 1->2, 2->3, 3->1, and 1->3, 2->1, 3->2.
+        tc : float
+            Correlation time of the exchange (inverse of rate constant)
+    
+        Returns
+        -------
+        self
+    
+        """
+        
+        self.add_relax(Type='SpinExchange',i=i,tc=tc)
+        
+        return self
+    
     def add_relax(self,M=None,Type:str=None,**kwargs):
         """
         Add explicit relaxation to the Liouvillian. This is either provided
@@ -288,6 +328,10 @@ class Liouvillian():
 
         """
         self._PropCache.reset()
+        
+        if isinstance(M,str): #In case Type is input as the first argument, just fix for the user
+            Type=M
+            M=None
         
         if self.Peq:
             warnings.warn('recovery should always be the last term added to Lrelax')
@@ -947,35 +991,37 @@ class Liouvillian():
             
         labels=self.expsys.Op.Llabels
         if labels is not None:
+            if len(self.H)>1:
+                label0=[]
+                for k in range(len(self.H)):
+                    for l in labels:
+                        label0.append('|'+l+fr'$\rangle_{{{k+1}}}$')
+            else:
+                label0=['|'+l+r'$\rangle$' for l in labels]
+            
+            
             def format_func(value,tick_number):
-                if len(self.H)>1:
-                    label0=[]
-                    for k in range(len(self.H)):
-                        for l in labels:
-                            label0.append('|'+l+fr'$\rangle_{{{k+1}}}$')
-                else:
-                    label0=['|'+l+r'$\rangle$' for k in range(len(self.H))]
                 value=int(value)
                 if value>=len(label0):return ''
                 elif value<0:return ''
                 return label0[value]
 
-            
             ax.set_xticklabels('',rotation=-90)
             ax.xaxis.set_major_formatter(plt.FuncFormatter(format_func))
             
+            if len(self.H)>1:
+                label1=[]
+                for k in range(len(self.H)):
+                    for l in labels:
+                        label1.append(r'$\langle$'+l+fr'$|_{{{k+1}}}$')
+            else:
+                label1=[r'$\langle$'+l+'|' for l in labels]
+                
             def format_func(value,tick_number):
-                if len(self.H)>1:
-                    label0=[]
-                    for k in range(len(self.H)):
-                        for l in labels:
-                            label0.append(r'$\langle$'+l+fr'$|_{{{k+1}}}$')
-                else:
-                    label0=[r'$\langle$'+l+'|' for k in range(len(self.H))]
                 value=int(value)
                 if value>=len(label0):return ''
                 elif value<0:return ''
-                return label0[value]
+                return label1[value]
             ax.yaxis.set_major_formatter(plt.FuncFormatter(format_func))
             
         

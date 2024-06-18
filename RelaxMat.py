@@ -10,6 +10,7 @@ import numpy as np
 from scipy.linalg import expm
 from . import Defaults
 from .Tools import Ham2Super
+from copy import copy
 
 rtype=Defaults['rtype']
 
@@ -235,21 +236,32 @@ def recovery(expsys,L):
     
 
 #%% Spin-swap/spin exchange
-def SpinSwap(expsys,i0:int,i1:int,tc:float):
+def SpinExchange(expsys,i:list,tc:float):
     """
-    Allows exchange between two spins, where the Hamiltonian only changes in the
-    sense that the spin-indexing is changed.
+    Allows exchange among spins, for example, if a water molecule experiences
+    a two-site hop. The hop does not change the values in the overall Hamiltonian,
+    but changes the spin indexing. We can treat this kind of dynamics without
+    rebuilding the entire Liouvillian; instead we just introduce exchange 
+    within a single Liouvillian.
+    
+    One provides a list of the spins in exchange. Usually, this is just two 
+    elements, but more is also possible. For example, methyl 3-site hopping
+    would have a list such as [1,2,3]. This means that we either have the
+    exchange process 1–>2, 2->3, and 3->1, or 1->3, 2->1, 3->2. The process must
+    always be cyclic, with equal populations.
+    
+    The correlation time is the inverse of the mean hopping rate constant. For
+    two- and three-site exchange, there is only one unique hopping rate, but for
+    higher numbers of states, the mean will be calculated
 
     Parameters
     ----------
     expsys : TYPE
         DESCRIPTION.
-    i0 : int
-        DESCRIPTION.
-    i1 : int
-        DESCRIPTION.
+    i : list
+        List of spins in exchange (given in order of exchange)
     tc : float
-        DESCRIPTION.
+        Correlation time of the exchange (inverse of the rate constant)
 
     Returns
     -------
@@ -257,15 +269,36 @@ def SpinSwap(expsys,i0:int,i1:int,tc:float):
 
     """
     
-    mult=expsys.Op.Mult**2
     
-    si=np.arange(mult.prod())
-    
+    states=expsys.Op.state_index
     
     
-    out=np.zeros([mult.prod(),mult.prod()],dtype=Defaults['rtype'])
+    assert len(i)<=states.shape[1],"Swap index cannot be longer than the number of spins in the system"
+    assert np.all([i0<states.shape[1] for i0 in i]),"Indices must be less than the number of spins"
     
+    out=np.zeros([states.shape[0],states.shape[0]],dtype=Defaults['rtype'])
     
+    for k in range(states.shape[0]):
+        if np.all([states[k][i[0]]==s for s in states[k][i[1:]]]):continue
+        
+        out[k,k]+=-1
+        
+        state=copy(states[k])
+        
+        state[i[-1]]=state[i[0]]
+        for a,b in zip(i[:-1],i[1:]):
+            state[a]=states[k][b]
+        
+        m=np.all(states==state,axis=-1)
+        out[k,m]=1
+    
+    out+=out.T
+    l=-np.linalg.eig(out)[0].real
+    Ravg=l[l>1e-5].mean()
+    
+    out/=tc*Ravg
+    
+    return out
     
     
     

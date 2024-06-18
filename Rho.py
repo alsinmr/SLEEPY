@@ -922,11 +922,14 @@ class Rho():
                 
         
         if det_num is None:
+            h=[]
             for det_num in range(len(self._detect)):
-                self.plot(det_num=det_num,ax=ax,FT=FT,mode=mode,apodize=apodize,axis=axis,**kwargs)
+                kids=self.plot(det_num=det_num,ax=ax,FT=FT,mode=mode,apodize=apodize,axis=axis,**kwargs).get_children()
+                i=np.array([isinstance(k,plt.Line2D) for k in kids],dtype=bool)
+                h.append(np.array(kids)[i][-1])
             if det_num:
                 ax.set_ylabel(r'<Op>')
-                ax.legend([det2label(detect) for detect in self.detect])
+                ax.legend(h,[det2label(detect) for detect in self.detect])
             return ax
         
         ap=self.apodize
