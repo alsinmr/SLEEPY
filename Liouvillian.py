@@ -85,6 +85,23 @@ class Liouvillian():
         
         self.relax_info=[]  #Keeps a short record of what kind of relaxation is used
     
+    def getBlock(self,block):
+        """
+        Returns a reduced version of this Liouvillian defined by a given
+        block.
+
+        Parameters
+        ----------
+        block : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        LiouvilleBlock 
+
+        """
+        return LiouvilleBlock(self, block)
+    
     def clear_cache(self):
         self._Ln_H=None
         self._PropCache.reset()
@@ -252,10 +269,14 @@ class Liouvillian():
         out=copy(self)
         
         out.H=[H0[i] for H0 in self.H]
+        out._Ln=None
+        out._Ln_H=None
         out._index=i
         out._PropCache=self._PropCache
-        out._PropCache.L=out
-        # out.sub=True
+        out._PropCache.L=out 
+        # The above line bothers me. If we extract a particular element and
+        # then later another element, the first element's propagator cache
+        # references the wrong element of the Liouvillian.
         return out
     
     def add_SpinEx(self,i:list,tc:float):
@@ -1097,12 +1118,26 @@ class Liouvillian():
     
 class LiouvilleBlock(Liouvillian):
     def __init__(self,L,block):
-        self.__dict__=L.__dict__
+        self.__dict__=copy(L.__dict__)
         self._L=L
         self.block=block
+        self._PropCache=PropCache(self)
         
     def L(self,step):
         return self._L[self._index].L(step)[self.block][:,self.block]
+    
+    def Ln(self,n:int):
+        return self._L[self._index].Ln(n)[self.block][:,self.block]
+    
+    @property
+    def Lrf(self):
+        return self._L.Lrf[self.block][:,self.block]
+        
+    
+    @property
+    def shape(self):
+        return (self.block.sum(),self.block.sum())
+    
     
         
     

@@ -207,6 +207,7 @@ class Rho():
         if not(self.BlockDiagonal):
             return np.ones(self.L.shape[0],dtype=bool)
         
+        ini_fields=copy(seq.rf.fields)
         for k in seq.rf.fields:seq.rf.add_field(k)
         x=np.zeros(self.L.shape,dtype=bool)
         for k,v1 in enumerate(seq.v1):
@@ -220,6 +221,8 @@ class Rho():
         x+=self.L[len(self.L)//3].L(0).astype(bool)
         x+=self.L[1*len(self.L)//4].L(0).astype(bool)
         
+        seq.rf.fields=ini_fields
+        
         B=BlockDiagonal(x)
         blocks=[]
         rho=np.array(self._rho,dtype=bool).sum(0).astype(bool)
@@ -229,7 +232,7 @@ class Rho():
                 blocks.append(b)
         return blocks
     
-    def ReturnBlock(self,block):
+    def getBlock(self,block):
         """
         Returns a Rho object that has been reduced for a particular block. Provide
         the logical index for the given block
@@ -249,6 +252,8 @@ class Rho():
         rho._rho0=self._rho0[block]
         rho._detect=[d[block] for d in self._detect]
         rho._rho=[r[block] for r in self._rho]
+        rho._Ipwd=[[[] for _ in range(len(self._detect))] for _ in range(len(self.L))]
+        rho._taxis=[]
         
         return rho
         

@@ -44,6 +44,25 @@ class Sequence():
         
         self._spin_specific=False
         self.cyclic=cyclic
+        
+    
+    def getBlock(self,block):
+        """
+        Returns a sequence using the reduced Liouvillian
+
+        Parameters
+        ----------
+        block : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        """
+        seq=copy(self)
+        seq.L=self.L.getBlock(block)
+        return seq
     
     @property
     def isotropic(self):
