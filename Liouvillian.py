@@ -20,7 +20,7 @@ import warnings
 from scipy.linalg import expm
 from .Propagator import Propagator,PropCache
 from . import Defaults
-from .Tools import Ham2Super
+from .Tools import Ham2Super,BlockDiagonal
 from .Hamiltonian import Hamiltonian
 from . import RelaxMat
 from .Sequence import Sequence
@@ -873,7 +873,7 @@ class Liouvillian():
     #     return Energy
     
     def plot(self,what:str='L',cmap:str=None,mode:str='log',colorbar:bool=True,
-             step:int=0,ax=None):
+             step:int=0,block:int=None,ax=None):
         """
         Visualizes the Liouvillian matrix. Options are what to view (what) and 
         how to display it (mode), as well as colormaps and one may optionally
@@ -969,7 +969,16 @@ class Liouvillian():
                 x[i]/=sc1
                 
                 sc1=sc1/1.2+sc0
-            
+        
+        if block is not None:
+            assert isinstance(block,int),'block must be an integer'
+            bi=BlockDiagonal(self[len(self)//2].L(0))
+            assert block<len(bi),f"block must be less than the number of independent blocks in the Liouville matrix ({len(bi)})"
+            bi=bi[block]
+            x=x[bi][:,bi]
+        else:
+            bi=np.ones(len(x),dtype=bool)
+        
         hdl=ax.imshow(x,cmap=cmap,vmin=0,vmax=1)
         
         if colorbar and mode!='spy':
@@ -998,6 +1007,7 @@ class Liouvillian():
                         label0.append('|'+l+fr'$\rangle_{{{k+1}}}$')
             else:
                 label0=['|'+l+r'$\rangle$' for l in labels]
+            label0=np.array(label0)[bi]
             
             
             def format_func(value,tick_number):
@@ -1016,6 +1026,8 @@ class Liouvillian():
                         label1.append(r'$\langle$'+l+fr'$|_{{{k+1}}}$')
             else:
                 label1=[r'$\langle$'+l+'|' for l in labels]
+            label1=np.array(label1)[bi]    
+            
                 
             def format_func(value,tick_number):
                 value=int(value)
@@ -1082,3 +1094,18 @@ class Liouvillian():
                     out+=f'\t{ri[0]}'
         out+='\n\n'+super().__repr__()
         return out
+    
+class LiouvilleBlock(Liouvillian):
+    def __init__(self,L,block):
+        self.__dict__=L.__dict__
+        self._L=L
+        self.block=block
+        
+    def L(self,step):
+        return self._L[self._index].L(step)[self.block][:,self.block]
+    
+        
+    
+    
+        
+    

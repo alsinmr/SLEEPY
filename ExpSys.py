@@ -208,6 +208,8 @@ class ExpSys():
         getattr(self,Type).append(kwargs)
         self.inter.append({'Type':Type,**kwargs})
         
+        return self
+        
     def __getitem__(self,n):
         """
         Returns parameters for the nth interaction. Indexing sweeps through 

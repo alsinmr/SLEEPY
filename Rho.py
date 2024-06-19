@@ -11,7 +11,7 @@ import numpy as np
 import warnings
 import matplotlib.pyplot as plt
 from . import Defaults
-from .Tools import NucInfo
+from .Tools import NucInfo,BlockDiagonal
 import re
 
 
@@ -20,7 +20,7 @@ rtype=Defaults['rtype']
 tol=1e-10
 
 class Rho():
-    def __init__(self,rho0,detect,L=None):
+    def __init__(self,rho0,detect,BlockDiagonal:bool=True,L=None):
         """
         Creates an object that contains both the initial density matrix and
         the detector matrix. One may then apply propagators to the density
@@ -47,6 +47,9 @@ class Rho():
         detect : Detection matrix or list of matrices, specify by string or the
             operator itself. Operators may be found in expsys.Op. Multiple 
             detection matrices may be specified by providing a list of operators.
+        BlockDiagonal : Flag to determine if we may break the Liouvillian into
+            Block-Diagonal components and only compute the components required
+            for propagation and detection. Default is True
 
         Returns
         -------
@@ -68,6 +71,7 @@ class Rho():
         
         if L is not None:self.L=L
         
+        self.BlockDiagonal=BlockDiagonal
         # self._Setup()
         self.apodize=False
     
@@ -176,6 +180,78 @@ class Rho():
         if diff.min()*(1+1e-10)>diff.max():   #Uniform spacing within error
             return 1
         return 2
+    
+    def Blocks(self,seq):
+        """
+        Returns a list of logical indices, where each list element consists of
+        a block of the Liouvillian that needs to be calculated. Note that not
+        all blocks need to be calculated, but this depends on the value of the
+        current density matrix and the detection operator.
+        
+        Block propagation is only implemented for the DetProp function, and 
+        disables operation on the density matrix, since we no longer have the
+        full state of the system when using block propagation.
+
+        Parameters
+        ----------
+        seq : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        """
+        if self.L is None:return None
+        if not(self.BlockDiagonal):
+            return np.ones(self.L.shape[0],dtype=bool)
+        
+        for k in seq.rf.fields:seq.rf.add_field(k)
+        x=np.zeros(self.L.shape,dtype=bool)
+        for k,v1 in enumerate(seq.v1):
+            if np.any(v1):seq.rf.add_field(k,v1=1) #Turn field on
+            x+=self.L.Lrf.astype(bool)  #Add it to the logical matrix
+            seq.rf.add_field(k) #Turn field off
+            
+        x+=self.L[0].L(0).astype(bool)
+        # We try to avoid any weird orientations that are missing cross terms so check a few orientations
+        x+=self.L[len(self.L)//2].L(0).astype(bool)
+        x+=self.L[len(self.L)//3].L(0).astype(bool)
+        x+=self.L[1*len(self.L)//4].L(0).astype(bool)
+        
+        B=BlockDiagonal(x)
+        blocks=[]
+        rho=np.array(self._rho,dtype=bool).sum(0).astype(bool)
+        detect=np.array(self._detect,dtype=bool).sum(0).astype(bool)
+        for b in B:
+            if np.any(rho[b]) and np.any(detect[b]):
+                blocks.append(b)
+        return blocks
+    
+    def ReturnBlock(self,block):
+        """
+        Returns a Rho object that has been reduced for a particular block. Provide
+        the logical index for the given block
+
+        Parameters
+        ----------
+        block : np.array (bool type)
+            Logical array specifying the block to propagate.
+
+        Returns
+        -------
+        Rho
+
+        """
+        
+        rho=copy(self)
+        rho._rho0=self._rho0[block]
+        rho._detect=[d[block] for d in self._detect]
+        rho._rho=[r[block] for r in self._rho]
+        
+        return rho
+        
     
     def downmix(self,t0:float=None):
         """

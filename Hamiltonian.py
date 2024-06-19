@@ -500,10 +500,10 @@ class RF():
         """
         if channel=='e':channel='e-'
         
-        self.fields.update({channel:(float(v1),float(phase),float(voff))})
-                
-        
-        
-        
-        
-    
+        if isinstance(channel,int):
+            self.fields.update({channel:(float(v1),float(phase),float(voff))})
+        else:
+            for key in self.fields:
+                if self.expsys.Nucs[key]==channel:
+                    self.fields[key]=float(v1),float(phase),float(voff)
+
