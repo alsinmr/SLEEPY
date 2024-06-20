@@ -49,7 +49,7 @@ class Rho():
             detection matrices may be specified by providing a list of operators.
         BlockDiagonal : Flag to determine if we may break the Liouvillian into
             Block-Diagonal components and only compute the components required
-            for propagation and detection. Default is True
+            for propagation and detection. Default is False
 
         Returns
         -------
@@ -72,6 +72,7 @@ class Rho():
         if L is not None:self.L=L
         
         self.BlockDiagonal=BlockDiagonal
+        self._BDP=False #Flag to indicate that Block-diagonal propagation was used.
         # self._Setup()
         self.apodize=False
     
@@ -204,8 +205,6 @@ class Rho():
 
         """
         if self.L is None:return None
-        if not(self.BlockDiagonal):
-            return np.ones(self.L.shape[0],dtype=bool)
         
         ini_fields=copy(seq.rf.fields)
         for k in seq.rf.fields:seq.rf.add_field(k)
@@ -254,6 +253,7 @@ class Rho():
         rho._rho=[r[block] for r in self._rho]
         rho._Ipwd=[[[] for _ in range(len(self._detect))] for _ in range(len(self.L))]
         rho._taxis=[]
+        rho.BlockDiagonal=False
         
         return rho
         
@@ -440,6 +440,7 @@ class Rho():
         self._taxis=list()
         self._rho=list() #Storage for numerical rho
         self._L=None
+        self._BDP=False
         
         return self
         # if self._L is not None:
@@ -462,6 +463,8 @@ class Rho():
         
         # if not(hasattr(U,'__getitem__')):U=U.U()
         
+        if self._BDP:
+            warnings.warn('Block-diagonal propagation was previously used. Propagator is set to time point BEFORE block-diagonal propagation.')
                    
         if self.L is None:
             self.L=U.L
@@ -588,7 +591,7 @@ class Rho():
         if self.L is not None:
             return self.L.__len__()
     
-    def DetProp(self,U=None,seq=None,n:int=1,n_per_seq:int=1):
+    def DetProp(self,U=None,seq=None,n:int=5000,n_per_seq:int=1):
         """
         Executes a series of propagation/detection steps. Detection occurs first,
         followed by propagation, with the sequence repeated for n steps. 
@@ -614,18 +617,49 @@ class Rho():
         """
         assert not(U is None and seq is None),"Either U or seq must be defined"
         
+        
+        if self._BDP:
+            warnings.warn('Block-diagonal propagation was previously used. Propagator is set to time point BEFORE block-diagonal propagation.')
+        
         if seq is None and not(hasattr(U,'calcU')):
             seq=U
             U=None
+            
         
         if U is not None and seq is not None:
             warnings.warn('Both U and seq are defined. seq will not be used')
+            seq=None
         
         if self.L is None:
             if U is not None:
                 self.L=U.L
             else:
                 self.L=seq.L
+        
+        # Block-diagonal propagation
+        if seq is not None and self.BlockDiagonal:
+            blocks=self.Blocks(seq)
+            blocks=[np.sum(blocks,0).astype(bool)]
+            if not(np.all(np.sum(blocks,axis=0))):
+                print(f'Block-Diagonal Propagation\nState reduction: {blocks[0].__len__()}->{blocks[0].sum()}')
+                #Block diagonalization doesn't really help if we still have to calculate all blocks
+                Ipwd=[]
+                for block in blocks:
+                    rb=self.getBlock(block)
+                    sb=seq.getBlock(block)
+                    rb.DetProp(seq=sb,n=n,n_per_seq=n_per_seq)
+                    Ipwd.append(rb.Ipwd)
+                Ipwd=np.sum(Ipwd,axis=0)
+                for k in range(Ipwd.shape[0]):
+                    for j in range(Ipwd.shape[1]):
+                        self._Ipwd[k][j].extend(Ipwd[k,j])
+                self._taxis.extend(rb._taxis)
+                self._BDP=True
+                return self
+                
+            
+        
+
         
         
         if U is not None:
@@ -640,8 +674,6 @@ class Rho():
         
         if U is not None:
             if n>=100:
-                # TODO
-                # Something is going wrong here when using recovery to equilibrium!
                 self()
                 U.eig()
                 for k,((d,v),rho) in enumerate(zip(U._eig,self)):

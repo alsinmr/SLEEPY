@@ -767,7 +767,7 @@ class Liouvillian():
         d[i]/=np.abs(d[i])
         return d,v
     
-    def Sequence(self,cyclic=False):
+    def Sequence(self,cyclic=False) -> Sequence:
         """
         Returns a Sequence object initialized from this Liouvillian
 
@@ -955,8 +955,8 @@ class Liouvillian():
             elif mode == 'spy':
                 cmap= 'binary'
                 
-        if what in ['L0','L1','L-1','L-2']:
-            x=self.Ln_H(int(what[1:]))
+        if what in ['L0','L1','L2','L-1','L-2']:
+            x=self[len(self)//2].Ln_H(int(what[1:])) if self._index==-1 else self.Ln_H(int(what[1:]))
         else:
             x=getattr(self[len(self)//2] if self._index==-1 else self,what)
             if hasattr(x,'__call__'):

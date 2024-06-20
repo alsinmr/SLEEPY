@@ -84,6 +84,10 @@ class Propagator():
                 # We do this because anything above 1 would be producing magnetization
                 # The most we can have is 1, which represents equilibrium
                 # under the current conditions
+                
+                # Is this correct, though? Does DNP produce magnetization? At
+                # the moment, Solid Effect works. So probably ok.
+                
                 dabs=np.abs(d) 
                 i=dabs>1
                 d[i]/=dabs[i]
@@ -96,6 +100,11 @@ class Propagator():
                     # equilibrium deviate slightly from 1, leading to slow
                     # decay of all magnetization. It won't increase only because
                     # we already cleaned that up several lines above.
+                    #
+                    # Actually....it's totally wrong to do this. Ignore the above
+                    # I'm leaving my comments in case I remember why
+                    # I thought this was a good idea...oops
+                    
                     i=np.argmax(d)
                     # v[:,i]=self.L.rho_eq(pwdindex=k)
                     # v[:,i]/=np.sqrt((v[:,i].conj()*v[:,i]).sum())
