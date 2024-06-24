@@ -525,7 +525,7 @@ def quadrupole(es,i:int,delta:float=0,eta:float=0,euler=[0,0,0]):
     return Ham1inter(M=M,isotropic=False,delta=delta,eta=eta,iso=0,euler=euler,
                       rotor_angle=es.rotor_angle,info=info,es=es)
 
-def g(es,i:int,gxx:float=0,gyy:float=0,gzz:float=0,euler=[0,0,0]):
+def g(es,i:int,gxx:float=2.0023193,gyy:float=2.0023193,gzz:float=2.0023193,euler=[0,0,0]):
     """
     electron g-tensor Hamiltonian. Note that the g-tensor values should be 
     typically positive.
@@ -538,11 +538,11 @@ def g(es,i:int,gxx:float=0,gyy:float=0,gzz:float=0,euler=[0,0,0]):
     i : int
         index of the spin.
     gxx : float, optional
-        xx-component of the electron g-tensor. The default is 0.
+        xx-component of the electron g-tensor. The default is 2.0023193.
     gyy : float, optional
-        yy-component of the electron g-tensor. The default is 0.
+        yy-component of the electron g-tensor. The default is 2.0023193.
     gzz : float, optional
-        xx-component of the electron g-tensor. The default is 0.
+        xx-component of the electron g-tensor. The default is 2.0023193.
     euler : TYPE, optional
         3 elements giving the euler angles for the g-tensor
         The default is [0,0,0].
@@ -565,14 +565,14 @@ def g(es,i:int,gxx:float=0,gyy:float=0,gzz:float=0,euler=[0,0,0]):
     mub=-9.2740100783e-24/6.62607015e-34  #Bohr magneton in Hz. Take positive g-values by convention
     
     avg1=mub*avg-NucInfo('e-')            #Values in Hz. Note that we take this in the rotating frame
-    delta=gzz*mub
-    eta=(gyy-gxx)/delta if delta else 0
+    delta=gzz*mub*es.B0
+    eta=(gyy-gxx)/gzz if delta else 0
     info={'Type':'g','i':i,'gxx':gxx+avg,'gyy':gyy+avg,'gzz':gzz+avg,'euler':euler}
     
     if es.LF[i]:  #Lab frame calculation
         T=es.Op[i].T
         T.set_mode('B0_LF')
-        H=-np.sqrt(3)*avg1*T[0,0]   #Rank-0 contribution
+        H=-np.sqrt(3)*avg1*T[0,0]*es.B0   #Rank-0 contribution
         if delta:
             return Ham1inter(H=H,T=T,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
         else:
