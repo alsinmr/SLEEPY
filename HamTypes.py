@@ -516,14 +516,20 @@ def quadrupole(es,i:int,delta:float=0,eta:float=0,euler=[0,0,0]):
     
     S=es.Op[i]
 
-    I=es.S[i]
-
-    M=1/2*(3*S.z@S.z-I*(I+1)*S.eye)     
+    if es.LF[i]:
+        T=S.T
+        T=T*T
+        info={'Type':'quadrupole','i':i,'delta':delta,'eta':eta,'euler':euler}
+        return Ham1inter(T=T,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
+    else:
+        I=es.S[i]
     
-    info={'Type':'quadrupole','i':i,'delta':delta,'eta':eta,'euler':euler}
-    print('Quadrupole Hamiltonian does not include 2nd order terms')
-    return Ham1inter(M=M,isotropic=False,delta=delta,eta=eta,iso=0,euler=euler,
-                      rotor_angle=es.rotor_angle,info=info,es=es)
+        M=1/2*(3*S.z@S.z-I*(I+1)*S.eye)     
+        
+        info={'Type':'quadrupole','i':i,'delta':delta,'eta':eta,'euler':euler}
+        print('Quadrupole Hamiltonian does not include 2nd order terms')
+        return Ham1inter(M=M,isotropic=False,delta=delta,eta=eta,euler=euler,
+                          rotor_angle=es.rotor_angle,info=info,es=es)
 
 def g(es,i:int,gxx:float=2.0023193,gyy:float=2.0023193,gzz:float=2.0023193,euler=[0,0,0]):
     """

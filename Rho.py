@@ -655,6 +655,7 @@ class Rho():
                         self._Ipwd[k][j].extend(Ipwd[k,j])
                 self._taxis.extend(rb._taxis)
                 self._BDP=True
+                self._t=rb._t
                 return self
                 
             
