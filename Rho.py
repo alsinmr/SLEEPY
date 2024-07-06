@@ -182,6 +182,11 @@ class Rho():
             return 1
         return 2
     
+    @property
+    def reduced(self):
+        if self.L is None:return False
+        return self.L.reduced
+    
     def Blocks(self,seq):
         """
         Returns a list of logical indices, where each list element consists of
@@ -255,7 +260,21 @@ class Rho():
         rho._taxis=[]
         rho.BlockDiagonal=False
         
+        
         return rho
+    
+    def _reduce(self,seq):
+        blocks=self.Blocks(seq)
+        block=np.sum(blocks,axis=0).astype(bool)
+        self._rho0=self._rho0[block]
+        self._detect=[d[block] for d in self._detect]
+        self._rho=[r[block] for r in self._rho]
+        self.BlockDiagonal=False
+        self.block=block
+        if seq.reduced:
+            self._L=seq.L
+        
+        return self
         
     
     def downmix(self,t0:float=None):
@@ -390,7 +409,7 @@ class Rho():
         self._Ipwd=[[list() for _ in range(self.n_det)] for _ in range(self.pwdavg.N)]
         self._taxis=list()
         
-        if self.rho0=='Thermal':
+        if isinstance(self.rho0,str) and self.rho0=='Thermal':
             rhoeq=self.L.rho_eq(sub1=True)
             if self.L.Peq:
                 eye=np.tile(np.ravel(self.expsys.Op[0].eye),len(self.L.H))
@@ -639,17 +658,15 @@ class Rho():
         # Block-diagonal propagation
         if seq is not None and self.BlockDiagonal:
             blocks=self.Blocks(seq)
-            blocks=[np.sum(blocks,0).astype(bool)]
+            block=np.sum(blocks,0).astype(bool)
             if not(np.all(np.sum(blocks,axis=0))):
-                print(f'Block-Diagonal Propagation\nState reduction: {blocks[0].__len__()}->{blocks[0].sum()}')
+                print(f'State-space reduction: {blocks[0].__len__()}->{blocks[0].sum()}')
                 #Block diagonalization doesn't really help if we still have to calculate all blocks
-                Ipwd=[]
-                for block in blocks:
-                    rb=self.getBlock(block)
-                    sb=seq.getBlock(block)
-                    rb.DetProp(seq=sb,n=n,n_per_seq=n_per_seq)
-                    Ipwd.append(rb.Ipwd)
-                Ipwd=np.sum(Ipwd,axis=0)
+                
+                rb=self.getBlock(block)
+                sb=seq.getBlock(block)
+                rb.DetProp(seq=sb,n=n,n_per_seq=n_per_seq)
+                Ipwd=rb.Ipwd
                 for k in range(Ipwd.shape[0]):
                     for j in range(Ipwd.shape[1]):
                         self._Ipwd[k][j].extend(Ipwd[k,j])

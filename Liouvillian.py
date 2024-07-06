@@ -106,7 +106,11 @@ class Liouvillian():
         self._Ln_H=None
         self._PropCache.reset()
         return self
-        
+    
+    @property
+    def reduced(self):
+        return False
+    
     @property
     def sub(self):
         if self._index==-1:return False
@@ -767,7 +771,7 @@ class Liouvillian():
         d[i]/=np.abs(d[i])
         return d,v
     
-    def Sequence(self,cyclic=False) -> Sequence:
+    def Sequence(self,cyclic=False,rho=None) -> Sequence:
         """
         Returns a Sequence object initialized from this Liouvillian
 
@@ -776,7 +780,7 @@ class Liouvillian():
         None.
 
         """
-        return Sequence(self,cyclic=cyclic)
+        return Sequence(self,cyclic=cyclic,rho=rho)
     
     @property
     def ex_pop(self):
@@ -893,8 +897,8 @@ class Liouvillian():
     #         Energy[k*N:(k+1)*N]=H.Energy
     #     return Energy
     
-    def plot(self,what:str='L',cmap:str=None,mode:str='log',colorbar:bool=True,
-             step:int=0,block:int=None,ax=None):
+    def plot(self,what:str='L',seq=None,cmap:str=None,mode:str='log',colorbar:bool=True,
+             step:int=0,block:int=None,ax=None) -> plt.axes:
         """
         Visualizes the Liouvillian matrix. Options are what to view (what) and 
         how to display it (mode), as well as colormaps and one may optionally
@@ -924,21 +928,26 @@ class Liouvillian():
         Parameters
         ----------
         what : str, optional
-            DESCRIPTION. The default is 'L'.
+            Specifies which Liouville matrix to plot. The default is 'L'.
+        seq : Sequence, optional
+            Include a sequence, which is used to determine what channels will
+            have rf turn on at some point. Uses the max v1 setting for each
+            channel in the sequence for plotting.
         cmap : str, optional
-            DESCRIPTION. The default is 'YOrRd'.
+            Colormap used for plotting. The default is 'YOrRd'.
         mode : str, optional
-            DESCRIPTION. The default is 'abs'.
+            Plotting mode. The default is 'abs'.
         colorbar : bool, optional
-            DESCRIPTION. The default is True.
+            Turn color bar on/off. The default is True.
         step : int, optional
-            DESCRIPTION. The default is 0.
-        ax : TYPE, optional
-            DESCRIPTION. The default is None.
+            Specify which step in the rotor period to plot. The default is 0.
+        ax : plt.axis, optional
+            Provide an axis to plot into. The default is None.
 
         Returns
         -------
-        None.
+        plt.axes
+            Returns the plot axis object
 
         """
     
@@ -946,6 +955,13 @@ class Liouvillian():
             fig,ax=plt.subplots()
         else:
             fig=None
+            
+        if seq is not None:
+            fields=copy(self.rf.fields)
+            for k,v1 in enumerate(seq.v1):
+                if np.any(v1):
+                    self.rf.add_field(k,v1=v1.max())
+                    
         
         if cmap is None:
             if mode == 'abs' or mode=='log':
@@ -997,6 +1013,8 @@ class Liouvillian():
             assert block<len(bi),f"block must be less than the number of independent blocks in the Liouville matrix ({len(bi)})"
             bi=bi[block]
             x=x[bi][:,bi]
+        elif hasattr(self,'block'):
+            bi=self.block
         else:
             bi=np.ones(len(x),dtype=bool)
         
@@ -1059,9 +1077,12 @@ class Liouvillian():
             
         
 
-        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.xaxis.set_major_locator(MaxNLocator(bi.sum(),integer=True))
+        ax.yaxis.set_major_locator(MaxNLocator(bi.sum(),integer=True))
         if fig is not None:fig.tight_layout()
+        
+        if seq is not None:
+            self.rf.fields=fields
             
         return ax
             
@@ -1137,6 +1158,10 @@ class LiouvilleBlock(Liouvillian):
     @property
     def shape(self):
         return (self.block.sum(),self.block.sum())
+    
+    @property
+    def reduced(self):
+        return True
     
     
         

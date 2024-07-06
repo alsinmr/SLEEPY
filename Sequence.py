@@ -12,18 +12,36 @@ from copy import copy
 from .Propagator import Propagator
 
 class Sequence():
-    def __init__(self,L,cyclic=False):
+    def __init__(self,L,cyclic=False,rho=None):
         """
         Generates a propagator for a specific pulse sequence. If the generated
         propagator is an integer number of rotor periods, then we can expect
         the fastest computational times. However, if an integer number of
         propagators fits into a rotor period, then we still can obtain a 
         significant speedup.
+        
+        If a propagator is generated from a sequence which is longer than the
+        sequence's default length, then at the end of the defined sequence, the
+        final state will be retained at the end of the sequence. Alternatively,
+        if cyclic=True, then the sequence will be repeated for the duration of
+        the propagator.
+        
+        If rho is defined for the sequence (optional), then the sequence will
+        be converted to return reduced propagators. Note that propagators 
+        resulting from this mode cannot be used together with other density
+        matrices
 
         Parameters
         ----------
         L : Liouvillian
-            Liouville matrix.
+            Liouville operator object.    
+        cyclic : bool
+            Determines if the sequence repeats (True), or simply retains the
+            final state in case a generated propagator is longer than the
+            defined sequence. The default is True
+        rho : Density matrix/detector object
+            Include to run the sequence using reduced (block-diagonal) matrices
+        
 
         Returns
         -------
@@ -44,7 +62,27 @@ class Sequence():
         
         self._spin_specific=False
         self.cyclic=cyclic
+        self._rho=None
+        self.rho=rho
+    
+    @property
+    def rho(self):
+        return self._rho
+    
+    @rho.setter
+    def rho(self,rho):
+        if rho is None:return
+        assert self._rho is None,"rho cannot be changed for a sequence"
+        self._rho=rho
         
+        if rho.BlockDiagonal:
+            rho.L=self.L
+            blocks=rho.Blocks(self)
+            block=np.sum(blocks,0).astype(bool)
+            self.L=self.L.getBlock(block)
+            self.block=block
+            rho._reduce(self)
+            
     
     def getBlock(self,block):
         """
@@ -52,8 +90,8 @@ class Sequence():
 
         Parameters
         ----------
-        block : TYPE
-            DESCRIPTION.
+        block : np.array (boolean)
+            Defines what states are included in the reduced density matrix.
 
         Returns
         -------
@@ -62,7 +100,12 @@ class Sequence():
         """
         seq=copy(self)
         seq.L=self.L.getBlock(block)
+        self.block=block
         return seq
+    
+    @property
+    def reduced(self):
+        return self.L.reduced
     
     @property
     def isotropic(self):
@@ -173,6 +216,8 @@ class Sequence():
         """
         if channel=='e':channel='e-'
         t=np.array(t)
+        if t.ndim==0:
+            t=np.array([0,t])
         self.new_t(t)
         
         
@@ -198,10 +243,6 @@ class Sequence():
             else:
                 getattr(self,name)[channel==self.expsys.Nucs]=new
         return self
-                
-        
-            
-        
         
     def new_t(self,t):
         """
@@ -410,8 +451,17 @@ class Sequence():
         dct={'t':t,'v1':v1[:,i:i+i1+1],'phase':phase[:,i:i+i1+1],'voff':voff[:,i:i+i1+1]}
         self.expsys._tprop=0 if self.taur is None else tf%self.taur
         
-        return Propagator(U=dct,t0=t0,tf=tf,taur=self.taur,L=self.L,isotropic=self.isotropic)
+        out=Propagator(U=dct,t0=t0,tf=tf,taur=self.taur,L=self.L,isotropic=self.isotropic)
+        if hasattr(self,'block'):
+            out.block=self.block
+        return out
     
+    def __repr__(self):
+        out='Sequence for the following Liouvillian:\n\t'
+        out+=self.L.__repr__().rsplit('\n',maxsplit=2)[0].replace('\n','\n\t')[:-2]
+        out+=f'Default sequence length is {self.Dt*1e6:.2f} microseconds'
+        out+='\n\n'+super().__repr__()
+        return out
     
     
     

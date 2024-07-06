@@ -54,7 +54,9 @@ class Propagator():
     def static(self):
         return self.L.static
     
-
+    @property
+    def reduced(self):
+        return self.L.reduced
     
     def eig(self,back_calc:bool=True):
         """
