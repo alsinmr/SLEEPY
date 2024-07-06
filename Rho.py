@@ -20,7 +20,7 @@ rtype=Defaults['rtype']
 tol=1e-10
 
 class Rho():
-    def __init__(self,rho0,detect,BlockDiagonal:bool=True,L=None):
+    def __init__(self,rho0,detect,Reduce:bool=True,L=None):
         """
         Creates an object that contains both the initial density matrix and
         the detector matrix. One may then apply propagators to the density
@@ -47,9 +47,9 @@ class Rho():
         detect : Detection matrix or list of matrices, specify by string or the
             operator itself. Operators may be found in expsys.Op. Multiple 
             detection matrices may be specified by providing a list of operators.
-        BlockDiagonal : Flag to determine if we may break the Liouvillian into
-            Block-Diagonal components and only compute the components required
-            for propagation and detection. Default is False
+        Reduce : Flag to determine if we may reduce the size of the Liouvillian
+            and only compute components required for propagation and detection.
+            Default is True
 
         Returns
         -------
@@ -71,10 +71,11 @@ class Rho():
         
         if L is not None:self.L=L
         
-        self.BlockDiagonal=BlockDiagonal
+        self.Reduce=Reduce
         self._BDP=False #Flag to indicate that Block-diagonal propagation was used.
         # self._Setup()
         self.apodize=False
+        self._block=None
     
     @property
     def _rtype(self):
@@ -95,6 +96,11 @@ class Rho():
     @property
     def L(self):
         return self._L
+    
+    @property
+    def shape(self):
+        if self.L is None:return None
+        return self.L.shape[:1]
     
     @L.setter
     def L(self,L):
@@ -187,7 +193,12 @@ class Rho():
         if self.L is None:return False
         return self.L.reduced
     
-    def Blocks(self,seq):
+    @property
+    def block(self):
+        if self.L is None:return None
+        return self.L.block
+    
+    def Blocks(self,*seq):
         """
         Returns a list of logical indices, where each list element consists of
         a block of the Liouvillian that needs to be calculated. Note that not
@@ -209,15 +220,19 @@ class Rho():
             DESCRIPTION.
 
         """
-        if self.L is None:return None
+        if self.L is None:self.L=seq[0].L  #Initialize self if necessary
         
-        ini_fields=copy(seq.rf.fields)
-        for k in seq.rf.fields:seq.rf.add_field(k)
+        ini_fields=copy(seq[0].rf.fields) #Store initial field settings
+        
         x=np.zeros(self.L.shape,dtype=bool)
-        for k,v1 in enumerate(seq.v1):
-            if np.any(v1):seq.rf.add_field(k,v1=1) #Turn field on
-            x+=self.L.Lrf.astype(bool)  #Add it to the logical matrix
-            seq.rf.add_field(k) #Turn field off
+        for seq0 in seq:
+            
+            for k in seq0.rf.fields:seq0.rf.add_field(k) #Set all fields first to zero
+            
+            for k,v1 in enumerate(seq0.v1):
+                if np.any(v1):seq0.rf.add_field(k,v1=1) #Turn field on
+                x+=self.L.Lrf.astype(bool)  #Add it to the logical matrix
+                seq0.rf.add_field(k) #Turn field off
             
         x+=self.L[0].L(0).astype(bool)
         # We try to avoid any weird orientations that are missing cross terms so check a few orientations
@@ -225,7 +240,7 @@ class Rho():
         x+=self.L[len(self.L)//3].L(0).astype(bool)
         x+=self.L[1*len(self.L)//4].L(0).astype(bool)
         
-        seq.rf.fields=ini_fields
+        seq[0].rf.fields=ini_fields
         
         B=BlockDiagonal(x)
         blocks=[]
@@ -253,26 +268,70 @@ class Rho():
         """
         
         rho=copy(self)
+        rho.L=self.L.getBlock(block)
         rho._rho0=self._rho0[block]
         rho._detect=[d[block] for d in self._detect]
         rho._rho=[r[block] for r in self._rho]
         rho._Ipwd=[[[] for _ in range(len(self._detect))] for _ in range(len(self.L))]
         rho._taxis=[]
-        rho.BlockDiagonal=False
+        rho.Reduce=False
+        
         
         
         return rho
     
-    def _reduce(self,seq):
-        blocks=self.Blocks(seq)
+    def ReducedSetup(self,*seq):
+        """
+        Sets up reduced matrices for the density matrix and all provided sequences.
+        Note that one should prepare all sequences to be used in the simulation
+        and enter them here. All operations are 
+
+        Parameters
+        ----------
+        *seq : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        """
+        block=np.sum(self.Blocks(*seq),axis=0).astype(bool)
+        rho=self.getBlock(block)
+        seq_red=[s.getBlock(block) for s in seq]
+        
+        print(f'State-space reduction: {block.__len__()}->{block.sum()}')
+        
+        return rho,*seq_red
+    
+    def _reduce(self,*seq):
+        """
+        Reduces rho (self) and all provided sequences for faster propagation.
+        One should do the reduction using ALL sequences that will be applied
+        to rho.
+
+        Parameters
+        ----------
+        *seq : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        """
+        blocks=self.Blocks(*seq)
         block=np.sum(blocks,axis=0).astype(bool)
         self._rho0=self._rho0[block]
         self._detect=[d[block] for d in self._detect]
         self._rho=[r[block] for r in self._rho]
-        self.BlockDiagonal=False
+        self.Reduce=False
         self.block=block
         if seq.reduced:
             self._L=seq.L
+            
+        print('')
         
         return self
         
@@ -480,7 +539,7 @@ class Rho():
 
         """
         
-        # if not(hasattr(U,'__getitem__')):U=U.U()
+        if hasattr(U,'add_channel'):U=U.U() #Sequence provided
         
         if self._BDP:
             warnings.warn('Block-diagonal propagation was previously used. Propagator is set to time point BEFORE block-diagonal propagation.')
@@ -500,6 +559,12 @@ class Rho():
         if not(self.static) and np.abs((self.t-U.t0)%self.taur)>tol and np.abs((U.t0-self.t)%self.taur)>tol:
             if not(U.t0==U.tf):
                 warnings.warn('The initial time of the propagator is not equal to the current time of the density matrix')
+        
+        assert U.shape[0]==self.shape[0],"Propagator shapes do not match"
+        assert U.block.sum(0)==self.block.sum(0),"Different matrix reduction applied to propagators (cannot be multiplied)"
+        if not(np.all(U.block==self.block)):
+            warnings.warn('\nMatrix blocks do not match. This is almost always wrong')
+        
         
             
         if U.calculated:
@@ -543,6 +608,7 @@ class Rho():
         self
 
         """
+        if hasattr(U,'add_channel'):U=U.U() #Sequence provided
         U.calcU()
         return self.prop(U)
     
@@ -656,24 +722,27 @@ class Rho():
                 self.L=seq.L
         
         # Block-diagonal propagation
-        if seq is not None and self.BlockDiagonal:
-            blocks=self.Blocks(seq)
-            block=np.sum(blocks,0).astype(bool)
-            if not(np.all(np.sum(blocks,axis=0))):
-                print(f'State-space reduction: {blocks[0].__len__()}->{blocks[0].sum()}')
-                #Block diagonalization doesn't really help if we still have to calculate all blocks
+        if seq is not None and self.Reduce:
+            rb,sb=self.ReducedSetup(seq)
+            
+            # blocks=self.Blocks(seq)
+            # block=np.sum(blocks,0).astype(bool)
+            # if not(np.all(np.sum(blocks,axis=0))):
+            #     print(f'State-space reduction: {blocks[0].__len__()}->{block.sum()}')
+            #     #Block diagonalization doesn't really help if we still have to calculate all blocks
                 
-                rb=self.getBlock(block)
-                sb=seq.getBlock(block)
-                rb.DetProp(seq=sb,n=n,n_per_seq=n_per_seq)
-                Ipwd=rb.Ipwd
-                for k in range(Ipwd.shape[0]):
-                    for j in range(Ipwd.shape[1]):
-                        self._Ipwd[k][j].extend(Ipwd[k,j])
-                self._taxis.extend(rb._taxis)
-                self._BDP=True
-                self._t=rb._t
-                return self
+            #     rb=self.getBlock(block)
+            #     sb=seq.getBlock(block)
+            
+            rb.DetProp(seq=sb,n=n,n_per_seq=n_per_seq)
+            Ipwd=rb.Ipwd
+            for k in range(Ipwd.shape[0]):
+                for j in range(Ipwd.shape[1]):
+                    self._Ipwd[k][j].extend(Ipwd[k,j])
+            self._taxis.extend(rb._taxis)
+            self._BDP=True
+            self._t=rb._t
+            return self
                 
             
         

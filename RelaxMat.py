@@ -163,6 +163,25 @@ def T2(expsys,i:int,T2:float):
     
     return out
 
+def Thermal(L,step):
+    out=np.zeros(L[0].Ln(0).shape,dtype=Defaults['ctype'])
+    index=np.argwhere(L.Lrelax-np.diag(np.diag(L.Lrelax)))
+    index.sort(-1)
+    index=np.unique(index,axis=0)
+        
+    rho_eq=L.rho_eq(pwdindex=L._index,step=step,sub1=False)
+    for i0,i1 in index:
+        if rho_eq[i0]==0 or rho_eq[i1]==0:continue
+        rat=rho_eq[i0]/rho_eq[i1]
+        Del=L.Lrelax[i0,i1]*(1-rat)/(1+rat)
+        out[i0,i1]=-Del
+        out[i1,i1]+=Del
+        out[i1,i0]=Del
+        out[i0,i0]+=-Del
+
+    return out
+    
+
 def recovery(expsys,L):
     # L.Lex
     # d,v=np.linalg.eig(L.kex)

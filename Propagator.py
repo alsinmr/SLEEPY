@@ -58,6 +58,10 @@ class Propagator():
     def reduced(self):
         return self.L.reduced
     
+    @property
+    def block(self):
+        return self.L.block
+    
     def eig(self,back_calc:bool=True):
         """
         Calculates eigenvalues/eigenvectors of all stored propagators. Stored for
@@ -184,7 +188,11 @@ class Propagator():
         
         if not(self.static) and np.abs((self.t0-U.tf)%self.taur)>tol and np.abs((U.tf-self.t0)%self.taur)>tol:
             warnings.warn(f'\nFirst propagator ends at {U.tf%self.taur} but second propagator starts at {self.t0%U.taur}')
-                
+        
+        assert U.shape[0]==self.shape[0],"Propagator shapes do not match"
+        assert U.block.sum(0)==self.block.sum(0),"Different matrix reduction applied to propagators (cannot be multiplied)"
+        if not(np.all(U.block==self.block)):
+            warnings.warn(f'\nMatrix blocks do not match. This is almost always wrong')
         
         if self.pwdavg:
             assert U.pwdavg,"Both propagators should have a powder average or bot not"

@@ -83,6 +83,9 @@ class Sequence():
             self.block=block
             rho._reduce(self)
             
+    @property
+    def block(self):
+        return self.L.block
     
     def getBlock(self,block):
         """
@@ -100,7 +103,6 @@ class Sequence():
         """
         seq=copy(self)
         seq.L=self.L.getBlock(block)
-        self.block=block
         return seq
     
     @property
@@ -452,8 +454,6 @@ class Sequence():
         self.expsys._tprop=0 if self.taur is None else tf%self.taur
         
         out=Propagator(U=dct,t0=t0,tf=tf,taur=self.taur,L=self.L,isotropic=self.isotropic)
-        if hasattr(self,'block'):
-            out.block=self.block
         return out
     
     def __repr__(self):

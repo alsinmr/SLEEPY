@@ -76,6 +76,7 @@ class Liouvillian():
         self._Lrf=None
         self._Ln=None
         self._Ln_H=None
+        self._Lthermal=None
         if Defaults['cache']:self._Ln_H=[[None for _ in range(5)] for _ in range(len(self))]
         
         self._fields=self.fields
@@ -101,6 +102,10 @@ class Liouvillian():
 
         """
         return LiouvilleBlock(self, block)
+    
+    @property
+    def block(self):
+        return np.ones(self.shape[0],dtype=bool)
     
     def clear_cache(self):
         self._Ln_H=None
@@ -163,6 +168,7 @@ class Liouvillian():
         # for ri in self.relax_info:
         #     if 'Peq' in ri[1] and ri[1]['Peq']:
         #         return True
+        if self._Lthermal is not None:return True
         for ri in self.relax_info:
             if ri[0]=='recovery':return True
         return False
@@ -365,12 +371,16 @@ class Liouvillian():
             if Type=='recovery':
                 M=RelaxMat.recovery(expsys=self.expsys,L=self)
                 self.relax_info.append(('recovery',{}))
+            elif Type=='Thermal':
+                self._Lthermal=RelaxMat.Thermal
+                self.relax_info.append(('Thermal',{}))
+                return self
             elif hasattr(RelaxMat,Type):
                 M=getattr(RelaxMat,Type)(expsys=self.expsys,**kwargs)
                 self.relax_info.append((Type,kwargs))
             else:
                 warnings.warn(f'Unknown relaxation type: {Type}')
-                return
+                return self
         
         q=np.prod(self.H[0].shape)
         self.Lrelax  #Call to make sure it's pre-allocated
@@ -397,7 +407,7 @@ class Liouvillian():
         
         self.relax_info=[]
         self._Lrelax=None
-        
+        self._Lthermal=None
         return self
         
     def validate_relax(self):
@@ -430,7 +440,13 @@ class Liouvillian():
     def Lrelax(self):
         if self._Lrelax is None:
             self._Lrelax=np.zeros(self.shape,dtype=self._ctype)
-        return self._Lrelax 
+        return self._Lrelax
+    
+    def Lthermal(self,step:int=0):
+        if self._Lthermal is None:
+            return np.zeros(self.shape,dtype=self._ctype)
+        else:
+            return self._Lthermal(self,step=step)
     
     @property
     def Lex(self):
@@ -554,8 +570,7 @@ class Liouvillian():
         # return np.sum([Ln0*ph**(-m) for Ln0,m in zip(Ln,range(-2,3))],axis=0)+self.Lrf
     
         ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
-        return np.sum([self.Ln(m)*(ph**(-m)) for m in range(-2,3)],axis=0)+self.Lrf
-    
+        return np.sum([self.Ln(m)*(ph**(-m)) for m in range(-2,3)],axis=0)+self.Lrf+self.Lthermal(step)    
     
     def U(self,Dt:float=None,t0:float=None,calc_now:bool=False):
         """
@@ -802,7 +817,7 @@ class Liouvillian():
         
         
     
-    def rho_eq(self,Hindex:int=None,pwdindex:int=0,sub1:bool=False):
+    def rho_eq(self,Hindex:int=None,pwdindex:int=None,step:int=None,sub1:bool=False):
         """
         Returns the equilibrium density operator for a given Hamiltonian and
         element of the powder average.
@@ -819,6 +834,10 @@ class Liouvillian():
             Index of the element of the powder average. Should not have an 
             influence unless the rotor is not at the magic angle or no 
             spinning is included (static, anisotropic). The default is 0.
+        step : int, optional
+            If provided, uses rho_eq for the particular step in the rotor cycle
+            required. Otherwise, the average Hamiltonian will be used, that is,
+            the rotating components will be omitted.
         sub1 : bool, optional
             Subtracts the identity from the density matrix. Primarily for
             internal use.
@@ -829,54 +848,59 @@ class Liouvillian():
         None.
 
         """
+        if pwdindex is None:
+            pwdindex=0 if self._index==-1 else self._index
+            
         if Hindex is None:
-            # pop=self.ex_pop
-            # N=self.shape[0]//len(pop)
-            # rho_eq=np.zeros(N*len(pop),dtype=self._ctype)
-            # for k,p in enumerate(pop):
-            #     rho_eq[N*k:N*(k+1)]=self.rho_eq(k,pwdindex=pwdindex,sub1=sub1)*p
-            # return rho_eq
+            pop=self.ex_pop
+            N=self.shape[0]//len(pop)
+            rho_eq=np.zeros(N*len(pop),dtype=self._ctype)
+            for k,p in enumerate(pop):
+                rho_eq[N*k:N*(k+1)]=self.rho_eq(k,pwdindex=pwdindex,step=step,sub1=sub1)*p
+            return rho_eq
             pop=self.ex_pop
             
-            H0=list()
-            for H in self.H:
-                if self.static and not(self.isotropic): #Include all terms Hn
-                    H0.append(np.sum([H[pwdindex].Hn(m) for m in range(-2,3)],axis=0))
-                else:
-                    H0.append(H[pwdindex].Hn(0))
-                for k,LF in enumerate(self.expsys.LF):
-                    if not(LF):
-                        H0[-1]+=H.expsys.v0[k]*self.expsys.Op[k].z
+            
+            # # 6 July 2024. Why were we calculating this here and not just getting it from the Hamiltonian?
+            # H0=list()
+            # for H in self.H:
+            #     if self.static and not(self.isotropic): #Include all terms Hn
+            #         H0.append(np.sum([H[pwdindex].Hn(m) for m in range(-2,3)],axis=0))
+            #     else:
+            #         H0.append(H[pwdindex].Hn(0))
+            #     for k,LF in enumerate(self.expsys.LF):
+            #         if not(LF):
+            #             H0[-1]+=H.expsys.v0[k]*self.expsys.Op[k].z
             
             
-            ##Approach 1: same rho_eq0 for all states in exchange
-            # H=(np.array(H0).T*pop).sum(-1).T
-            # rho_eq0=expm(6.62607015e-34*H/(1.380649e-23*self.expsys.T_K))
-            # rho_eq0/=np.trace(rho_eq0)
-            # if sub1:
-            #     eye=np.eye(rho_eq0.shape[0])
-            #     rho_eq0-=np.trace(rho_eq0@eye)/rho_eq0.shape[0]*eye
+            # ##Approach 1: same rho_eq0 for all states in exchange
+            # # H=(np.array(H0).T*pop).sum(-1).T
+            # # rho_eq0=expm(6.62607015e-34*H/(1.380649e-23*self.expsys.T_K))
+            # # rho_eq0/=np.trace(rho_eq0)
+            # # if sub1:
+            # #     eye=np.eye(rho_eq0.shape[0])
+            # #     rho_eq0-=np.trace(rho_eq0@eye)/rho_eq0.shape[0]*eye
+            # # rho_eq=np.zeros(self.shape[0],dtype=self._ctype)
+            # # n=self.H[0].shape[0]**2
+            # # for k,p in enumerate(pop):
+            # #     rho_eq[k*n:(k+1)*n]=rho_eq0.flatten()*p
+            
+            # ##Approach 2: different rho_eq0 for each state in exchange
+            
             # rho_eq=np.zeros(self.shape[0],dtype=self._ctype)
             # n=self.H[0].shape[0]**2
-            # for k,p in enumerate(pop):
+            # for k,(H,p) in enumerate(zip(H0,pop)):
+            #     rho_eq0=expm(6.62607015e-34*H/(1.380649e-23*self.expsys.T_K))
+            #     rho_eq0/=np.trace(rho_eq0)
+            #     if sub1:
+            #         eye=np.eye(rho_eq0.shape[0])
+            #         rho_eq0-=np.trace(rho_eq0@eye)/rho_eq0.shape[0]*eye
             #     rho_eq[k*n:(k+1)*n]=rho_eq0.flatten()*p
-            
-            ##Approach 2: different rho_eq0 for each state in exchange
-            
-            rho_eq=np.zeros(self.shape[0],dtype=self._ctype)
-            n=self.H[0].shape[0]**2
-            for k,(H,p) in enumerate(zip(H0,pop)):
-                rho_eq0=expm(6.62607015e-34*H/(1.380649e-23*self.expsys.T_K))
-                rho_eq0/=np.trace(rho_eq0)
-                if sub1:
-                    eye=np.eye(rho_eq0.shape[0])
-                    rho_eq0-=np.trace(rho_eq0@eye)/rho_eq0.shape[0]*eye
-                rho_eq[k*n:(k+1)*n]=rho_eq0.flatten()*p
                 
         
-            return rho_eq
+            # return rho_eq
         else:
-            return self.H[Hindex].rho_eq(pwdindex=pwdindex,sub1=sub1).reshape(self.shape[0]//len(self.H))
+            return self.H[Hindex].rho_eq(pwdindex=pwdindex,step=step,sub1=sub1).reshape(self.shape[0]//len(self.H))
         
         
     # @property    
@@ -1141,7 +1165,7 @@ class LiouvilleBlock(Liouvillian):
     def __init__(self,L,block):
         self.__dict__=copy(L.__dict__)
         self._L=L
-        self.block=block
+        self._block=block
         self._PropCache=PropCache(self)
         
     def L(self,step):
@@ -1162,6 +1186,10 @@ class LiouvilleBlock(Liouvillian):
     @property
     def reduced(self):
         return True
+    
+    @property
+    def block(self):
+        return self._block
     
     
         
