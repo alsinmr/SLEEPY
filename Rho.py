@@ -528,7 +528,9 @@ class Rho():
         """
         if self.L is not None:
             self._rho=[self._rho0 for _ in range(self.pwdavg.N)]
+            self._phase_accum0=np.zeros(self.expsys.nspins)
         self._t=None
+        
         return self
     
     def clear(self):
