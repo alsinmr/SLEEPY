@@ -16,7 +16,7 @@ from . import Defaults
 tol=1e-10
 
 class Propagator():
-    def __init__(self,U,t0,tf,taur,L,isotropic):
+    def __init__(self,U,t0,tf,taur,L,isotropic,phase_accum):
         self.U=U
         self.pwdavg=False if hasattr(U,'shape') else True
         self.t0=t0
@@ -26,7 +26,7 @@ class Propagator():
         self._index=-1
         self._isotropic=isotropic
         self._eig=None
-
+        self.phase_accum=phase_accum%(2*np.pi)
         
     
     @property
@@ -205,7 +205,7 @@ class Propagator():
             Uout=[U1@U2 for U1,U2 in zip(self,U)]
         
         if not(self.pwdavg):Uout=Uout[0]
-        return Propagator(Uout,t0=U.t0,tf=U.tf+self.Dt,taur=self.taur,L=self.L,isotropic=self.isotropic)
+        return Propagator(Uout,t0=U.t0,tf=U.tf+self.Dt,taur=self.taur,L=self.L,isotropic=self.isotropic,phase_accum=self.phase_accum+U.phase_accum)
     
     # def __rmul__(self,U):
     #     if U==1:
@@ -261,7 +261,7 @@ class Propagator():
             
         if not(self.pwdavg):Uout=Uout[0]
         
-        out=Propagator(Uout,t0=self.t0,tf=self.t0+self.Dt*n,taur=self.taur,L=self.L,isotropic=self.isotropic)
+        out=Propagator(Uout,t0=self.t0,tf=self.t0+self.Dt*n,taur=self.taur,L=self.L,isotropic=self.isotropic,phase_accum=self.phase_accum*n)
         out._eig=_eig
         return out            
     

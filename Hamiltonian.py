@@ -240,7 +240,7 @@ class Hamiltonian():
             H=self[pwdindex].Hn(0)
         else:
             ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
-            H=np.sum([self[pwdindex].Hn(k)*ph**k for k in range(-2,3)],axis=0)
+            H=np.sum([self[pwdindex].Hn(k)*(ph**-k) for k in range(-2,3)],axis=0)
         for k,LF in enumerate(self.expsys.LF):
             if not(LF):
                 H+=self.expsys.v0[k]*self.expsys.Op[k].z

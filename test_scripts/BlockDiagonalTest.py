@@ -42,9 +42,9 @@ L=sl.Liouvillian((ex0,ex1))
 L.kex=sl.Tools.twoSite_kex(tc=1e-5)
 
 pi2=L.Sequence().add_channel('13C',v1=62500,t=4e-6,phase=np.pi/2)
-lock=L.Sequence().add_channel('13C',v1=25000)
+lock=L.Sequence().add_channel('13C',v1=25000,voff=10000)
 
-rho=sl.Rho(rho0='13Cz',detect='13Cx')
+rho=sl.Rho(rho0='13Cz',detect='13Cm')
 
 rho,pi2,lock=rho.ReducedSetup(pi2,lock)
 

@@ -384,14 +384,13 @@ class Liouvillian():
         
         q=np.prod(self.H[0].shape)
         self.Lrelax  #Call to make sure it's pre-allocated
-        if M.shape[0]==q:
+        if M.shape[0]==self.shape[0]:
+            self._Lrelax+=M
+        elif M.shape[0]==q:
             for k,H0 in enumerate(self.H):
                 self._Lrelax[k*q:(k+1)*q][:,k*q:(k+1)*q]+=M
-        elif M.shape[0]==self.shape[0]:
-            self._Lrelax+=M
         else:
             assert False,f"M needs to have size ({q},{q}) or {self.shape}"   
-            
         return self
     
     def clear_relax(self):
@@ -612,6 +611,8 @@ class Liouvillian():
         
         self.expsys._tprop=0 if self.taur is None else tf%self.taur  #Update current time
         
+        voff=np.array([x[-1] for x in self.rf.fields.values()])
+        ph_acc=(voff*Dt)*2*np.pi
         
         if calc_now:
             if self.sub:
@@ -621,10 +622,11 @@ class Liouvillian():
     
                     d,v=np.linalg.eig(L)
                     
+
                     
                     U=v@np.diag(np.exp(d*Dt))@np.linalg.pinv(v)
     
-                    return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
+                    return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic,phase_accum=ph_acc)
                 else:
                     # dt=self.dt
                     # n0=int(t0//dt)
@@ -655,15 +657,15 @@ class Liouvillian():
                         else:
                             L=self.L(nf)
                             U=expm(L*tp1)@U
-                    return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
+                    return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic,phase_accum=ph_acc)
             else:
                 if self.isotropic:
                     U=[L0.U(t0=t0,Dt=Dt,calc_now=calc_now).U for L0 in self]
-                    return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
+                    return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic,phase_accum=ph_acc)
                 else:
                     pm=ParallelManager(L=self,t0=t0,Dt=Dt)
                     U=pm()
-                    return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
+                    return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic,phase_accum=ph_acc)
                 # if self._parallel and not(self.static):
                 #     dt=self.dt
                 #     n0=int(t0//dt)
@@ -695,7 +697,7 @@ class Liouvillian():
             dct['voff']=np.zeros([len(self.fields),2])
             for k,v in self.fields.items():
                 dct['v1'][k],dct['phase'][k],dct['voff'][k]=v
-            return Propagator(U=dct,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
+            return Propagator(U=dct,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic,phase_accum=ph_acc)
             
         
     def Ueye(self,t0:float=None):
@@ -717,7 +719,7 @@ class Liouvillian():
             if t0 is None:t0=self.expsys._tprop%self.taur
         
         return Propagator(U=[np.eye(self.shape[0]) for _ in range(len(self))],
-                          t0=t0,tf=t0,taur=self.taur,L=self,isotropic=self.isotropic)    
+                          t0=t0,tf=t0,taur=self.taur,L=self,isotropic=self.isotropic,phase_accum=0)    
     
     def Udelta(self,channel,phi:float=np.pi,phase:float=0,t0:float=None):
         """
@@ -767,7 +769,7 @@ class Liouvillian():
         U=expm(-1j*phi*L)
         
         return Propagator(U=[U for _ in range(len(self))],
-                          t0=t0,tf=t0,taur=self.taur,L=self,isotropic=self.isotropic)
+                          t0=t0,tf=t0,taur=self.taur,L=self,isotropic=self.isotropic,phase_accum=0)
 
     def Ueig(self):
         """

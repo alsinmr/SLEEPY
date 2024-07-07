@@ -76,6 +76,8 @@ class Rho():
         # self._Setup()
         self.apodize=False
         self._block=None
+        self._phase_accum=None
+        self._phase_accum0=None
     
     @property
     def _rtype(self):
@@ -187,6 +189,10 @@ class Rho():
         if diff.min()*(1+1e-10)>diff.max():   #Uniform spacing within error
             return 1
         return 2
+    
+    @property
+    def phase_accum(self):
+        return np.array(self._phase_accum).T
     
     @property
     def reduced(self):
@@ -357,31 +363,60 @@ class Rho():
         None.
 
         """
-        assert self._tstatus==1,"Uniform time-axis spacing required for downmixing"
         
         # from scipy.signal import butter,filtfilt
         
         if t0 is None:t0=self.t_axis[0]
         
-        for k,detect in enumerate(self.detect):
-            OpName,_=self.OpScaling(detect)
-            v0=None
-            if OpName[0]=='S':
-                i=int(OpName[1])   #At the moment, I'm assuming this program won't work with 11 spins...
-                if self.expsys.LF[i] and OpName[2:] in ['p','m']: #Downmix required
-                    v0=self.expsys.v0[i]*(-1 if OpName[2:]=='p' else 1)
-            else:
-                Nuc,a=self.parseOp(OpName)
-                i=self.expsys.Nucs.tolist().index(Nuc)
-                if self.expsys.LF[i] and a in ['p','m']:
-                    v0=self.expsys.v0[i]*(-1 if a=='p' else 1)
-                    
-            if v0 is not None:
-                Ipwd=self.Ipwd[:,k]
-                Idm=Ipwd*np.exp(1j*v0*2*np.pi*(self.t_axis-t0))
-                for m in range(self.pwdavg.N):
-                    self._Ipwd[m][k]=Idm[m]
+        #A new, more general attempt
+        co=[np.tile(o.coherence_order,len(self.L.H)).T[self.block] for o in self.expsys.Op]
+        for k,detect in enumerate(self._detect):
+            stop=False
+            detect=detect.astype(bool)
+            q=np.ones(len(self.t_axis),dtype=ctype)
+            for i,(ph_acc,co0) in enumerate(zip(self.phase_accum,co)):
+                if self.expsys.LF[i]:  #Add phase from LF rotation if necessary
+                    ph_acc+=self.expsys.v0[i]*2*np.pi*(self.t_axis-t0)
+                if np.unique(co0[detect]).__len__()==1:
+                    q*=np.exp(1j*ph_acc*co0[detect][0])
+                elif np.unique(np.abs(co0[detect])).__len__()==1:
+                    q*=np.exp(1j*ph_acc*np.abs(co0[detect][0]))
+                else:
+                    warnings.warn(f'Inconsistent coherence orders in detection matrix {k}, downmixing aborted')
+                    stop=True
+                    break
+            if stop:break #Break out of the second for-loop
+            
+            Ipwd=self.Ipwd[:,k]
+            Idm=Ipwd*q
+            for m in range(self.pwdavg.N):
+                self._Ipwd[m][k]=Idm[m]
                 
+        return self
+            
+            
+            
+        
+        # # Old approach
+        # for k,detect in enumerate(self.detect):
+        #     OpName,_=self.OpScaling(detect)
+        #     v0=None
+        #     q=None
+        #     if OpName[0]=='S':
+        #         i=int(OpName[1])   #At the moment, I'm assuming this program won't work with 11 spins...
+        #         if self.expsys.LF[i] and OpName[2:] in ['p','m']: #Downmix required
+        #             v0=self.expsys.v0[i]*(-1 if OpName[2:]=='p' else 1)
+        #     else:
+        #         Nuc,a=self.parseOp(OpName)
+        #         i=self.expsys.Nucs.tolist().index(Nuc)
+        #         if self.expsys.LF[i] and a in ['p','m']:
+        #             v0=self.expsys.v0[i]*(-1 if a=='p' else 1)
+                    
+        #     if v0 is not None:
+        #         Ipwd=self.Ipwd[:,k]
+        #         Idm=Ipwd*np.exp(1j*v0*2*np.pi*(self.t_axis-t0))
+        #         for m in range(self.pwdavg.N):
+        #             self._Ipwd[m][k]=Idm[m]
                 
     
     @property
@@ -467,6 +502,8 @@ class Rho():
         
         self._Ipwd=[[list() for _ in range(self.n_det)] for _ in range(self.pwdavg.N)]
         self._taxis=list()
+        self._phase_accum=list()
+        
         
         if isinstance(self.rho0,str) and self.rho0=='Thermal':
             rhoeq=self.L.rho_eq(sub1=True)
@@ -477,6 +514,7 @@ class Rho():
         else:
             self._rho0=self.Op2vec(self.strOp2vec(self.rho0))
         self._detect=[self.Op2vec(self.strOp2vec(det,detect=True),detect=True) for det in self.detect]
+        self._phase_accum0=np.zeros(self.expsys.nspins)
         self.reset()
         
     def reset(self):
@@ -560,7 +598,7 @@ class Rho():
             if not(U.t0==U.tf):
                 warnings.warn('The initial time of the propagator is not equal to the current time of the density matrix')
         
-        assert U.shape[0]==self.shape[0],"Propagator shapes do not match"
+        assert U.shape[0]==self.shape[0],"Detector and propagator shapes do not match"
         assert U.block.sum(0)==self.block.sum(0),"Different matrix reduction applied to propagators (cannot be multiplied)"
         if not(np.all(U.block==self.block)):
             warnings.warn('\nMatrix blocks do not match. This is almost always wrong')
@@ -570,8 +608,9 @@ class Rho():
         if U.calculated:
             self._rho=[U0@rho for U0,rho in zip(U,self._rho)]
             self._t+=U.Dt
-            return self
+            
         else:
+            # This approach is incomplete and should not be used!
             
             dct=U.U
             t=dct['t']
@@ -590,13 +629,19 @@ class Rho():
             
             L.fields.update(ini_fields)  #Return fields to their initial state
             self._t+=U.Dt
-                    
+        
+        self._phase_accum0+=U.phase_accum
+        self._phase_accum0%=2*np.pi
+        
+        return self
                     
                 
         
     def __rmul__(self,U):
         """
-        Runs rho.prop(U) and returns self
+        Runs rho.prop(U) and returns self.
+        
+        This is the usual mechanism for accessing rho.prop
 
         Parameters
         ----------
@@ -615,6 +660,8 @@ class Rho():
     def __mul__(self,U):
         """
         Runs rho.prop(U) and returns self
+        
+        This isn't really fully implemented. Would run if we execute rho*U
 
         Parameters
         ----------
@@ -626,6 +673,9 @@ class Rho():
         self
 
         """
+        if hasattr(U,'add_channel'):U=U.U() #Sequence provided
+        U.calcU()   #This line should be removed if we were to perform faster
+                    #approach for multiplying rho*U
         return self.prop(U)
         
     
@@ -646,6 +696,7 @@ class Rho():
             return self
         
         self._taxis.append(self.t)
+        self._phase_accum.append(self._phase_accum0)
         for k,rho in enumerate(self._rho):
             for m,det in enumerate(self._detect):
                 self._Ipwd[k][m].append((rho*det).sum())
@@ -761,7 +812,7 @@ class Rho():
         
         if U is not None:
             if n>=100:
-                self()
+                self()  #This is the initial detection
                 U.eig()
                 for k,((d,v),rho) in enumerate(zip(U._eig,self)):
                     rho0=np.linalg.pinv(v)@rho
@@ -774,6 +825,8 @@ class Rho():
                 
                 self._taxis.extend([self.t+k*U.Dt for k in range(1,n)])
                 self._t+=n*U.Dt
+                self._phase_accum.extend([(self._phase_accum0+k*U.phase_accum)%(2*np.pi) for k in range(1,n)])
+                self._phase_accum0=(self._phase_accum0+n*U.phase_accum)%(2*np.pi)
                     
             else:
                 for _ in range(n):
@@ -784,7 +837,7 @@ class Rho():
                 return self.DetProp(U=seq.U(),n=n)
             
             if (seq.Dt%seq.taur<tol or -seq.Dt%seq.taur<tol) and n_per_seq==1:
-                U=seq.U(t0=self.t,Dt=self.t+seq.Dt)  #Just generate the propagator and call with U
+                U=seq.U(t0=self.t,Dt=seq.Dt)  #Just generate the propagator and call with U
                 self.DetProp(U=U,n=n)
                 return self
             

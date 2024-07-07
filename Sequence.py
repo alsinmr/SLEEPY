@@ -441,6 +441,8 @@ class Sequence():
         i1=np.argmax(t>=tf) #First time after tf
         t=np.concatenate((t[:i1],[tf]))
         
+        ph_acc=(np.diff(t)*voff[:,i:i+i1]).sum(-1)*2*np.pi
+        
         # for m,(ta,tb) in enumerate(zip(t[:-1],t[1:])):
         #     for k,(v1,phase,voff) in enumerate(zip(self.v1,self.phase,self.voff)):
         #         self.fields[k]=(v1[m],phase[m],voff[m])
@@ -453,7 +455,7 @@ class Sequence():
         dct={'t':t,'v1':v1[:,i:i+i1+1],'phase':phase[:,i:i+i1+1],'voff':voff[:,i:i+i1+1]}
         self.expsys._tprop=0 if self.taur is None else tf%self.taur
         
-        out=Propagator(U=dct,t0=t0,tf=tf,taur=self.taur,L=self.L,isotropic=self.isotropic)
+        out=Propagator(U=dct,t0=t0,tf=tf,taur=self.taur,L=self.L,isotropic=self.isotropic,phase_accum=ph_acc)
         return out
     
     def __repr__(self):

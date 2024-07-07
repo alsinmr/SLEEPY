@@ -189,6 +189,9 @@ class SpinOp:
 from copy import copy    
 class OneSpin():
     def __init__(self,S,n):
+        self._M=(2*S+1).astype(int)
+        self._n=n
+        
         for k in dir(Op0):
             if 'so_' in k:
                 Type=k[3:]
@@ -198,10 +201,32 @@ class OneSpin():
                             np.eye(Mult[n+1:].prod(),dtype=Defaults['ctype'])))
                 setattr(self,Type,op)
         self.T=SphericalTensor(self)
+        self._co=None
+        
+    @property
+    def S(self):
+        return (self._M[self._n]-1)/2
+    @property
+    def M(self):
+        return self._M[self._n]
+    
     def __getattribute__(self, name):
         if name=='T':
             return super().__getattribute__(name)
         return copy(super().__getattribute__(name))  #Ensure we don't modify the original object
+    
+    @property
+    def coherence_order(self):
+        if self._co is None:
+            co=np.zeros([self.M,self.M],dtype=int)
+            for k in range(-int(2*self.S),int(2*self.S+1)):
+                co+=k*np.diag(np.ones(self.M-np.abs(k),dtype=int),k=k)
+            co=(np.kron(np.kron(np.eye(self._M[:self._n].prod(),dtype=int),co),
+                        np.eye(self._M[self._n+1:].prod(),dtype=int)))
+            self._co=co.reshape(co.size)
+        return self._co
+            
+    
 
 #Doesn't work below. Not sure why
 # class OpMat(np.ndarray):
