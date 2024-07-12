@@ -306,9 +306,10 @@ class Rho():
         rho=self.getBlock(block)
         seq_red=[s.getBlock(block) for s in seq]
         
-        print(f'State-space reduction: {block.__len__()}->{block.sum()}')
+        if Defaults['verbose']:
+            print(f'State-space reduction: {block.__len__()}->{block.sum()}')
         
-        return rho,*seq_red
+        return (rho,*seq_red)
     
     def _reduce(self,*seq):
         """
@@ -336,8 +337,6 @@ class Rho():
         self.block=block
         if seq.reduced:
             self._L=seq.L
-            
-        print('')
         
         return self
         
@@ -860,8 +859,9 @@ class Rho():
                     nsteps=n
                 k,nsteps=nsteps,k
             nsteps*=n_per_seq if nsteps<n else n
-                
-            print(f'Prop: {nsteps} step{"" if nsteps==1 else "s"} per every {k} rotor period{"" if k==1 else "s"}')
+            
+            if Defaults['verbose']:
+                print(f'Prop: {nsteps} step{"" if nsteps==1 else "s"} per every {k} rotor period{"" if k==1 else "s"}')
             
             
             seq.reset_prop_time(self.t)
