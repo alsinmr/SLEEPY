@@ -78,6 +78,7 @@ class Rho():
         self._block=None
         self._phase_accum=None
         self._phase_accum0=None
+        self._downmixed=False
     
     @property
     def _rtype(self):
@@ -365,6 +366,10 @@ class Rho():
         
         # from scipy.signal import butter,filtfilt
         
+        if self._downmixed:
+            print('Already downmixed')
+            return self
+        
         if t0 is None:t0=self.t_axis[0]
         
         #A new, more general attempt
@@ -390,6 +395,8 @@ class Rho():
             Idm=Ipwd*q
             for m in range(self.pwdavg.N):
                 self._Ipwd[m][k]=Idm[m]
+        
+        self._downmixed=True
                 
         return self
             
@@ -558,6 +565,7 @@ class Rho():
         self._rho=list() #Storage for numerical rho
         self._L=None
         self._BDP=False
+        self._downmixed=False
         
         return self
         # if self._L is not None:
