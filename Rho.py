@@ -879,9 +879,7 @@ class Rho():
             
             U=[seq.U(Dt=Dt,t0_seq=k*Dt) for k in range(nsteps)]
             
-            
             if n//nsteps>100:
-                self()  #Detect once before propagation
                 U0=[]
                 Ipwd=np.zeros([len(self),len(self._detect),n],dtype=Defaults['ctype'])
                 
@@ -893,7 +891,8 @@ class Rho():
                     U0.eig()
                     for k,((d,v),rho0) in enumerate(zip(U0._eig,rho00)):  #Sweep over the powder average
                         rho0=np.linalg.pinv(v)@rho0
-                        dp=np.cumprod(np.repeat([d],n0,axis=0),axis=0)
+                        dp=np.concatenate([np.ones([1,d.size],dtype=ctype),
+                                           np.cumprod(np.repeat([d],n0-1,axis=0),axis=0)],axis=0)
                         rho_d=dp*rho0
                         for m,det in enumerate(self._detect):
                             det_d=det@v
@@ -905,9 +904,9 @@ class Rho():
                         
                 for k in range(len(self)):
                     for m in range(len(self._detect)):
-                        self._Ipwd[k][m].extend(Ipwd[k][m][:-1].tolist())
+                        self._Ipwd[k][m].extend(Ipwd[k][m].tolist())
                 
-                self._taxis.extend([self.t+k*Dt for k in range(1,n)])
+                self._taxis.extend([self.t+k*Dt for k in range(0,n)])
                 self._t+=n*Dt
                         
             else:

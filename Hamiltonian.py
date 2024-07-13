@@ -340,6 +340,7 @@ class Hamiltonian():
             cutoff=np.abs(x).max()*1e-6
             x=np.abs(x)>cutoff
         elif mode=='log':
+            # This isn't always working if only one value present (??)
             x=np.abs(x)
             i=np.logical_not(x==0)
             if i.sum()!=0:
