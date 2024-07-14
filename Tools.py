@@ -333,6 +333,27 @@ def twoSite_kex(tc:float,p1:float=0.5):
     
     return 1/(2*tc)*(np.array([[-1,1],[1,-1]])+(2*p1-1)*np.array([[1,1],[-1,-1]]))
 
+def nSite_sym(n:int,tc:float):
+    """
+    Returns a matrix for n-sites, where all sites are directly connected with
+    all other sites with the same rate constant. This type of exchange always
+    has exactly one unique correlation time.
+
+    Parameters
+    ----------
+    n : int
+        Number of sites in exchange.
+    tc : float
+        Correlation time of the exchange.
+
+    Returns
+    -------
+    np.array
+        kex matrix
+
+    """
+    return 1/(n*tc)*(np.ones([n,n])-np.eye(n)*n)
+
 def fourSite_sym(tc:float):
     """
     Exchange matrix which can be used to mimic isotropic tumbling, replaced

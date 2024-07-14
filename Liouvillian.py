@@ -788,15 +788,33 @@ class Liouvillian():
         d[i]/=np.abs(d[i])
         return d,v
     
-    def Sequence(self,cyclic=False,rho=None) -> Sequence:
+    def Sequence(self,Dt:float=None,cyclic:bool=False,rho=None) -> Sequence:
         """
         Returns a Sequence object initialized from this Liouvillian
 
+        Parameters
+        ----------
+        Dt : float, optional
+            Timestep for the sequence. Typically only used if one intends to 
+            make an empty sequence (no pulses). The default is None.
+        cyclic : bool, optional
+            If the sequence is execute for a Dt longer than the default sequence
+            length, then setting cyclic to True will cause the sequence to
+            repeat. If False, then the final state of the sequence will be
+            retained. The default is False.
+        rho : TYPE, optional
+            DESCRIPTION. The default is None.
+
         Returns
         -------
-        None.
+        Sequence
+            Pulse sequence object with this Liouvillian.
 
         """
+        if Dt is not None:
+            seq=Sequence(self,cyclic=cyclic,rho=rho)
+            seq.add_channel(self.expsys.Nucs[0],t=Dt)
+            return seq
         return Sequence(self,cyclic=cyclic,rho=rho)
     
     @property

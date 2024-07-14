@@ -79,6 +79,7 @@ class Rho():
         self._phase_accum=None
         self._phase_accum0=None
         self._downmixed=False
+        self.apod_pars={'WDW':'em','LB':None,'SSB':2,'GB':15}
     
     @property
     def _rtype(self):
@@ -375,7 +376,6 @@ class Rho():
         #A new, more general attempt
         co=[np.tile(o.coherence_order,len(self.L.H)).T[self.block] for o in self.expsys.Op]
         for k,detect in enumerate(self._detect):
-            stop=False
             detect=detect.astype(bool)
             q=np.ones(len(self.t_axis),dtype=ctype)
             for i,(ph_acc,co0) in enumerate(zip(self.phase_accum,co)):
@@ -386,15 +386,13 @@ class Rho():
                 elif np.unique(np.abs(co0[detect])).__len__()==1:
                     q*=np.exp(1j*ph_acc*np.abs(co0[detect][0]))
                 else:
-                    warnings.warn(f'Inconsistent coherence orders in detection matrix {k}, downmixing aborted')
-                    stop=True
+                    warnings.warn(f'Inconsistent coherence orders in detection matrix {k}, downmixing aborted for this matrix')
                     break
-            if stop:break #Break out of the second for-loop
             
             Ipwd=self.Ipwd[:,k]
             Idm=Ipwd*q
             for m in range(self.pwdavg.N):
-                self._Ipwd[m][k]=Idm[m]
+                self._Ipwd[m][k]=Idm[m].tolist()
         
         self._downmixed=True
                 
@@ -484,11 +482,39 @@ class Rho():
             FT, including division of the first time point by zero.
 
         """
-        I=np.concatenate((self.I[:,:1]/2,self.I[:,1:]),axis=1)
-        if self.apodize:
-            I*=np.exp(-np.arange(I.shape[-1])/I.shape[-1]*5)
         if self._tstatus!=1:
             warnings.warn('Time points are not equally spaced. FT will be incorrect')
+
+        I=np.concatenate((self.I[:,:1]/2,self.I[:,1:]),axis=1)
+        if self.apodize:
+            ap=self.apod_pars
+            wdw=ap['WDW'].lower()
+            t=self.t_axis
+            LB=ap['LB'] if ap['LB'] is not None else 5/t[-1]/np.pi
+            
+            if wdw=='em':
+                apod=np.exp(-t*LB*np.pi)
+            elif wdw=='gm':
+                apod=np.exp(-np.pi*LB*t+(np.pi*LB*t**2)/(2*ap['GB']*t[-1]))
+            elif wdw=='sine':
+                if ap['SSB']>=2:
+                    apod=np.sin(np.pi*(1-1/ap['SSB'])*t/t[-1]+np.pi/ap['SSB'])
+                else:
+                    apod=np.sin(np.pi*t/t[-1])
+            elif wdw=='qsine':
+                if ap['SSB']>=2:
+                    apod=np.sin(np.pi*(1-1/ap['SSB'])*t/t[-1]+np.pi/ap['SSB'])**2
+                else:
+                    apod=np.sin(np.pi*t/t[-1])**2
+            elif wdw=='sinc':
+                apod=np.sin(2*np.pi*ap['SSB']*(t/t[-1]-ap['GB']))
+            elif wdw=='qsinc':
+                apod=np.sin(2*np.pi*ap['SSB']*(t/t[-1]-ap['GB']))**2
+            else:
+                warnings.warn(f'Unrecognized apodization function: "{wdw}"')
+                apod=np.ones(t.shape)
+            I*=apod
+
             
         return np.fft.fftshift(np.fft.fft(I,n=I.shape[1]*2,axis=1),axes=[1])
         
@@ -800,6 +826,7 @@ class Rho():
                 for j in range(Ipwd.shape[1]):
                     self._Ipwd[k][j].extend(Ipwd[k,j])
             self._taxis.extend(rb._taxis)
+            self._phase_accum.extend(rb._phase_accum)
             self._BDP=True
             self._t=rb._t
             return self
@@ -881,7 +908,8 @@ class Rho():
             
             if n//nsteps>100:
                 U0=[]
-                Ipwd=np.zeros([len(self),len(self._detect),n],dtype=Defaults['ctype'])
+                Ipwd=np.zeros([len(self),len(self._detect),n],dtype=ctype)
+                phase_accum=np.ones([len(self),self.expsys.nspins],dtype=rtype)*self._phase_accum0
                 
                 rho00=copy(self._rho)
                 for q in range(nsteps):  #Loop over the starting time
@@ -889,6 +917,7 @@ class Rho():
                     U0=U[q]
                     for m in range(q+1,q+nsteps):U0=U[m%nsteps]*U0 #Calculate propagator for 1 rotor period starting U[q]
                     U0.eig()
+                    phase_accum[q::nsteps]+=U0.phase_accum*np.arange(n0)
                     for k,((d,v),rho0) in enumerate(zip(U0._eig,rho00)):  #Sweep over the powder average
                         rho0=np.linalg.pinv(v)@rho0
                         dp=np.concatenate([np.ones([1,d.size],dtype=ctype),
@@ -907,6 +936,9 @@ class Rho():
                         self._Ipwd[k][m].extend(Ipwd[k][m].tolist())
                 
                 self._taxis.extend([self.t+k*Dt for k in range(0,n)])
+                
+                self._phase_accum.extend([pa%(2*np.pi) for pa in phase_accum])
+                self._phase_accum0=self._phase_accum[-1]
                 self._t+=n*Dt
                         
             else:

@@ -220,7 +220,7 @@ def recovery(expsys,L):
     # return out
     
     
-    # ## Versiou 3
+    # ## Version 3
     out=np.zeros(L[0].Ln(0).shape,dtype=Defaults['ctype'])
     index=np.argwhere(L.Lrelax-np.diag(np.diag(L.Lrelax)))
     index.sort(-1)
@@ -235,6 +235,7 @@ def recovery(expsys,L):
         
     rho_eq=L.rho_eq()
     for i0,i1 in index:
+        # TODO this is still wrong. Somehow we need to thermalize between SalphaI+ SbetaI+ coherences
         # if out[i0,i1]==0:
         # DelE=(L.Energy[i0]-L.Energy[i1])
         # rat=np.exp(DelE/(1.380649e-23*expsys.T_K))
