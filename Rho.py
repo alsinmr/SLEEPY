@@ -909,7 +909,7 @@ class Rho():
             if n//nsteps>100:
                 U0=[]
                 Ipwd=np.zeros([len(self),len(self._detect),n],dtype=ctype)
-                phase_accum=np.ones([len(self),self.expsys.nspins],dtype=rtype)*self._phase_accum0
+                phase_accum=np.ones([n,self.expsys.nspins],dtype=rtype)*self._phase_accum0
                 
                 rho00=copy(self._rho)
                 for q in range(nsteps):  #Loop over the starting time
@@ -917,7 +917,7 @@ class Rho():
                     U0=U[q]
                     for m in range(q+1,q+nsteps):U0=U[m%nsteps]*U0 #Calculate propagator for 1 rotor period starting U[q]
                     U0.eig()
-                    phase_accum[q::nsteps]+=U0.phase_accum*np.arange(n0)
+                    phase_accum[q::nsteps]+=U0.phase_accum*np.repeat([np.arange(n0)],self.expsys.nspins,axis=0).T
                     for k,((d,v),rho0) in enumerate(zip(U0._eig,rho00)):  #Sweep over the powder average
                         rho0=np.linalg.pinv(v)@rho0
                         dp=np.concatenate([np.ones([1,d.size],dtype=ctype),
