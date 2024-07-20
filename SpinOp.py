@@ -322,6 +322,12 @@ class SphericalTensor():
                 # print('checkpoint')
                 self._T[0]=[Op.eye]
                 self._T[1]=[-1/np.sqrt(2)*Op.p,Op.z,1/np.sqrt(2)*Op.m]
+                if Op.S>0.5:
+                    self._T.append([1/2*Op.m@Op.m,
+                                -1/2*(Op.p@Op.z+Op.z@Op.p),
+                                1/np.sqrt(6)*(2*Op.z@Op.z-(Op.x@Op.x+Op.y@Op.y)),
+                                1/2*(Op.m@Op.z+Op.z@Op.m),
+                                1/2*Op.p@Op.p])
             elif mode=='B0_LF':
                 zero=np.zeros(Op.eye.shape)
                 self._T=[None for _ in range(3)]

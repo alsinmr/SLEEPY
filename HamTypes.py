@@ -355,7 +355,7 @@ def J(es,i0:int,i1:int,J:float):
 
     """
     S,I=es.Op[i0],es.Op[i1]
-    if es.Nucs[i0]==es.Nucs[i1]:
+    if es.Nucs[i0]==es.Nucs[i1] or (es.LF[i0] and es.LF[i1]):
         H=J*(S.x@I.x+S.y@I.y+S.z*I.z)
     else:
         H=J*S.z*I.z
@@ -413,11 +413,18 @@ def CSA(es,i:int,delta:float,eta:float=0,euler=[0,0,0]):
 
     """
     
-    S=es.Op[i]
-    M=np.sqrt(2/3)*S.z    
+    info={'Type':'CSA','i':i,'delta':delta,'eta':eta,'euler':euler}
+    
     delta=delta*es.v0[i]/1e6
     
-    info={'Type':'CSA','i':i,'delta':delta,'eta':eta,'euler':euler}
+    if es.LF[i]:  #Lab frame calculation
+        T=es.Op[i].T
+        T.set_mode('B0_LF')
+       
+        return Ham1inter(T=T,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
+    else:
+        S=es.Op[i]
+        M=np.sqrt(2/3)*S.z    
     
     return Ham1inter(M=M,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
  
@@ -524,10 +531,11 @@ def quadrupole(es,i:int,delta:float=0,eta:float=0,euler=[0,0,0]):
     else:
         I=es.S[i]
     
-        M=1/2*(3*S.z@S.z-I*(I+1)*S.eye)     
+        M=np.sqrt(2/3)*1/2*(3*S.z@S.z-I*(I+1)*S.eye)  
         
         info={'Type':'quadrupole','i':i,'delta':delta,'eta':eta,'euler':euler}
-        print('Quadrupole Hamiltonian does not include 2nd order terms')
+        if Defaults['verbose']:
+            print('Quadrupole Hamiltonian does not include 2nd order terms')
         return Ham1inter(M=M,isotropic=False,delta=delta,eta=eta,euler=euler,
                           rotor_angle=es.rotor_angle,info=info,es=es)
 
