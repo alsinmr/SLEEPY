@@ -161,26 +161,26 @@ class Hamiltonian():
                 
         return out
     
-    # @property
-    # def Energy(self):
-    #     """
-    #     Energy for each of the NxN states in the Hamiltonian, including 
-    #     energy from the Larmor frequency (regardless of whether in lab frame).
-    #     Neglects rotating terms, Hn, for n!=0
+    @property
+    def Energy(self):
+        """
+        Energy for each of the NxN states in the Hamiltonian, including 
+        energy from the Larmor frequency (regardless of whether in lab frame).
+        Neglects rotating terms, Hn, for n!=0
 
-    #     Returns
-    #     -------
-    #     None.
+        Returns
+        -------
+        None.
 
-    #     """
-    #     H=self[0].Hn(0)
-    #     expsys=self.expsys
-    #     for LF,v0,Op in zip(expsys.LF,expsys.v0,expsys.Op):
-    #         if not(LF):
-    #             H+=v0*Op.z
-    #     Hdiag=np.tile(np.atleast_2d(np.diag(H)).T,H.shape[0])
-    #     energy=(Hdiag+Hdiag.T)/2+(H-np.diag(np.diag(H)))
-    #     return energy.reshape(energy.size).real*6.62607015e-34
+        """
+        H=self[0].Hn(0)
+        expsys=self.expsys
+        for LF,v0,Op in zip(expsys.LF,expsys.v0,expsys.Op):
+            if not(LF):
+                H+=v0*Op.z
+        Hdiag=np.tile(np.atleast_2d(np.diag(H)).T,H.shape[0])
+        energy=(Hdiag+Hdiag.T)/2+(H-np.diag(np.diag(H)))
+        return energy.reshape(energy.size).real*6.62607015e-34
     
     @property
     def shape(self):

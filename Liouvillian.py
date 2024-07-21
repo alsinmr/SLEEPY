@@ -873,12 +873,12 @@ class Liouvillian():
             
         if Hindex is None:
             pop=self.ex_pop
-            N=self.shape[0]//len(pop)
-            rho_eq=np.zeros(N*len(pop),dtype=self._ctype)
+            N=self.block.shape[0]//len(pop)
+            rho_eq=np.zeros(self.block.shape[0],dtype=self._ctype)
             for k,p in enumerate(pop):
                 rho_eq[N*k:N*(k+1)]=self.rho_eq(k,pwdindex=pwdindex,step=step,sub1=sub1)*p
-            return rho_eq
-            pop=self.ex_pop
+            return rho_eq[self.block]
+            # pop=self.ex_pop
             
             
             # # 6 July 2024. Why were we calculating this here and not just getting it from the Hamiltonian?
@@ -920,26 +920,26 @@ class Liouvillian():
         
             # return rho_eq
         else:
-            return self.H[Hindex].rho_eq(pwdindex=pwdindex,step=step,sub1=sub1).reshape(self.shape[0]//len(self.H))
+            return self.H[Hindex].rho_eq(pwdindex=pwdindex,step=step,sub1=sub1).reshape(self.block.shape[0]//len(self.H))
         
         
-    # @property    
-    # def Energy(self):
-    #     """
-    #     Energy for each of the NxNxnHam states in the Liouvillian, including 
-    #     energy from the Larmor frequency (regardless of whether in lab frame).
-    #     Neglects rotating terms, Hn, for n!=0
+    @property    
+    def Energy(self):
+        """
+        Energy for each of the NxNxnHam states in the Liouvillian, including 
+        energy from the Larmor frequency (regardless of whether in lab frame).
+        Neglects rotating terms, Hn, for n!=0
 
-    #     Returns
-    #     -------
-    #     None.
+        Returns
+        -------
+        None.
 
-    #     """
-    #     Energy=np.zeros(self.shape[0])
-    #     N=self.H[0].shape[0]**2
-    #     for k,H in enumerate(self.H):
-    #         Energy[k*N:(k+1)*N]=H.Energy
-    #     return Energy
+        """
+        Energy=np.zeros(self.shape[0])
+        N=self.H[0].shape[0]**2
+        for k,H in enumerate(self.H):
+            Energy[k*N:(k+1)*N]=H.Energy
+        return Energy
     
     def plot(self,what:str='L',seq=None,cmap:str=None,mode:str='log',colorbar:bool=True,
              step:int=0,block:int=None,ax=None) -> plt.axes:

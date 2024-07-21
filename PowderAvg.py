@@ -25,7 +25,7 @@ Pwd.sort()
 
 class PowderAvg():
     list_pwd_types=copy(Pwd)
-    def __init__(self,PwdType:str='JCP59',n_gamma:int=100,**kwargs):
+    def __init__(self,PwdType:str='JCP59',n_gamma:int=100,gamma_encoded:bool=False,**kwargs):
         """
         Initializes the powder average. May be initialized with a powder average
         type (see set_powder_type)
@@ -37,7 +37,8 @@ class PowderAvg():
         self._weight=None
         self.n_gamma=n_gamma
         self.n_alpha=0
-        self._gamma_incl=False
+        self._gamma_incl=gamma_encoded 
+        self.gamma_encoded=gamma_encoded
         
         self._pwdpath=os.path.join(os.path.dirname(os.path.realpath(__file__)),'PowderFiles')
         self._inter=list()
@@ -74,7 +75,7 @@ class PowderAvg():
         
     @property
     def gamma(self):
-        if self._gamma is None and self._gamma_incl:return None
+        if self._gamma is None and self._gamma_incl:return np.zeros(self.n_alpha)
         if self._gamma_incl:return self._gamma
         if self._alpha is None:return None
         return np.repeat(np.arange(self.n_gamma)*2*np.pi/self.n_gamma,len(self._alpha))
@@ -107,7 +108,7 @@ class PowderAvg():
         the powder files and the functions, then the files will be used
         """
         self._gamma=None
-        self._gamma_incl=False
+        self._gamma_incl=self.gamma_encoded
         pwdfile=os.path.join(self._pwdpath,PwdType+'.txt')
         if os.path.exists(pwdfile):
             with open(pwdfile,'r') as f:

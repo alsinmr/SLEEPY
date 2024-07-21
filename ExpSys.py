@@ -69,6 +69,7 @@ class ExpSys():
     @n_gamma.setter
     def n_gamma(self,n_gamma):
         self._n_gamma=n_gamma
+        
         self.pwdavg.n_gamma=n_gamma
     
     @property

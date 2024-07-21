@@ -309,7 +309,10 @@ class Rho():
         seq_red=[s.getBlock(block) for s in seq]
         
         if Defaults['verbose']:
-            print(f'State-space reduction: {block.__len__()}->{block.sum()}')
+            if block.sum()==0:
+                warnings.warn('Combination of sequence, initial density operator, and detection operator will not yield any signal (errors likely to follow)')
+            else:
+                print(f'State-space reduction: {block.__len__()}->{block.sum()}')
         
         return (rho,*seq_red)
     
@@ -540,7 +543,7 @@ class Rho():
         if isinstance(self.rho0,str) and self.rho0=='Thermal':
             rhoeq=self.L.rho_eq(sub1=True)
             if self.L.Peq:
-                eye=np.tile(np.ravel(self.expsys.Op[0].eye),len(self.L.H))
+                eye=np.tile(np.ravel(self.expsys.Op[0].eye),len(self.L.H))[self.block]
                 rhoeq+=eye/self.expsys.Op.Mult.prod()
             self._rho0=rhoeq
         else:
@@ -1138,6 +1141,7 @@ class Rho():
             Op=Op.T.conj()
             # Op/=np.abs(np.trace(Op.T.conj()@Op))*self.expsys.Op.Mult.prod()/2
             Op/=np.abs(np.trace(Op.T.conj()@Op))
+            if self.L.Peq:Op*=self.expsys.Op.Mult.prod()/2
             return np.tile(Op.reshape(Op.size),nHam)
         else:
             # Op/=np.abs(np.trace(Op.T.conj()@Op))
@@ -1262,7 +1266,7 @@ class Rho():
                 
             ax.set_xlabel(label)
             ax.set_ylabel('I / a.u.')
-            ax.invert_xaxis()
+            ax.xaxis.set_inverted(True)
         else:
             if self._tstatus==0:
                 if mode.lower()=='reim':

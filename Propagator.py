@@ -97,7 +97,9 @@ class Propagator():
                 dabs=np.abs(d) 
                 i=dabs>1
                 d[i]/=dabs[i]
-                if self.L.Peq:
+                if self.L.Peq and not self.reduced:
+                    # This approach is not valid for some reduced matrices....
+                    
                     # We do this because there does indeed need to be an equilibrium
                     # state. It is possible, however, that without relaxation,
                     # the equilibrium state is never accessed. Still, it
@@ -110,6 +112,7 @@ class Propagator():
                     # Actually....it's totally wrong to do this. Ignore the above
                     # I'm leaving my comments in case I remember why
                     # I thought this was a good idea...oops
+                    
                     
                     i=np.argmax(d)
                     # v[:,i]=self.L.rho_eq(pwdindex=k)
