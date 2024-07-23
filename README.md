@@ -1,4 +1,4 @@
-<img src="logo.png" alt="drawing" width="200"/>
+<img src="logo.png" alt="drawing" width="600"/>
 
 # SLEEPY
 Spin-simulation in Liouville space for rElaxation and Exchange in PYthon
