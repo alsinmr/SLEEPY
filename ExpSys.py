@@ -32,8 +32,8 @@ class ExpSys():
         assert B0 is not None or v0H is not None,"B0 or v0H must be specified"
         self.B0=B0 if B0 is not None else v0H*1e6/NucInfo('1H')
         self.Nucs=np.atleast_1d(Nucs)
-        self.Nucs[self.Nucs=='e']='e-'
-        S=np.array([NucInfo(nuc,'spin') for nuc in self.Nucs])
+        self.Nucs[np.array([nuc[0]=='e' for nuc in self.Nucs])]='e-'
+        S=np.array([ElectronSpin(nuc) if nuc[0]=='e' else NucInfo(nuc,'spin') for nuc in Nucs])
         self.gamma=np.array([NucInfo(nuc,'gyro') for nuc in self.Nucs])
         self.Op=SpinOp(S)
         if LF is None or LF is False:
@@ -320,5 +320,36 @@ class ExpSys():
         return out
         
         
+def ElectronSpin(string):
+    """
+    We do not have a mechanism to easily change the spin of a nucleus (obviously),
+    but for an electron, this is not so uncommon. We allow the specification 
+    within the nucleus string such as:
+        
+        e1 : spin 1 electron (or e-1)
+        e-5/2 : spin 5/2 electron (or e5/2)
+        e1.5 : spin 3/2 electron (or e-1.5)
+
+    Parameters
+    ----------
+    string : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    float
+        Electron spin
+
+    """
+    string=string[1:] #Remove the e
+    if string[0]=='-':string=string[1:] #Remove the - if included
+    
+    if not(string):return 0.5  #If the string is empty at this point, then default to spin 1/2
+    if string[-2:]=='.5':return float(string)  #1/2 integer spin, specified with a decimal
+    
+    if string[-2:]=='/2':   #Specified with a fraction
+        return int(string[:-2])/2
+    
+    return float(str)
         
             
