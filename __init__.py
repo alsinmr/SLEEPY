@@ -11,7 +11,6 @@ from .PowderAvg import PowderAvg
 from .SpinOp import SpinOp
 from .ExpSys import ExpSys
 from .Hamiltonian import Hamiltonian
-# from .Hamiltonian import Hamiltonian
 from .Liouvillian import Liouvillian
 from .Sequence import Sequence
 from .Rho import Rho
