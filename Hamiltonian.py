@@ -275,9 +275,10 @@ class Hamiltonian():
         mode:
         'abs' : Colormap of the absolute value of the plot
         'log' : Similar to abs, but on a logarithmic scale
-        'signed' : Usually applied for real matrices (i.e. relaxation), which
-                    shifts the data to show both negative and positive values
-                    (imaginary part will be omitted)
+        're' : Real part of the Hamiltonian, where we indicate both
+                    negative and positive values (imaginary part will be omitted)
+        'im' : Imaginary part of the Hamiltonian, where we indicate both
+                    negative and positive values (real part will be omitted)
         'spy' : Black/white for nonzero/zero (threshold applied at 1/1e6 of the max)
 
 
@@ -302,6 +303,8 @@ class Hamiltonian():
         None.
 
         """
+        
+        mode=mode.lower()
     
         if ax is None:
             fig,ax=plt.subplots()
@@ -331,8 +334,8 @@ class Hamiltonian():
             x=np.abs(x)
             sc=x.max()
             x/=sc
-        elif mode=='signed':
-            x=x.real
+        elif mode in ['re','im']:
+            x=copy(x.real if mode=='re' else x.imag)
             sc=np.abs(x).max()
             x/=sc*2
             x+=.5
@@ -344,14 +347,20 @@ class Hamiltonian():
             x=np.abs(x)
             i=np.logical_not(x==0)
             if i.sum()!=0:
-                x[i]=np.log10(x[i])
-                sc0=x[i].min()
-                x[i]-=sc0
-                x[i]+=x[i].max()*.2
-                sc1=x[i].max()
-                x[i]/=sc1
-                
-                sc1=sc1/1.2+sc0
+                if x[i].min()==x[i].max():
+                    sc0=sc1=np.log10(x[i].max())
+                    x[i]=1
+                else:
+                    x[i]=np.log10(x[i])
+                    sc0=x[i].min()
+                    x[i]-=sc0
+                    x[i]+=x[i].max()*.2
+                    sc1=x[i].max()
+                    x[i]/=sc1
+                    
+                    sc1=sc1/1.2+sc0
+        else:
+            assert 0,'Unknown plotting mode (Try "abs", "re", "im", "spy", or "log")'
             
         hdl=ax.imshow(x,cmap=cmap,vmin=0,vmax=1)
         
@@ -366,7 +375,7 @@ class Hamiltonian():
                 labels=['0',*[f'{10**q:.2e}' for q in np.linspace(sc0,sc1,5)]]
                 hdl.set_ticklabels(labels)
                 hdl.set_label(r'$|H_{n,n}|$')
-            elif mode=='signed':
+            elif mode in ['re','im']:
                 hdl.set_ticks(np.linspace(0,1,5))
                 labels=[f'{q:.2e}' for q in np.linspace(-sc,sc,5)]
                 hdl.set_ticklabels(labels)

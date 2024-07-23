@@ -1030,8 +1030,8 @@ class Liouvillian():
             x=np.abs(x)
             sc=x.max()
             x/=sc
-        elif mode=='signed':
-            x=copy(x.real)
+        elif mode in ['re','im']:
+            x=copy(x.real if mode=='re' else x.imag)
             sc=np.abs(x).max()
             x/=sc*2
             x+=.5
@@ -1042,14 +1042,20 @@ class Liouvillian():
             x=np.abs(x)
             i=np.logical_not(x==0)
             if i.sum()!=0:
-                x[i]=np.log10(x[i])
-                sc0=x[i].min()
-                x[i]-=sc0
-                x[i]+=x[i].max()*.2
-                sc1=x[i].max()
-                x[i]/=sc1
-                
-                sc1=sc1/1.2+sc0
+                if x[i].min()==x[i].max():
+                    sc0=sc1=np.log10(x[i].max())
+                    x[i]=1
+                else:
+                    x[i]=np.log10(x[i])
+                    sc0=x[i].min()
+                    x[i]-=sc0
+                    x[i]+=x[i].max()*.2
+                    sc1=x[i].max()
+                    x[i]/=sc1
+                    
+                    sc1=sc1/1.2+sc0
+        else:
+            assert 0,'Unknown plotting mode (Try "abs", "re", "im", "spy", or "log")'
         
         if block is not None:
             assert isinstance(block,int),'block must be an integer'
@@ -1075,7 +1081,7 @@ class Liouvillian():
                 labels=['0',*[f'{10**q:.2e}' for q in np.linspace(sc0,sc1,5)]]
                 hdl.set_ticklabels(labels)
                 hdl.set_label(r'$|L_{n,n}|$')
-            elif mode=='signed':
+            elif mode in ['re','im']:
                 hdl.set_ticks(np.linspace(0,1,5))
                 labels=[f'{q:.2e}' for q in np.linspace(-sc,sc,5)]
                 hdl.set_ticklabels(labels)
@@ -1121,8 +1127,8 @@ class Liouvillian():
             
         
 
-        ax.xaxis.set_major_locator(MaxNLocator(bi.sum(),integer=True))
-        ax.yaxis.set_major_locator(MaxNLocator(bi.sum(),integer=True))
+        ax.xaxis.set_major_locator(MaxNLocator(min([bi.sum(),20]),integer=True))
+        ax.yaxis.set_major_locator(MaxNLocator(min([bi.sum(),20]),integer=True))
         if fig is not None:fig.tight_layout()
         
         if seq is not None:
