@@ -1,4 +1,5 @@
-![logo](https://github.com/alsinmr/SLEEPY/blob/master/logo.png?raw=true)
+<img src="logo.png" alt="drawing" width="200"/>
+
 # SLEEPY
 Spin-simulation in Liouville space for rElaxation and Exchange in PYthon
 
