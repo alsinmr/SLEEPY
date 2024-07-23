@@ -312,7 +312,13 @@ class Rho():
             if block.sum()==0:
                 warnings.warn('Combination of sequence, initial density operator, and detection operator will not yield any signal (errors likely to follow)')
             else:
-                print(f'State-space reduction: {block.__len__()}->{block.sum()}')
+                if block.sum()==len(block):
+                    rho.Reduced=False
+                    rho.Reduce=False
+                    return (rho,*seq)
+                else:
+                    print(f'State-space reduction: {block.__len__()}->{block.sum()}')
+                
         
         return (rho,*seq_red)
     

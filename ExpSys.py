@@ -31,7 +31,10 @@ class ExpSys():
         
         assert B0 is not None or v0H is not None,"B0 or v0H must be specified"
         self.B0=B0 if B0 is not None else v0H*1e6/NucInfo('1H')
-        self.Nucs=np.atleast_1d(Nucs)
+        self._v0=None
+        
+        self.Nucs=np.atleast_1d(Nucs).astype('<U5')
+        Nucs=np.atleast_1d(Nucs)
         self.Nucs[np.array([nuc[0]=='e' for nuc in self.Nucs])]='e-'
         S=np.array([ElectronSpin(nuc) if nuc[0]=='e' else NucInfo(nuc,'spin') for nuc in Nucs])
         self.gamma=np.array([NucInfo(nuc,'gyro') for nuc in self.Nucs])
@@ -78,7 +81,9 @@ class ExpSys():
     
     @property
     def v0(self):
-        return self.B0*self.gamma
+        if self._v0 is None:
+            self._v0=self.B0*self.gamma
+        return self._v0
     
     @property
     def S(self):
@@ -342,6 +347,7 @@ def ElectronSpin(string):
 
     """
     string=string[1:] #Remove the e
+    if not(string):return 0.5  #If the string is empty at this point, then default to spin 1/2
     if string[0]=='-':string=string[1:] #Remove the - if included
     
     if not(string):return 0.5  #If the string is empty at this point, then default to spin 1/2
@@ -350,6 +356,6 @@ def ElectronSpin(string):
     if string[-2:]=='/2':   #Specified with a fraction
         return int(string[:-2])/2
     
-    return float(str)
+    return float(string)
         
             
