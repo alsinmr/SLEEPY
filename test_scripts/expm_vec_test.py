@@ -33,7 +33,7 @@ ref_rho=rho[0]
 # Faster function (hopefully?)
 
 
-def expmv(L,rho,Dt,N=150,s=50):
+def expmv(L,rho,Dt,N=150,s=100):
     mu=np.trace(L)/len(L)
     L-=mu*np.eye(L.shape[0])
     out=copy(rho)
@@ -46,7 +46,8 @@ def expmv(L,rho,Dt,N=150,s=50):
             if k==1:x0=Lrho
             out+=Lrho
             k+=1
-            # if np.linalg.norm(Lrho)*1000<np.linalg.norm(x0):break #Termination condition?
+            if np.linalg.norm(Lrho)*10000<np.linalg.norm(x0):break #Termination condition?
+        print(k)
         out*=np.exp(Dt*mu/s) #Why is this in the loop??
         Lrho=out
     # out*=np.exp(Dt*mu) #Instead of out here without s?

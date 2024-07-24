@@ -461,7 +461,10 @@ class Sequence():
     def __repr__(self):
         out='Sequence for the following Liouvillian:\n\t'
         out+=self.L.__repr__().rsplit('\n',maxsplit=2)[0].replace('\n','\n\t')[:-2]
-        out+=f'Default sequence length is {self.Dt*1e6:.2f} microseconds'
+        if self.Dt is None:
+            out+='\n\nSequence length unassigned'
+        else:
+            out+=f'\n\nDefault sequence length is {self.Dt*1e6:.2f} microseconds'
         out+='\n\n'+super().__repr__()
         return out
     
