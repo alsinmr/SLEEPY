@@ -131,7 +131,6 @@ class ParallelManager():
         return mp.cpu_count()
     
     def __call__(self):
-        
         if self.L.static:
             fun=prop_static
         else:
