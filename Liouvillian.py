@@ -996,6 +996,8 @@ class Liouvillian():
 
         """
     
+        mode=mode.lower()
+    
         if ax is None:
             fig,ax=plt.subplots()
         else:

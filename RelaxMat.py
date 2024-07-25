@@ -171,8 +171,11 @@ def Thermal(L,step):
         
     rho_eq=L.rho_eq(pwdindex=L._index,step=step,sub1=False)
     for i0,i1 in index:
-        if rho_eq[i0]==0 or rho_eq[i1]==0:continue
-        rat=rho_eq[i0]/rho_eq[i1]
+        if rho_eq[i0]==0 or rho_eq[i1]==0:
+            DelE=(L.Energy[i0]-L.Energy[i1])
+            rat=np.exp(DelE/(1.380649e-23*L.expsys.T_K))
+        else:
+            rat=rho_eq[i0]/rho_eq[i1]
         Del=L.Lrelax[i0,i1]*(1-rat)/(1+rat)
         out[i0,i1]=-Del
         out[i1,i1]+=Del

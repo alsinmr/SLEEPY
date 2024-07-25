@@ -306,7 +306,9 @@ class Propagator():
     def __repr__(self):
         out=f'Propagator with length of {self.Dt*1e6:.3f} microseconds (t0={self.t0*1e6:.3f},tf={self.tf*1e6:.3f})\n'
         out+='Constructed from the following Liouvillian:\n\t'
-        out+=self.L.__repr__().replace('\n','\n\t')
+        out+=self.L.__repr__().replace('\n','\n\t').rsplit('\n',1)[0]
+        out+='\n'+super().__repr__()
+        
         return out
                 
     

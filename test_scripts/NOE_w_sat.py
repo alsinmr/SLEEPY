@@ -5,7 +5,7 @@ import numpy as np
 from SLEEPY.LFrf import LFrf
 import matplotlib.pyplot as plt
 
-ex0=sl.ExpSys(v0H=600,Nucs=['13C','1H'],vr=10000,LF=True,pwdavg=sl.PowderAvg()[50],n_gamma=30)
+ex0=sl.ExpSys(v0H=600,Nucs=['13C','1H'],vr=10000,LF=True,pwdavg=sl.PowderAvg(),n_gamma=30)
 ex0.set_inter('dipole',i0=0,i1=1,delta=44000)
 ex1=ex0.copy()
 ex1.set_inter('dipole',i0=0,i1=1,delta=44000,euler=[0,45*np.pi/180,0])
@@ -44,7 +44,7 @@ rho2.plot()
 fig,ax=plt.subplots(1,2)
 
 
-for min_steps in [16,32]:
+for min_steps in [3,4,8]:
     lfrf=LFrf(seq,min_steps=min_steps)
     U=lfrf.U()
     rho=sl.Rho(ex0.Op[0].z+ex0.Op[1].z,['1Hz','13Cz'])
@@ -58,11 +58,17 @@ for min_steps in [16,32]:
 
 ex=sl.ExpSys(v0H=600,Nucs='1H',LF=True)
 
-seq=ex.Liouvillian().Sequence(Dt=1e-4).add_channel('1H',v1=100)
-rho=sl.Rho('1Hz',['1Hz','1Hy'])
+seq=ex.Liouvillian().Sequence(Dt=1e-4).add_channel('1H',v1=100,voff=100)
 
-lfrf=LFrf(seq,min_steps=16)
-U=lfrf.U()
+fig,ax=plt.subplots(1,2)
 
-rho.DetProp(U,n=10000)
-rho.plot()
+
+for min_steps in [2,3,4,8,16,32]:
+    lfrf=LFrf(seq,min_steps=min_steps)
+
+    U=lfrf.U()
+
+    rho=sl.Rho('1Hz',['1Hy','1Hz'])
+    rho.DetProp(U,n=1001)
+    rho.plot(ax=ax[0],det_num=0)
+    rho.plot(ax=ax[1],det_num=1)

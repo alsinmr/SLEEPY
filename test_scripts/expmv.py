@@ -44,7 +44,6 @@ def _expm_multiply_simple(A, B, t=1.0, traceA=None):
     else:
         raise ValueError('expected B to be like a matrix or a vector')
     u_d = 2**-53
-    #u_d = 2**-26
     tol = u_d
     if traceA is None:
         # m3=1 is bit arbitrary choice, a more accurate trace (larger m3) might

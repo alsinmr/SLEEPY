@@ -2,13 +2,12 @@
 
 import numpy as np
 import warnings
-from time import time
 import matplotlib.pyplot as plt
 
 class LFrf():
-    def __init__(self,seq,min_steps:int=4):
+    def __init__(self,seq,min_steps:int=2):
         """
-        Allows application of RF fields in the lab frame, by explicitely including
+        Allows application of an RF field in the lab frame, by explicitely including
         the oscillation. 
         
         Currently set up for constant fields. Returns a propagator for one 
@@ -227,7 +226,10 @@ class LFrf():
         
         if ax is None:
             ax=plt.subplots()[1]
+        ax.plot(f/1e6,np.abs((S).T),color='black',linewidth=2)
         ax.plot(f/1e6,((S).real.T))
+        ax.plot(f/1e6,((S).imag.T))
+        
         ax.set_xlabel('f / MHz')
         
         return ax

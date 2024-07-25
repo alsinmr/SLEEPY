@@ -1225,20 +1225,23 @@ class Rho():
                 return r'<Op>'
                 
         
-        if det_num is None:
+        if det_num is None or hasattr(det_num,'__len__'):
+            det_num=np.arange(len(self._detect)) if det_num is None else np.array(det_num,dtype=int)
             h=[]
-            for det_num in range(len(self._detect)):
+            for det_num in det_num:
                 kids=self.plot(det_num=det_num,ax=ax,FT=FT,mode=mode,apodize=apodize,axis=axis,**kwargs).get_children()
                 i=np.array([isinstance(k,plt.Line2D) for k in kids],dtype=bool)
                 h.append(np.array(kids)[i][-1])
             if det_num:
-                ax.set_ylabel(r'<Op>')
-                ax.legend(h,[det2label(detect) for detect in self.detect])
+                ax.set_ylabel('<Op>')
+                # ax.legend(h,[det2label(detect) for detect in self.detect])
+                ax.legend()
             return ax
         
         ap=self.apodize
         self.apodize=apodize
         
+        label=det2label(self.detect[det_num])
         
         if FT:
             if axis.lower()=='ppm' and self.parseOp(self.detect[det_num]) is not None:
@@ -1258,15 +1261,15 @@ class Rho():
                 label=r'$\nu$ / Hz'
             
             if mode.lower()=='reim':
-                ax.plot(v_axis,self.FT[det_num].real,**kwargs)
-                ax.plot(v_axis,self.FT[det_num].imag,**kwargs)
+                ax.plot(v_axis,self.FT[det_num].real,label=f'Re[{label}]',**kwargs)
+                ax.plot(v_axis,self.FT[det_num].imag,label=f'Im[{label}]',**kwargs)
                 ax.legend(('Re','Im'))
             elif mode[0].lower()=='r':
-                ax.plot(v_axis,self.FT[det_num].real,**kwargs)
+                ax.plot(v_axis,self.FT[det_num].real,label=label,**kwargs)
             elif mode[0].lower()=='a':
-                ax.plot(v_axis,np.abs(self.FT[det_num]),**kwargs)
+                ax.plot(v_axis,np.abs(self.FT[det_num]),label=f'Abs[{label}]',**kwargs)
             elif mode[0].lower()=='i':
-                ax.plot(v_axis,self.FT[det_num].imag,**kwargs)
+                ax.plot(v_axis,self.FT[det_num].imag,label=f'Im[{label}]',**kwargs)
             else:
                 assert 0,'Unrecognized plotting mode'
                 
@@ -1274,52 +1277,85 @@ class Rho():
             ax.set_ylabel('I / a.u.')
             ax.xaxis.set_inverted(True)
         else:
-            if self._tstatus==0:
-                if mode.lower()=='reim':
-                    ax.plot(np.arange(len(self.t_axis)),self.I[det_num].real,**kwargs)
-                    ax.plot(np.arange(len(self.t_axis)),self.I[det_num].imag,**kwargs)
-                    ax.legend(('Re','Im'))
-                elif mode[0].lower()=='r':
-                    ax.plot(np.arange(len(self.t_axis)),self.I[det_num].real,**kwargs)
-                elif mode[0].lower()=='a':
-                    ax.plot(np.arange(len(self.t_axis)),np.abs(self.I[det_num]),**kwargs)
-                elif mode[0].lower()=='i':
-                    ax.plot(np.arange(len(self.t_axis)),self.I[det_num].imag,**kwargs)
-                else:
-                    assert 0,'Unrecognized plotting mode'
-                
-                ax.set_ylabel('<'+self.detect[det_num]+'>')
-                ax.set_xlabel('Acquisition Number')
-                
-            else:
-                if axis.lower() in ['microseconds','us']:
-                    t_axis=self.t_axis*1e6
-                    label=r'$t$ / $\mu$s'
-                elif axis.lower()=='s':
-                    t_axis=self.t_axis
-                    label=r'$t$ / s'
+            if self._tstatus:
+                x=self.t_axis
+                if axis.lower()=='s':
+                    xlabel='t / s'
+                elif axis.lower() in ['microseconds','us']:
+                    x*=1e6
+                    xlabel=r't / $\mu$s'
                 elif axis.lower()=='ns':
-                    t_axis=self.t_axis*1e9
-                    label=r'$t$ / ns'
+                    x*=1e9
+                    xlabel='t / ns'
                 else:
-                    t_axis=self.t_axis*1e3
-                    label=r'$t$ / ms'
-                    
-                if mode.lower()=='reim':
-                    ax.plot(t_axis,self.I[det_num].real,**kwargs)
-                    ax.plot(t_axis,self.I[det_num].imag,**kwargs)
-                    ax.legend(('Re','Im'))
-                elif mode[0].lower()=='r':
-                    ax.plot(t_axis,self.I[det_num].real,**kwargs)
-                elif mode[0].lower()=='a':
-                    ax.plot(t_axis,np.abs(self.I[det_num]),**kwargs)
-                elif mode[0].lower()=='i':
-                    ax.plot(t_axis,self.I[det_num].imag,**kwargs)
-                else:
-                    assert 0,'Unrecognized plotting mode'
+                    x*=1e3
+                    xlabel='t / ms'
+            else:
+                x=np.arange(len(self.t_axis))
+                xlabel='Acquisition Number'
                 
-                ax.set_ylabel(det2label(self.detect[det_num]))
-                ax.set_xlabel(label)
+            if mode.lower()=='reim':
+                ax.plot(x,self.I[det_num].real,label=f'Re[{label}]',**kwargs)
+                ax.plot(x,self.I[det_num].imag,label=f'Im[{label}]',**kwargs)
+                ax.legend(('Re','Im'))
+            elif mode[0].lower()=='r':
+                ax.plot(x,self.I[det_num].real,label=label,**kwargs)
+            elif mode[0].lower()=='a':
+                ax.plot(x,np.abs(self.I[det_num]),label=f'Abs[{label}]',**kwargs)
+            elif mode[0].lower()=='i':
+                ax.plot(x,self.I[det_num].imag,label=f'Im[{label}]',**kwargs)
+            else:
+                assert 0,'Unrecognized plotting mode'
+                
+            ax.set_ylabel(det2label(self.detect[det_num]))
+            ax.set_xlabel(xlabel)
+            
+            # if self._tstatus==0:
+            #     if mode.lower()=='reim':
+            #         ax.plot(np.arange(len(self.t_axis)),self.I[det_num].real,label=f'Re[{label}]',**kwargs)
+            #         ax.plot(np.arange(len(self.t_axis)),self.I[det_num].imag,label=f'Im[{label}]',**kwargs)
+            #         ax.legend(('Re','Im'))
+            #     elif mode[0].lower()=='r':
+            #         ax.plot(np.arange(len(self.t_axis)),self.I[det_num].real,label=label,**kwargs)
+            #     elif mode[0].lower()=='a':
+            #         ax.plot(np.arange(len(self.t_axis)),np.abs(self.I[det_num]),label=f'Abs[{label}]',**kwargs)
+            #     elif mode[0].lower()=='i':
+            #         ax.plot(np.arange(len(self.t_axis)),self.I[det_num].imag,label=f'Im[{label}]',**kwargs)
+            #     else:
+            #         assert 0,'Unrecognized plotting mode'
+                
+            #     ax.set_ylabel('<'+self.detect[det_num]+'>')
+            #     ax.set_xlabel('Acquisition Number')
+                
+            # else:
+            #     if axis.lower() in ['microseconds','us']:
+            #         t_axis=self.t_axis*1e6
+            #         label=r'$t$ / $\mu$s'
+            #     elif axis.lower()=='s':
+            #         t_axis=self.t_axis
+            #         label=r'$t$ / s'
+            #     elif axis.lower()=='ns':
+            #         t_axis=self.t_axis*1e9
+            #         label=r'$t$ / ns'
+            #     else:
+            #         t_axis=self.t_axis*1e3
+            #         label=r'$t$ / ms'
+                    
+            #     if mode.lower()=='reim':
+            #         ax.plot(t_axis,self.I[det_num].real,**kwargs)
+            #         ax.plot(t_axis,self.I[det_num].imag,**kwargs)
+            #         ax.legend(('Re','Im'))
+            #     elif mode[0].lower()=='r':
+            #         ax.plot(t_axis,self.I[det_num].real,**kwargs)
+            #     elif mode[0].lower()=='a':
+            #         ax.plot(t_axis,np.abs(self.I[det_num]),**kwargs)
+            #     elif mode[0].lower()=='i':
+            #         ax.plot(t_axis,self.I[det_num].imag,**kwargs)
+            #     else:
+            #         assert 0,'Unrecognized plotting mode'
+                
+            #     ax.set_ylabel(det2label(self.detect[det_num]))
+            #     ax.set_xlabel(label)
         self.apodize=ap
         return ax
             
