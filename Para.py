@@ -36,10 +36,10 @@ def StepCalculator(t0,Dt,dt):
 class ParallelManager():
     def __init__(self,L,t0,Dt):
         self.L=L
+        self.Lthermal=None if L._Lthermal is None else L.Lthermal
         
         
         self.cache=Defaults['cache']
-        self.parallel=Defaults['parallel']
         
         if L.static:
             self.pars=(Dt,)
@@ -84,6 +84,10 @@ class ParallelManager():
     def Ln(self):
         return [self.L.Ln(k) for k in range(-2,3)]
     
+    @property
+    def parallel(self):
+        return Defaults['parallel'] if self.Lthermal is None else False
+    
     
     @property
     def pwdavg(self):
@@ -121,7 +125,7 @@ class ParallelManager():
         if self.L.static:
             return [(pm.L.L(0),*self.pars) for pm in self]
         
-        return [(pm.Ln,self.L.Lrf,*self.pars,self.sm0,self.sm1,self.index,self.step_index,self.PropCache.SZ) for pm in self]
+        return [(pm.Ln,self.L.Lrf,pm.Lthermal,*self.pars,self.sm0,self.sm1,self.index,self.step_index,self.PropCache.SZ) for pm in self]
         # FIGURE OUT HOW TO GET THE CACHE TO NON-PARALLEL PROCESSES!
 
     
@@ -148,8 +152,9 @@ class ParallelManager():
 
 #%% Parallel functions
 def prop(X):
-    Ln0,Lrf,n0,nf,tm1,tp1,dt,n_gamma,sm0,sm1,index,step_index,SZ=X
+    Ln0,Lrf,Lthermal,n0,nf,tm1,tp1,dt,n_gamma,sm0,sm1,index,step_index,SZ=X
     
+    if Lthermal is None:Lthermal=lambda n:0
     
     # Setup if using the shared cache
     if sm0 is None:
@@ -168,7 +173,7 @@ def prop(X):
         # count0+=1
     else:
         ph=np.exp(1j*2*np.pi*n0/n_gamma)
-        L=np.sum([Ln0[m+2]*(ph**(-m)) for m in range(-2,3)],axis=0)+Lrf
+        L=np.sum([Ln0[m+2]*(ph**(-m)) for m in range(-2,3)],axis=0)+Lrf+Lthermal(n0)
         U=expm(L*tm1)
         if tm1==dt and ci is not None:
             # count1+=1
@@ -179,7 +184,7 @@ def prop(X):
         i,si=index[n%n_gamma],step_index[n%n_gamma]
         if ci is None or not(ci[i,si]): #Not cached
             ph=np.exp(1j*2*np.pi*n/n_gamma)
-            L=np.sum([Ln0[m+2]*(ph**(-m)) for m in range(-2,3)],axis=0)+Lrf
+            L=np.sum([Ln0[m+2]*(ph**(-m)) for m in range(-2,3)],axis=0)+Lrf+Lthermal(n)
             U0=expm(L*dt)
             if ci is not None:
                 # count1+=1
@@ -193,7 +198,7 @@ def prop(X):
             
     if tp1>1e-10: #Last propagator
         ph=np.exp(1j*2*np.pi*nf/n_gamma)
-        L=np.sum([Ln0[m+2]*(ph**(-m)) for m in range(-2,3)],axis=0)+Lrf
+        L=np.sum([Ln0[m+2]*(ph**(-m)) for m in range(-2,3)],axis=0)+Lrf+Lthermal(nf)
         U=expm(L*tp1)@U
     
     return U

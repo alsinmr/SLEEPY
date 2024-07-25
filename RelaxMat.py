@@ -164,6 +164,12 @@ def T2(expsys,i:int,T2:float):
     return out
 
 def Thermal(L,step):
+    if L.reduced:
+        block=L.block
+        L=L._L
+    else:
+        block=None
+    
     out=np.zeros(L[0].Ln(0).shape,dtype=Defaults['ctype'])
     index=np.argwhere(L.Lrelax-np.diag(np.diag(L.Lrelax)))
     index.sort(-1)
@@ -181,8 +187,11 @@ def Thermal(L,step):
         out[i1,i1]+=Del
         out[i1,i0]=Del
         out[i0,i0]+=-Del
-
-    return out
+        
+    if block is None:
+        return out
+    else:
+        return out[block][:,block]
     
 
 def recovery(expsys,L):
