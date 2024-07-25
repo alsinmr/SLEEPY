@@ -36,7 +36,7 @@ from matplotlib.ticker import MaxNLocator
 from .Parallel import prop,prop_static
 
 class Liouvillian():
-    def __init__(self,H:list,kex=None):
+    def __init__(self,*ex,kex=None):
         """
         Creates the full Liouvillian, and provides some functions for 
         propagation of the Liouvillian
@@ -53,8 +53,9 @@ class Liouvillian():
         None.
 
         """
-        if hasattr(H,'shape') or hasattr(H,'B0'):H=[H]
-        self.H=[*H]
+        if len(ex)==1:ex=ex[0]
+        if hasattr(ex,'shape') or hasattr(ex,'B0'):ex=[ex]
+        self.H=[*ex]
         
         for k,H in enumerate(self.H):
             if not(hasattr(H,'Hinter')) and hasattr(H,'B0'):
