@@ -585,18 +585,27 @@ def g(es,i:int,gxx:float=2.0023193,gyy:float=2.0023193,gzz:float=2.0023193,euler
     if es.Nucs[i][0]!='e':
         warnings.warn('g-tensor is being applied to a nucleus')
     
+    
+       
+    info={'Type':'g','i':i,'gxx':gxx,'gyy':gyy,'gzz':gzz,'euler':euler}   
+    
     avg=(gxx+gyy+gzz)/3
     if avg<0:
         warnings.warn('Expected a positive g-tensor')
-        
-    gyy,gxx,gzz=np.sort([gxx-avg,gyy-avg,gzz-avg])
+    
+    gxx-=avg
+    gyy-=avg
+    gzz-=avg
+    
+    
+    q=np.argsort(np.abs([gxx,gyy,gzz]))
+    gyy,gxx,gzz=np.array([gxx,gyy,gzz])[q]
     
     mub=-9.2740100783e-24/6.62607015e-34  #Bohr magneton in Hz. Take positive g-values by convention
     
     avg1=mub*avg-NucInfo('e-')            #Values in Hz. Note that we take this in the rotating frame
     delta=gzz*mub*es.B0
     eta=(gyy-gxx)/gzz if delta else 0
-    info={'Type':'g','i':i,'gxx':gxx+avg,'gyy':gyy+avg,'gzz':gzz+avg,'euler':euler}
     
     if es.LF[i]:  #Lab frame calculation
         T=es.Op[i].T
