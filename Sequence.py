@@ -391,6 +391,9 @@ class Sequence():
         
 
         if Dt is None:Dt=self.Dt
+        
+        assert Dt is not None,"For static systems, Dt needs to either be set in the sequence, or when generating U"
+        
         if self.isotropic:t0=0
         if t0 is None:
             t0=0 if self.L.static else self.expsys._tprop%self.taur

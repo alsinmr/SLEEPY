@@ -76,7 +76,7 @@ class Liouvillian():
         self._Lrelax=None
         self._Lrf=None
         self._Ln=None
-        self._Ln_H=None
+        # self._Ln_H=None
         self._Lthermal=None
         if Defaults['cache']:self._Ln_H=[[None for _ in range(5)] for _ in range(len(self))]
         
@@ -444,7 +444,7 @@ class Liouvillian():
     
     def Lthermal(self,step:int=0):
         if self._Lthermal is None:
-            return np.zeros(self.shape,dtype=self._ctype)
+            return 0
         else:
             return self._Lthermal(self,step=step)
     
@@ -489,8 +489,8 @@ class Liouvillian():
         """
         assert self.sub,"Calling Ln_H requires indexing to a specific element of the powder average"
         # self._Ln_H=None
-        if self._Ln_H is not None and self._Ln_H[self._index][n+2] is not None:
-            return copy(self._Ln_H[self._index][n+2])
+        # if self._Ln_H is not None and self._Ln_H[self._index][n+2] is not None:
+        #     return copy(self._Ln_H[self._index][n+2])
         
         out=np.zeros(self.shape,dtype=self._ctype)
         q=np.prod(self.H[0].shape)
@@ -498,7 +498,7 @@ class Liouvillian():
             out[k*q:(k+1)*q][:,k*q:(k+1)*q]=H0.Ln(n)
         out*=-1j*2*np.pi
         
-        if self._Ln_H is not None:self._Ln_H[self._index][n+2]=out
+        # if self._Ln_H is not None:self._Ln_H[self._index][n+2]=out
         
         return copy(out)
     
@@ -550,7 +550,7 @@ class Liouvillian():
                 
         return self._Lrf
     
-    def L(self,step):
+    def L(self,step:int):
         """
         Returns the Liouvillian for a given step in the rotor cycle (t=step*L.dt)
 
@@ -714,7 +714,7 @@ class Liouvillian():
 
         """
         
-        if self.isotropic:
+        if self.static:
             t0=0
         else:
             if t0 is None:t0=self.expsys._tprop%self.taur
@@ -746,7 +746,7 @@ class Liouvillian():
 
         """
         
-        if self.isotropic:
+        if self.static:
             t0=0
         else:
             if t0 is None:t0=self.expsys._tprop%self.taur

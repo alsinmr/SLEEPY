@@ -317,10 +317,10 @@ class ExpSys():
             dct=copy(i)
             if 'i' in dct:
                 out+=f'\t{dct.pop("Type")} on spin {dct.pop("i")} with arguments: ('+\
-                    ','.join([f'{key}={ef(value) if key=="euler" else value}' for key,value in dct.items()])+')\n'
+                    ','.join([f'{key}={ef(value)}' if key=='euler' else f'{key}={value:.2f}' for key,value in dct.items()])+')\n'
             else:
                 out+=f'\t{dct.pop("Type")} between spins {dct.pop("i0")},{dct.pop("i1")} with arguments:\n\t\t('+\
-                    ','.join([f'{key}={ef(value) if key=="euler" else value}' for key,value in dct.items()])+')\n'
+                    ','.join([f'{key}={ef(value)}' if key=="euler" else f'{key}={value:.2f}' for key,value in dct.items()])+')\n'
         out+='\n'+super().__repr__()    
         return out
         

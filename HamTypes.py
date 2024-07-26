@@ -471,13 +471,19 @@ def hyperfine(es,i0:int,i1:int,Axx:float=0,Ayy:float=0,Azz:float=0,euler=[0,0,0]
     if es.Nucs[i0][0]!='e' and es.Nucs[i1][0]!='e':
         warnings.warn(f'Hyperfine coupling between two nuclei ({es.Nucs[i0]},{es.Nucs[i1]})')
     
+    info={'Type':'Hyperfine','i0':i0,'i1':i1,'Axx':Axx,'Ayy':Ayy,'Azz':Azz,'euler':euler}
     avg=(Axx+Ayy+Azz)/3
-    Ayy,Axx,Azz=np.sort([Axx-avg,Ayy-avg,Azz-avg])
+    
+    Axx-=avg
+    Ayy-=avg
+    Azz-=avg
+    
+    i=np.argsort(np.abs([Axx,Ayy,Azz]))
+    Ayy,Axx,Azz=np.array([Axx,Ayy,Azz])[i]
     
     
     delta=Azz
     eta=(Ayy-Axx)/delta if delta else 0
-    info={'Type':'Hyperfine','i0':i0,'i1':i1,'Axx':Axx+avg,'Ayy':Ayy+avg,'Azz':Azz+avg,'euler':euler}
 
     if es.LF[i0] or es.LF[i1]:  #Lab frame calculation
         T=es.Op[i0].T*es.Op[i1].T

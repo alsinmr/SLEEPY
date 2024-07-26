@@ -161,6 +161,26 @@ class Hamiltonian():
                 
         return out
     
+    def H(self,step:int=0):
+        """
+        Constructs the Hamiltonian for the requested step of the rotor period.
+        Not used for simulation- just provided for completeness
+
+        Parameters
+        ----------
+        step : int, optional
+            Step of the rotor period (0->n_gamma-1). The default is 0.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        """
+        ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
+        return np.sum([self.Hn(m)*(ph**(-m)) for m in range(-2,3)],axis=0)    
+        
+    
     @property
     def Energy(self):
         """
@@ -211,6 +231,28 @@ class Hamiltonian():
         """
         
         return Ham2Super(self.Hn(n))
+    
+    def L(self,step:int=0):
+        """
+        Constructs the Liouvillian for the requested step of the rotor period.
+        Not used for simulation, just provided for completeness
+
+        Parameters
+        ----------
+        step : int, optional
+            Step of the rotor period (0->n_gamma-1). The default is 0.
+
+        Returns
+        -------
+        None.
+
+        """
+        return -1j*2*np.pi*Ham2Super(self.H(step))
+        # ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
+        # return -1j*2*np.pi*np.sum([self.Ln(m)*(ph**(-m)) for m in range(-2,3)],axis=0)
+        
+        
+        
     
     def rho_eq(self,pwdindex:int=0,step:int=None,sub1:bool=False):
         """
@@ -323,7 +365,7 @@ class Hamiltonian():
             x=self.Hn(int(what[1:]))
         elif what=='H':
             H=self[0] if self._index==-1 else self
-            x=np.sum([H.Hn(k) for k in range(-2,3)],axis=0)
+            x=H.H(step)
         else:
             x=getattr(self[len(self)//2] if self._index==-1 else self,what)
             if hasattr(x,'__call__'):

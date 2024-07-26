@@ -405,6 +405,25 @@ def twoSite_S_eta(theta:float,p:float=0.5):
     
     return S[0],eta[0]
 
+
+def commute(A,B):
+    """
+    Returns the commutator of square matrices A and B
+
+    Parameters
+    ----------
+    A : np.array
+        Square matrix.
+    B : np.array
+        Square matrix.
+
+    Returns
+    -------
+    np.array
+        [A,B]=A@B-B@A
+
+    """
+    return A@B-B@A
     
     
     
