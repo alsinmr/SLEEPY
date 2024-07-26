@@ -942,6 +942,24 @@ class Liouvillian():
             Energy[k*N:(k+1)*N]=H.Energy
         return Energy
     
+    def Energy2(self,step:int):
+        """
+        Energy for each of the NxNxnHam states in the Liouvillian, including 
+        energy from the Larmor frequency (regardless of whether in lab frame).
+        Neglects rotating terms, Hn, for n!=0
+
+        Returns
+        -------
+        None.
+
+        """
+        Energy=np.zeros(self.shape[0])
+        N=self.H[0].shape[0]**2
+        for k,H in enumerate(self.H):
+            Energy[k*N:(k+1)*N]=H.Energy2(step)
+        return Energy
+
+    
     def plot(self,what:str='L',seq=None,cmap:str=None,mode:str='log',colorbar:bool=True,
              step:int=0,block:int=None,ax=None) -> plt.axes:
         """

@@ -180,7 +180,6 @@ class Hamiltonian():
         ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
         return np.sum([self.Hn(m)*(ph**(-m)) for m in range(-2,3)],axis=0)    
         
-    
     @property
     def Energy(self):
         """
@@ -193,7 +192,21 @@ class Hamiltonian():
         None.
 
         """
+
         H=self[0].Hn(0)
+
+        expsys=self.expsys
+        for LF,v0,Op in zip(expsys.LF,expsys.v0,expsys.Op):
+            if not(LF):
+                H+=v0*Op.z
+        Hdiag=np.tile(np.atleast_2d(np.diag(H)).T,H.shape[0])
+        energy=(Hdiag+Hdiag.T)/2+(H-np.diag(np.diag(H)))
+        return energy.reshape(energy.size).real*6.62607015e-34
+    
+    def Energy2(self,step:int):
+        i=0 if self._index is None else self._index
+        H=self[i].H(step)
+
         expsys=self.expsys
         for LF,v0,Op in zip(expsys.LF,expsys.v0,expsys.Op):
             if not(LF):

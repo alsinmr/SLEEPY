@@ -176,9 +176,11 @@ def Thermal(L,step):
     index=np.unique(index,axis=0)
         
     rho_eq=L.rho_eq(pwdindex=L._index,step=step,sub1=False)
+    E=L.Energy2(step)
     for i0,i1 in index:
-        if rho_eq[i0]==0 or rho_eq[i1]==0:
-            DelE=(L.Energy[i0]-L.Energy[i1])
+        if rho_eq[i0]==0 or rho_eq[i1]==0 or True:
+            DelE=E[i0]-E[i1]
+            # DelE=(L.Energy[i0]-L.Energy[i1])
             rat=np.exp(DelE/(1.380649e-23*L.expsys.T_K))
         else:
             rat=rho_eq[i0]/rho_eq[i1]

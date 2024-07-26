@@ -101,7 +101,7 @@ class SpinOp:
         for index in self.state_index:
             labels.append('')
             for s,i in enumerate(index):
-                labels[-1]=labels[-1]+[rf'S$_{s+1}^\alpha$',rf'S$_{s+1}^+$',rf'S$_{s+1}^-$',rf'S$_{s+1}^\beta$'][i]
+                labels[-1]=labels[-1]+[rf'S$_{s}^\alpha$',rf'S$_{s}^+$',rf'S$_{s}^-$',rf'S$_{s}^\beta$'][i]
                 
         return labels
             
