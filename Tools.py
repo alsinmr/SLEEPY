@@ -272,6 +272,56 @@ def Ham2Super(H):
         Lp[k::n][:,k::n]=H
         Lm[k*n:(k+1)*n][:,k*n:(k+1)*n]=H.T
     return Lp-Lm
+
+def LeftSuper(X):
+    """
+    Returns the super operator in Liouville spacefor square matrix X that 
+    yields left multiplication in the Hilbert space
+    
+    For an nxn matrix X and a matrix or vector m,
+    (X*m).reshape(n) = LeftSuper(X)*m.reshape(n)
+
+    Parameters
+    ----------
+    X : np.array
+        Square matrix (nxn)
+
+    Returns
+    -------
+    Super : np.array
+        Superoperator (n**2xn**2)
+
+    """
+    n=X.shape[0]
+    Super=np.zeros([n**2,n**2],dtype=X.dtype)
+    for k in range(n):
+        Super[k::n][:,k::n]=X
+    return Super
+
+def RightSuper(X):
+    """
+    Returns the super operator in Liouville spacefor square matrix X that 
+    yields right multiplication in the Hilbert space
+    
+    For an nxn matrix X and a matrix or vector m,
+    (m*X).reshape(n) = RightSuper(X)*m.reshape(n)
+
+    Parameters
+    ----------
+    X : np.array
+        Square matrix (nxn)
+
+    Returns
+    -------
+    Super : np.array
+        Superoperator (n**2xn**2)
+
+    """
+    n=X.shape[0]
+    Super=np.zeros([n**2,n**2],dtype=X.dtype)
+    for k in range(n):
+        Super[k*n:(k+1)*n][:,k*n:(k+1)*n]=X.T
+    return Super
     
     
 def BlockDiagonal(M):

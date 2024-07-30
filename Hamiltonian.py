@@ -17,7 +17,7 @@ Created on Tue Jan 17 11:49:00 2023
 # import pyDIFRATE.HamTypes as HamTypes
 from . import HamTypes
 from copy import copy
-from .Tools import Ham2Super
+from .Tools import Ham2Super,LeftSuper,RightSuper
 import numpy as np
 from . import Defaults
 from scipy.linalg import expm
@@ -178,7 +178,35 @@ class Hamiltonian():
 
         """
         ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
-        return np.sum([self.Hn(m)*(ph**(-m)) for m in range(-2,3)],axis=0)    
+        return np.sum([self.Hn(m)*(ph**(-m)) for m in range(-2,3)],axis=0) 
+    
+    def DiagEnergy(self,step:int):
+        """
+        Returns a matrix to diagonalize the Liouvillian corresponding to the 
+        Hamiltonian, as well as the energies of the diagonalized states.
+
+        The hamiltonian must be indexed and the rotor period step specified
+
+        Parameters
+        ----------
+        step : int
+            Step in the rotor period to diagonalize. The default is 0.
+
+        Returns
+        -------
+        tuple
+            (Udiag,Udiagi,Energy)
+
+        """
+        a,b=np.linalg.eigh(self.H(step))
+        Udiag=RightSuper(b)@LeftSuper(b.T.conj())
+        Udiagi=RightSuper(b.T.conj())@LeftSuper(b)
+        Energy=(np.tile(a,a.size)+np.repeat(a,a.size))/2
+        return Udiag,Udiagi,Energy*6.62607015e-34
+        
+        
+        
+        
         
     @property
     def Energy(self):
