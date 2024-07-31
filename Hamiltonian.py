@@ -180,7 +180,7 @@ class Hamiltonian():
         ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
         return np.sum([self.Hn(m)*(ph**(-m)) for m in range(-2,3)],axis=0) 
     
-    def DiagEnergy(self,step:int):
+    def eig2L(self,step:int):
         """
         Returns a matrix to diagonalize the Liouvillian corresponding to the 
         Hamiltonian, as well as the energies of the diagonalized states.
@@ -195,14 +195,14 @@ class Hamiltonian():
         Returns
         -------
         tuple
-            (Udiag,Udiagi,Energy)
+            (U,Ui,v)
 
         """
         a,b=np.linalg.eigh(self.H(step))
-        Udiag=RightSuper(b)@LeftSuper(b.T.conj())
-        Udiagi=RightSuper(b.T.conj())@LeftSuper(b)
-        Energy=(np.tile(a,a.size)+np.repeat(a,a.size))/2
-        return Udiag,Udiagi,Energy*6.62607015e-34
+        U=RightSuper(b)@LeftSuper(b.T.conj())
+        Ui=RightSuper(b.T.conj())@LeftSuper(b)
+        v=(np.tile(a,a.size)+np.repeat(a,a.size))/2
+        return U,Ui,v
         
         
         
@@ -228,7 +228,14 @@ class Hamiltonian():
             if not(LF):
                 H+=v0*Op.z
         Hdiag=np.tile(np.atleast_2d(np.diag(H)).T,H.shape[0])
-        energy=(Hdiag+Hdiag.T)/2+(H-np.diag(np.diag(H)))
+        
+        energy=(Hdiag+Hdiag.T)/2
+        
+        # Below was to try to bring in off-diagonal terms of the Hamiltonian
+        # I think where these terms are important, we probably shouldn't be
+        # using this approach anyway
+        # energy=(Hdiag+Hdiag.T)/2+(H-np.diag(np.diag(H)))
+        
         return energy.reshape(energy.size).real*6.62607015e-34
     
     def Energy2(self,step:int):

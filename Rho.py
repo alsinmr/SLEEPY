@@ -277,7 +277,8 @@ class Rho():
         
         rho=copy(self)
         rho.L=self.L.getBlock(block)
-        rho._rho0=self._rho0[block]
+        rho._rho0=[rho0[block] for rho0 in self._rho0] if isinstance(self._rho0,list) else self._rho0[block]
+        # rho._rho0=self._rho0[block]
         rho._detect=[d[block] for d in self._detect]
         rho._rho=[r[block] for r in self._rho]
         rho._Ipwd=[[[] for _ in range(len(self._detect))] for _ in range(len(self.L))]
@@ -341,7 +342,8 @@ class Rho():
         """
         blocks=self.Blocks(*seq)
         block=np.sum(blocks,axis=0).astype(bool)
-        self._rho0=self._rho0[block]
+        self._rho0=[rho0[block] for rho0 in self._rho0] if isinstance(self._rho0,list) else self._rho0[block]
+        # self._rho0=self._rho0[block]
         self._detect=[d[block] for d in self._detect]
         self._rho=[r[block] for r in self._rho]
         self.Reduce=False
@@ -547,10 +549,14 @@ class Rho():
         
         
         if isinstance(self.rho0,str) and self.rho0=='Thermal':
-            rhoeq=self.L.rho_eq(sub1=True)
-            if self.L.Peq:
-                eye=np.tile(np.ravel(self.expsys.Op[0].eye),len(self.L.H))[self.block]
-                rhoeq+=eye/self.expsys.Op.Mult.prod()
+            # rhoeq=self.L.rho_eq(sub1=True)
+            step=0 if self.taur is None else self.t//self.L.dt
+            rhoeq=[]
+            for L in self.L:
+                rhoeq.append(L.rho_eq(step=step))
+                if self.L.Peq:
+                    eye=np.tile(np.ravel(self.expsys.Op[0].eye),len(self.L.H))[self.block]
+                    rhoeq[-1]+=eye/self.expsys.Op.Mult.prod()
             self._rho0=rhoeq
         else:
             self._rho0=self.Op2vec(self.strOp2vec(self.rho0))
@@ -568,7 +574,7 @@ class Rho():
 
         """
         if self.L is not None:
-            self._rho=[self._rho0 for _ in range(self.pwdavg.N)]
+            self._rho=self._rho0 if isinstance(self._rho0,list) else [self._rho0 for _ in range(self.pwdavg.N)]
             self._phase_accum0=np.zeros(self.expsys.nspins)
         self._t=None
         

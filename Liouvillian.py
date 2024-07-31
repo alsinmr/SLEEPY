@@ -23,6 +23,7 @@ from . import Defaults
 from .Tools import Ham2Super,BlockDiagonal
 from .Hamiltonian import Hamiltonian
 from . import RelaxMat
+from .RelaxClass import RelaxClass
 from .Sequence import Sequence
 from .Para import ParallelManager, StepCalculator
 import matplotlib.pyplot as plt
@@ -77,7 +78,7 @@ class Liouvillian():
         self._Lrf=None
         self._Ln=None
         # self._Ln_H=None
-        self._Lthermal=None
+        self._LrelaxOS=RelaxClass(self)
         if Defaults['cache']:self._Ln_H=[[None for _ in range(5)] for _ in range(len(self))]
         
         self._fields=self.fields
@@ -169,7 +170,7 @@ class Liouvillian():
         # for ri in self.relax_info:
         #     if 'Peq' in ri[1] and ri[1]['Peq']:
         #         return True
-        if self._Lthermal is not None:return True
+        if self._LrelaxOS.Peq:return True
         for ri in self.relax_info:
             if ri[0]=='recovery':return True
         return False
@@ -285,6 +286,7 @@ class Liouvillian():
         out._index=i
         out._PropCache=self._PropCache
         out._PropCache.L=out 
+        out._LrelaxOS.L=out
         # The above line bothers me. If we extract a particular element and
         # then later another element, the first element's propagator cache
         # references the wrong element of the Liouvillian.
@@ -330,7 +332,7 @@ class Liouvillian():
         
         return self
     
-    def add_relax(self,M=None,Type:str=None,**kwargs):
+    def add_relax(self,M=None,Type:str=None,OS:bool=False,**kwargs):
         """
         Add explicit relaxation to the Liouvillian. This is either provided
         directly by the user via a matrix, or by type, where currently T1, T2, 
@@ -367,15 +369,22 @@ class Liouvillian():
         
         if self.Peq:
             warnings.warn('recovery should always be the last term added to Lrelax')
-            
+        
+        if OS:
+            getattr(self.LrelaxOS,Type)(**kwargs)
+            kwargs.update({'OS':OS})
+            self.relax_info.append((Type,kwargs))
+            return self
+                
+        
         if M is None:
             if Type=='recovery':
                 M=RelaxMat.recovery(expsys=self.expsys,L=self)
-                self.relax_info.append(('recovery',{}))
-            elif Type=='Thermal':
-                self._Lthermal=RelaxMat.Thermal
-                self.relax_info.append(('Thermal',{}))
-                return self
+                self.relax_info.append(('recovery',{'OS':OS}))
+            # elif Type=='Thermal':
+            #     self.LrelaxOS.Thermal()
+            #     self.relax_info.append(('Thermal',{}))
+            #     return self
             elif hasattr(RelaxMat,Type):
                 M=getattr(RelaxMat,Type)(expsys=self.expsys,**kwargs)
                 self.relax_info.append((Type,kwargs))
@@ -407,7 +416,7 @@ class Liouvillian():
         
         self.relax_info=[]
         self._Lrelax=None
-        self._Lthermal=None
+        self._LrelaxOS.clear()
         return self
         
     def validate_relax(self):
@@ -442,11 +451,26 @@ class Liouvillian():
             self._Lrelax=np.zeros(self.shape,dtype=self._ctype)
         return self._Lrelax
     
-    def Lthermal(self,step:int=0):
-        if self._Lthermal is None:
-            return 0
-        else:
-            return self._Lthermal(self,step=step)
+    
+    @property
+    def LrelaxOS(self):
+        """
+        Returns the orientation-specific relaxation matrix for the current 
+        rotor step and orientation
+
+        Parameters
+        ----------
+        step : int, optional
+            DESCRIPTION. The default is 0.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        """
+
+        return self._LrelaxOS
     
     @property
     def Lex(self):
@@ -570,7 +594,7 @@ class Liouvillian():
         # return np.sum([Ln0*ph**(-m) for Ln0,m in zip(Ln,range(-2,3))],axis=0)+self.Lrf
     
         ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
-        return np.sum([self.Ln(m)*(ph**(-m)) for m in range(-2,3)],axis=0)+self.Lrf+self.Lthermal(step)    
+        return np.sum([self.Ln(m)*(ph**(-m)) for m in range(-2,3)],axis=0)+self.Lrf+self.LrelaxOS(step)    
     
     def U(self,Dt:float=None,t0:float=None,calc_now:bool=False):
         """
@@ -972,6 +996,7 @@ class Liouvillian():
         
         what:
         'L' : Full Liouvillian. Optionally specify time step
+        'Lcoh' : Coherent Hamiltonian. Optionally specify time step
         'Lrelax' : Full relaxation matrix
         'Lrf' : Applied field matrix
         'recovery' : Component of relaxation matrix responsible for magnetizaton recovery
@@ -1038,6 +1063,10 @@ class Liouvillian():
                 
         if what in ['L0','L1','L2','L-1','L-2']:
             x=self[len(self)//2].Ln_H(int(what[1:])) if self._index==-1 else self.Ln_H(int(what[1:]))
+        elif what=='Lcoh':
+            ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
+            index=len(self)//2 if self._index==-1 else self._index
+            x=np.sum([self[index].Ln_H(k)*ph**(-k) for k in range(-2,3)],axis=0)
         else:
             x=getattr(self[len(self)//2] if self._index==-1 else self,what)
             if hasattr(x,'__call__'):
