@@ -1243,7 +1243,8 @@ class LiouvilleBlock(Liouvillian):
         self._L=L
         self._block=block
         self._PropCache=PropCache(self)
-        
+        self._LrelaxOS=RelaxClass(self)
+        self.LrelaxOS.methods=L.LrelaxOS.methods
     def L(self,step):
         return self._L[self._index].L(step)[self.block][:,self.block]
     

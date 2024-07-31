@@ -39,7 +39,13 @@ class RelaxClass():
 
         """
         
-        self.L=L
+        
+        if L.reduced:
+            self.L=L._L
+            self._L=L
+        else:
+            self.L=L
+            self._L=L
         
         self.methods=[]
         self.clear_cache()
@@ -53,7 +59,10 @@ class RelaxClass():
         if Defaults['cache']:
             cache=self._cache[self.L._index][step%self.L.expsys.n_gamma]
             if cache is not None:
-                return cache
+                if cache.shape[0]!=self.L.shape[0]:
+                    self.clear_cache()
+                else:
+                    return cache
         
         out=np.zeros(self.L.shape,dtype=Defaults['ctype'])
         for method in self.methods:
@@ -73,6 +82,10 @@ class RelaxClass():
     @property
     def block(self):
         return self.L.block
+    
+    @property
+    def reduced(self):
+        return self._L.reduced
     
     @property
     def active(self):
@@ -189,12 +202,12 @@ class RelaxClass():
                 if m['method']=='Thermal':return self
             
             self.methods.append({'method':'recovery'})
+            self.Peq=True
             return self.clear_cache()
         
         
         # Run the function
-        L=self.L._L if self.L.reduced else self.L
-        self.Peq=True
+        L=self.L
         
         return self.Lindblad(L.Lrelax,L.Energy2(step))
     
@@ -230,13 +243,14 @@ class RelaxClass():
                     break
                 
             self.methods.append({'method':'T1','i':i,'T1':T1,'Thermal':Thermal})
+            if Thermal:self.Peq=True
             return self.clear_cache()
         
         L=self.L
         
         Lx,Ly,Lz=[Ham2Super(getattr(self.Op[i],q)) for q in ['x','y','z']]
         
-        M=Lx@Lx+Ly@Ly+Lz@Lz
+        M=Lx@Lx+Ly@Ly+Lz@Lz #This is isotropic (will not transform)
         
         N=len(L.H)      #Number of Hamiltonians
         n=L.H[0].shape[0]  #Dimension of Hamiltonians
@@ -249,28 +263,31 @@ class RelaxClass():
         
         for k,H in enumerate(L.H):
             U,Ui,v=H.eig2L(step)
-            Md=U@M@Ui
+            Mp=U@M@Ui
             dv=[]
-            index=np.argwhere(np.abs(Md-np.diag(np.diag(Md)))>1e-7)  #Is this threshold ok?
+            index=np.argwhere(np.abs(Mp-np.diag(np.diag(Mp)))>1e-20)  #Is this threshold ok?
             index.sort()
             index=np.unique(index,axis=0)
             for i0,i1 in index:
                 dv.append(v[i1]-v[i0])
+
             dv=np.abs(dv)
             i=np.argsort(np.abs(v0-dv))[:nt]
-            out=np.zeros(Md.shape,dtype=Md.dtype)
+            out=np.zeros(Mp.shape,dtype=Mp.dtype)
             for i0,i1 in index[i]:
                 out[i0,i1]=0.5/T1
                 out[i1,i0]=0.5/T1
                 out[i0,i0]-=0.5/T1
                 out[i1,i1]-=0.5/T1
-            out=Ui@out@U
             
             if Thermal:
                 out+=self.Lindblad(out, v*6.626e-34)
-            
+                
+            out=Ui@out@U    
+                
+        
             Lrelax[k*n**2:(k+1)*n**2][:,k*n**2:(k+1)*n**2]=out
-            
+        
         return out
             
             
@@ -347,15 +364,15 @@ class RelaxClass():
 
 
         if what=='L':
-            x=(self[len(self)//2] if self.L_index==-1 else self)(step)
+            x=(self[len(self)//2] if self.L._index==-1 else self)(step)
         else:
             i=np.argwhere([m['method']==what for m in self.methods])[:,0]
-            x=np.zeros(self.L.shape,dtype=Defaults['ctype'])
+            x=np.zeros(self._L.shape,dtype=Defaults['ctype'])
             for i0 in i:
                 kwargs=copy(self.methods[i0])
                 kwargs.pop('method')
                 
-                x+=getattr(self,what)(step=step,**kwargs)
+                x+=getattr(self,what)(step=step,**kwargs)[self.block][:,self.block]
         
                 
         if mode=='log' and np.max(np.abs(x[x!=0]))==np.min(np.abs(x[x!=0])):
