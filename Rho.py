@@ -605,6 +605,7 @@ class Rho():
             rhoeq=[]
             for L in self.L:
                 rhoeq.append(L.rho_eq(step=step))
+                # TODO : I'm not sure the next 3 lines should be here
                 if self.L.Peq:
                     eye=np.tile(np.ravel(self.expsys.Op[0].eye),len(self.L.H))[self.block]
                     rhoeq[-1]+=eye/self.expsys.Op.Mult.prod()

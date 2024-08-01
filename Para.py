@@ -126,7 +126,7 @@ class ParallelManager():
         if self.L.static:
             return [(pm.L.L(0),*self.pars) for pm in self]
         
-        if self.parallel:
+        if self.parallel or True:
             out=[(pm.Ln,self.L.Lrf,pm.LrelaxOS,*self.pars,self.sm0,self.sm1,self.index,self.step_index,self.PropCache.SZ) for pm in self]
         else:
             out=((pm.Ln,self.L.Lrf,pm.LrelaxOS,*self.pars,self.sm0,self.sm1,self.index,self.step_index,self.PropCache.SZ) for pm in self)
