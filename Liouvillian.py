@@ -367,7 +367,7 @@ class Liouvillian():
             Type=M
             M=None
         
-        if self.Peq:
+        if hasattr(self,'recovery'):
             warnings.warn('recovery should always be the last term added to Lrelax')
         
         if OS:
@@ -661,6 +661,7 @@ class Liouvillian():
                     # tp1=tf-nf*dt
                     
                     # if tm1<=0:tm1=dt
+                    
                     dt=self.dt
                     n0,nf,tm1,tp1=StepCalculator(t0=t0,Dt=Dt,dt=dt)
                     
@@ -1175,8 +1176,6 @@ class Liouvillian():
                 return label1[value]
             ax.yaxis.set_major_formatter(plt.FuncFormatter(format_func))
             
-        
-
         ax.xaxis.set_major_locator(MaxNLocator(min([bi.sum(),20]),integer=True))
         ax.yaxis.set_major_locator(MaxNLocator(min([bi.sum(),20]),integer=True))
         if fig is not None:fig.tight_layout()

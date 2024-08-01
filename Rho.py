@@ -528,7 +528,57 @@ class Rho():
 
             
         return np.fft.fftshift(np.fft.fft(I,n=I.shape[1]*2,axis=1),axes=[1])
+    
+    @property
+    def FTpwd(self):
+        """
+        Fourier transform of the time-dependent signal
+
+        Returns
+        -------
+        np.array
+            FT, including division of the first time point by zero.
+
+        """
         
+        if self._FTpwd is None:
+            if self._tstatus!=1:
+                warnings.warn('Time points are not equally spaced. FT will be incorrect')
+    
+            I=np.concatenate((self.Ipwd[:,:,:1]/2,self.Ipwd[:,:,1:]),axis=-1)
+            if self.apodize:
+                ap=self.apod_pars
+                wdw=ap['WDW'].lower()
+                t=self.t_axis
+                LB=ap['LB'] if ap['LB'] is not None else 5/t[-1]/np.pi
+                
+                if wdw=='em':
+                    apod=np.exp(-t*LB*np.pi)
+                elif wdw=='gm':
+                    apod=np.exp(-np.pi*LB*t+(np.pi*LB*t**2)/(2*ap['GB']*t[-1]))
+                elif wdw=='sine':
+                    if ap['SSB']>=2:
+                        apod=np.sin(np.pi*(1-1/ap['SSB'])*t/t[-1]+np.pi/ap['SSB'])
+                    else:
+                        apod=np.sin(np.pi*t/t[-1])
+                elif wdw=='qsine':
+                    if ap['SSB']>=2:
+                        apod=np.sin(np.pi*(1-1/ap['SSB'])*t/t[-1]+np.pi/ap['SSB'])**2
+                    else:
+                        apod=np.sin(np.pi*t/t[-1])**2
+                elif wdw=='sinc':
+                    apod=np.sin(2*np.pi*ap['SSB']*(t/t[-1]-ap['GB']))
+                elif wdw=='qsinc':
+                    apod=np.sin(2*np.pi*ap['SSB']*(t/t[-1]-ap['GB']))**2
+                else:
+                    warnings.warn(f'Unrecognized apodization function: "{wdw}"')
+                    apod=np.ones(t.shape)
+                I*=apod
+    
+                
+            self._FTpwd=np.fft.fftshift(np.fft.fft(I,n=I.shape[-1]*2,axis=-1),axes=[-1])
+        
+        return self._FTpwd
     
     def _Setup(self):
         """
@@ -544,6 +594,7 @@ class Rho():
         """
         
         self._Ipwd=[[list() for _ in range(self.n_det)] for _ in range(self.pwdavg.N)]
+        self._FTpwd=None
         self._taxis=list()
         self._phase_accum=list()
         
@@ -602,6 +653,7 @@ class Rho():
         self._t=None
         
         self._Ipwd=[[]]
+        self._FTpwd=None
         self._taxis=list()
         self._rho=list() #Storage for numerical rho
         self._L=None
@@ -1168,7 +1220,7 @@ class Rho():
             return out
         
         
-    def plot(self,det_num:int=None,ax=None,FT:bool=False,mode:str='Real',apodize=False,axis='kHz/ms',**kwargs):
+    def plot(self,det_num:int=None,pwd_index:int=None,ax=None,FT:bool=False,mode:str='Real',apodize=False,axis='kHz/ms',**kwargs):
         """
         Plots the amplitudes as a function of time or frequency
 
@@ -1235,7 +1287,8 @@ class Rho():
             det_num=np.arange(len(self._detect)) if det_num is None else np.array(det_num,dtype=int)
             h=[]
             for det_num in det_num:
-                kids=self.plot(det_num=det_num,ax=ax,FT=FT,mode=mode,apodize=apodize,axis=axis,**kwargs).get_children()
+                kids=self.plot(det_num=det_num,pwd_index=pwd_index,ax=ax,FT=FT,
+                               mode=mode,apodize=apodize,axis=axis,**kwargs).get_children()
                 i=np.array([isinstance(k,plt.Line2D) for k in kids],dtype=bool)
                 h.append(np.array(kids)[i][-1])
             if det_num:
@@ -1266,16 +1319,24 @@ class Rho():
                 v_axis=self.v_axis
                 label=r'$\nu$ / Hz'
             
+            
+            if pwd_index is None:
+                Re=self.FT[det_num].real
+                Im=self.FT[det_num].imag
+            else:
+                Re=self.FTpwd[pwd_index][det_num].real
+                Im=self.FTpwd[pwd_index][det_num].imag
+            
             if mode.lower()=='reim':
-                ax.plot(v_axis,self.FT[det_num].real,label=f'Re[{label}]',**kwargs)
-                ax.plot(v_axis,self.FT[det_num].imag,label=f'Im[{label}]',**kwargs)
+                ax.plot(v_axis,Re,label=f'Re[{label}]',**kwargs)
+                ax.plot(v_axis,Im,label=f'Im[{label}]',**kwargs)
                 ax.legend(('Re','Im'))
             elif mode[0].lower()=='r':
-                ax.plot(v_axis,self.FT[det_num].real,label=label,**kwargs)
+                ax.plot(v_axis,Re,label=label,**kwargs)
             elif mode[0].lower()=='a':
-                ax.plot(v_axis,np.abs(self.FT[det_num]),label=f'Abs[{label}]',**kwargs)
+                ax.plot(v_axis,np.abs(Re+1j*Im),label=f'Abs[{label}]',**kwargs)
             elif mode[0].lower()=='i':
-                ax.plot(v_axis,self.FT[det_num].imag,label=f'Im[{label}]',**kwargs)
+                ax.plot(v_axis,Im,label=f'Im[{label}]',**kwargs)
             else:
                 assert 0,'Unrecognized plotting mode'
                 
@@ -1299,17 +1360,24 @@ class Rho():
             else:
                 x=np.arange(len(self.t_axis))
                 xlabel='Acquisition Number'
+
+
+            if pwd_index is None:
+                Re,Im=self.I[det_num].real,self.I[det_num].imag
+            else:
+                Re,Im=self.Ipwd[pwd_index][det_num].real,self.I[det_num].imag
+
                 
             if mode.lower()=='reim':
-                ax.plot(x,self.I[det_num].real,label=f'Re[{label}]',**kwargs)
-                ax.plot(x,self.I[det_num].imag,label=f'Im[{label}]',**kwargs)
+                ax.plot(x,Re,label=f'Re[{label}]',**kwargs)
+                ax.plot(x,Im,label=f'Im[{label}]',**kwargs)
                 ax.legend(('Re','Im'))
             elif mode[0].lower()=='r':
-                ax.plot(x,self.I[det_num].real,label=label,**kwargs)
+                    ax.plot(x,Re,label=label,**kwargs)
             elif mode[0].lower()=='a':
-                ax.plot(x,np.abs(self.I[det_num]),label=f'Abs[{label}]',**kwargs)
+                ax.plot(x,np.abs(Re+1j*Im),label=f'Abs[{label}]',**kwargs)
             elif mode[0].lower()=='i':
-                ax.plot(x,self.I[det_num].imag,label=f'Im[{label}]',**kwargs)
+                ax.plot(x,Im,label=f'Im[{label}]',**kwargs)
             else:
                 assert 0,'Unrecognized plotting mode'
                 

@@ -40,12 +40,8 @@ class RelaxClass():
         """
         
         
-        if L.reduced:
-            self.L=L._L
-            self._L=L
-        else:
-            self.L=L
-            self._L=L
+        self._L=None
+        self.L=L
         
         self.methods=[]
         self.clear_cache()
@@ -59,12 +55,12 @@ class RelaxClass():
         if Defaults['cache']:
             cache=self._cache[self.L._index][step%self.L.expsys.n_gamma]
             if cache is not None:
-                if cache.shape[0]!=self.L.shape[0]:
+                if cache.shape[0]!=self._L.shape[0]:
                     self.clear_cache()
                 else:
                     return cache
         
-        out=np.zeros(self.L.shape,dtype=Defaults['ctype'])
+        out=np.zeros(self._L.shape,dtype=Defaults['ctype'])
         for method in self.methods:
             fun=getattr(self,method['method'])
             kwargs=copy(method)
@@ -77,11 +73,22 @@ class RelaxClass():
             
         return out
             
-            
+    @property        
+    def L(self):
+        if self._L.reduced:
+            return self._L._L
+        else:
+            return self._L
+        
+    @L.setter
+    def L(self,L):
+        self._L=L
+    
+    
     
     @property
     def block(self):
-        return self.L.block
+        return self._L.block
     
     @property
     def reduced(self):
@@ -188,7 +195,8 @@ class RelaxClass():
         Parameters
         ----------
         step : int, optional
-            DESCRIPTION. The default is None.
+            The default is None, which runs setup for this method, and returns 
+            self. Providing a value for step will return a relaxation matrix
 
         Returns
         -------
@@ -215,9 +223,8 @@ class RelaxClass():
         """
         Introduces T1 relaxation on a single spin. Relaxation is introduced in
         the eigenbasis. Transitions in the eigenbasis will be included based
-        on having frequencies near the Larmor frequency of the selected spin.
-        This function should be used with caution where a spin might resonate 
-        far away from its Larmor frequency
+        on having the largest contributions from an isotropic relaxation operator
+        (Lx^2+Ly^2+Lz^2) for that spin in the eigenbasis.
 
         Parameters
         ----------
@@ -228,7 +235,8 @@ class RelaxClass():
         Thermal : bool, optional
            Flag to thermalize the system. The default is False.
         step : int, optional
-            DESCRIPTION. The default is None.
+            The default is None, which runs setup for this method, and returns 
+            self. Providing a value for step will return a relaxation matrix
 
         Returns
         -------
@@ -250,31 +258,26 @@ class RelaxClass():
         
         Lx,Ly,Lz=[Ham2Super(getattr(self.Op[i],q)) for q in ['x','y','z']]
         
-        M=Lx@Lx+Ly@Ly+Lz@Lz #This is isotropic (will not transform)
+        M=Lx@Lx+Ly@Ly+0*Lz@Lz #This is isotropic (will not transform for 1 spin)
         
         N=len(L.H)      #Number of Hamiltonians
         n=L.H[0].shape[0]  #Dimension of Hamiltonians
         
         Lrelax=np.zeros([n**2*N,n**2*N],dtype=Defaults['ctype'])
         
-        v0=self.v0[i]
-        
         nt=(np.prod(self.Op.Mult)//(self.Op.Mult[i]))**2*(self.Op.Mult[i]-1)  #Number of T1 transitions
         
         for k,H in enumerate(L.H):
             U,Ui,v=H.eig2L(step)
             Mp=U@M@Ui
-            dv=[]
-            index=np.argwhere(np.abs(Mp-np.diag(np.diag(Mp)))>1e-20)  #Is this threshold ok?
-            index.sort()
-            index=np.unique(index,axis=0)
-            for i0,i1 in index:
-                dv.append(v[i1]-v[i0])
+            
+            x=np.abs(Mp-np.diag(np.diag(Mp)))
+            index=np.unravel_index(np.argsort(x.reshape(x.size))[-1:-(2*nt+1):-1],Mp.shape)
+            index=np.unique(np.sort(np.concatenate([index],axis=0).T,axis=-1),axis=0)
+            
 
-            dv=np.abs(dv)
-            i=np.argsort(np.abs(v0-dv))[:nt]
             out=np.zeros(Mp.shape,dtype=Mp.dtype)
-            for i0,i1 in index[i]:
+            for i0,i1 in index:
                 out[i0,i1]=0.5/T1
                 out[i1,i0]=0.5/T1
                 out[i0,i0]-=0.5/T1
@@ -288,12 +291,71 @@ class RelaxClass():
         
             Lrelax[k*n**2:(k+1)*n**2][:,k*n**2:(k+1)*n**2]=out
         
-        return out
+        return Lrelax
+    
+    
+    def T2(self,i:int,T2:float,step:int=None):
+        """
+        Introduces T2 relaxation on a single spin. Relaxation is introduced in
+        the eigenbasis. Transitions in the eigenbasis will be included based
+        on having frequencies near the Larmor frequency of the selected spin.
+        This function should be used with caution where a spin might resonate 
+        far away from its Larmor frequency
+
+        Parameters
+        ----------
+        i : int
+            DESCRIPTION.
+        T2 : float
+            T2 relaxation time in seconds
+        step : int, optional
+            The default is None, which runs setup for this method, and returns 
+            self. Providing a value for step will return a relaxation matrix
+
+        Returns
+        -------
+        self/np.array
+
+        """
+        if step is None:
+            # Check to see if method is already here for this spin
+            for k,m in enumerate(self.methods):
+                if m['method']=='T2' and m['i']==i:
+                    self.methods.pop(k)
+                    break
+                
+            self.methods.append({'method':'T2','i':i,'T2':T2})
+            return self.clear_cache()
+        
+        L=self.L
+        
+        
+        Lz=Ham2Super(self.Op[i].z)
+        
+        M=Lz@Lz
+        
+        N=len(L.H)      #Number of Hamiltonians
+        n=L.H[0].shape[0]  #Dimension of Hamiltonians
+        
+        Lrelax=np.zeros([n**2*N,n**2*N],dtype=Defaults['ctype'])
+        
+        nt=(np.prod(self.Op.Mult)//(self.Op.Mult[i]))**2*(self.Op.Mult[i]**2-self.Op.Mult[i])  #Number of T2 terms
+        
+        for k,H in enumerate(L.H):
+            U,Ui,v=H.eig2L(step)
+            Mp=U@M@Ui
             
-            
-            
-        if Thermal:self.Peq=True
-            
+            index=np.argsort(np.diag(Mp))[-1:-(nt+1):-1]            
+
+            out=np.zeros(Mp.shape,dtype=Mp.dtype)
+            for i0 in index:
+                out[i0,i0]=-1/T2
+                            
+            out=Ui@out@U    
+                
+            Lrelax[k*n**2:(k+1)*n**2][:,k*n**2:(k+1)*n**2]=out
+        
+        return Lrelax
         
     def plot(self,what:str='L',cmap:str=None,mode:str='log',colorbar:bool=True,
              step:int=0,block:int=None,ax=None) -> plt.axes:

@@ -62,6 +62,8 @@ class ParallelManager():
         out=copy(self)
         out._index=i%len(self)
         out.L=self.L[out._index]
+        if self.LrelaxOS is not None:
+            self.LrelaxOS.L=out.L
         return out
         
     def __len__(self):
@@ -124,7 +126,10 @@ class ParallelManager():
         if self.L.static:
             return [(pm.L.L(0),*self.pars) for pm in self]
         
-        out=[(pm.Ln,self.L.Lrf,pm.LrelaxOS,*self.pars,self.sm0,self.sm1,self.index,self.step_index,self.PropCache.SZ) for pm in self]
+        if self.parallel:
+            out=[(pm.Ln,self.L.Lrf,pm.LrelaxOS,*self.pars,self.sm0,self.sm1,self.index,self.step_index,self.PropCache.SZ) for pm in self]
+        else:
+            out=((pm.Ln,self.L.Lrf,pm.LrelaxOS,*self.pars,self.sm0,self.sm1,self.index,self.step_index,self.PropCache.SZ) for pm in self)
         # TODO why is the next line necessary?
         # There's some failure to update reduced in LrelaxOS without it
         # self.L[0].LrelaxOS.reduced
