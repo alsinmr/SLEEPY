@@ -76,6 +76,7 @@ class RelaxClass():
     @property        
     def L(self):
         if self._L.reduced:
+            self._L._L=self._L._L[self._L._index]
             return self._L._L
         else:
             return self._L
@@ -274,7 +275,6 @@ class RelaxClass():
             x=np.abs(Mp-np.diag(np.diag(Mp)))
             index=np.unravel_index(np.argsort(x.reshape(x.size))[-1:-(2*nt+1):-1],Mp.shape)
             index=np.unique(np.sort(np.concatenate([index],axis=0).T,axis=-1),axis=0)
-            
 
             out=np.zeros(Mp.shape,dtype=Mp.dtype)
             for i0,i1 in index:
@@ -283,10 +283,19 @@ class RelaxClass():
                 out[i0,i0]-=0.5/T1
                 out[i1,i1]-=0.5/T1
             
+            
+            
             if Thermal:
                 out+=self.Lindblad(out, v*6.626e-34)
                 
-            out=Ui@out@U    
+            out=Ui@out@U
+            
+            
+            # Is this really ok?
+            # out-=np.diag(np.diag(out))
+            # out=np.abs(out)
+            # out-=np.diag(out.sum(0))
+            # TODO : The action on coherences is somehow wrong (in some/all cases?)
                 
         
             Lrelax[k*n**2:(k+1)*n**2][:,k*n**2:(k+1)*n**2]=out
@@ -332,7 +341,9 @@ class RelaxClass():
         
         Lz=Ham2Super(self.Op[i].z)
         
-        M=Lz@Lz
+        Lx,Ly,Lz=[Ham2Super(getattr(self.Op[i],q)) for q in ['x','y','z']]
+        
+        M=Lx@Lx+Ly@Ly+Lz@Lz #This is isotropic (will not transform for 1 spin)
         
         N=len(L.H)      #Number of Hamiltonians
         n=L.H[0].shape[0]  #Dimension of Hamiltonians
@@ -341,17 +352,29 @@ class RelaxClass():
         
         nt=(np.prod(self.Op.Mult)//(self.Op.Mult[i]))**2*(self.Op.Mult[i]**2-self.Op.Mult[i])  #Number of T2 terms
         
+        nt=(np.prod(self.Op.Mult)//(self.Op.Mult[i]))**2*(self.Op.Mult[i]-1)  #Number of T1 transitions
+        
+        
         for k,H in enumerate(L.H):
             U,Ui,v=H.eig2L(step)
             Mp=U@M@Ui
             
-            index=np.argsort(np.diag(Mp))[-1:-(nt+1):-1]            
-
+            x=np.abs(Mp-np.diag(np.diag(Mp)))
+            index0=np.unravel_index(np.argsort(x.reshape(x.size))[-1:-(2*nt+1):-1],Mp.shape)[0]
+            
+            
+            
+            index=np.argsort(np.diag(Mp))
             out=np.zeros(Mp.shape,dtype=Mp.dtype)
             for i0 in index:
-                out[i0,i0]=-1/T2
+                if not(i0 in index0):
+                    out[i0,i0]=-1/T2
+
+            # out=np.zeros(Mp.shape,dtype=Mp.dtype)
+            # for i0 in index:
+            #     out[i0,i0]=-1/T2
                             
-            out=Ui@out@U    
+            out=Ui@out@U
                 
             Lrelax[k*n**2:(k+1)*n**2][:,k*n**2:(k+1)*n**2]=out
         
@@ -455,7 +478,9 @@ class RelaxClass():
             x=np.abs(x)>cutoff
         elif mode=='log':
             x=np.abs(x)
-            i=np.logical_not(x==0)
+            # i=np.logical_not(x==0)
+            i=np.abs(x)>np.abs(x).max()/1e8
+            x[np.logical_not(i)]=0
             if i.sum()!=0:
                 if x[i].min()==x[i].max():
                     sc0=sc1=np.log10(x[i].max())
