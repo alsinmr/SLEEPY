@@ -596,6 +596,29 @@ class Liouvillian():
         ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
         return np.sum([self.Ln(m)*(ph**(-m)) for m in range(-2,3)],axis=0)+self.Lrf+self.LrelaxOS(step)    
     
+    def Lcoh(self,step:int):
+        """
+        Returns the coherent Liouvillian for a given step in the rotor cycle (t=step*L.dt)
+
+        Parameters
+        ----------
+        step : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        """
+        # Ln=[self.Ln(n) for n in range(-2,3)]
+        # n_gamma=self.expsys.n_gamma
+        # ph=np.exp(1j*2*np.pi*step/n_gamma)
+        # return np.sum([Ln0*ph**(-m) for Ln0,m in zip(Ln,range(-2,3))],axis=0)+self.Lrf
+    
+        ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
+        return np.sum([self.Ln_H(m)*(ph**(-m)) for m in range(-2,3)],axis=0)   
+    
+    
     def U(self,Dt:float=None,t0:float=None,calc_now:bool=False):
         """
         Calculates the propagator between times t0 and t0+Dt. By default, t0 will
@@ -1064,10 +1087,10 @@ class Liouvillian():
                 
         if what in ['L0','L1','L2','L-1','L-2']:
             x=self[len(self)//2].Ln_H(int(what[1:])) if self._index==-1 else self.Ln_H(int(what[1:]))
-        elif what=='Lcoh':
-            ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
-            index=len(self)//2 if self._index==-1 else self._index
-            x=np.sum([self[index].Ln_H(k)*ph**(-k) for k in range(-2,3)],axis=0)
+        # elif what=='Lcoh':
+        #     ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
+        #     index=len(self)//2 if self._index==-1 else self._index
+        #     x=np.sum([self[index].Ln_H(k)*ph**(-k) for k in range(-2,3)],axis=0)
         else:
             x=getattr(self[len(self)//2] if self._index==-1 else self,what)
             if hasattr(x,'__call__'):

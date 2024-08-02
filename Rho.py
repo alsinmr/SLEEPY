@@ -133,7 +133,7 @@ class Rho():
     
     @property
     def taur(self):
-        return self.expsys.taur
+        return self.L.taur
         
     @property
     def t(self):
@@ -354,7 +354,7 @@ class Rho():
         return self
         
     
-    def downmix(self,t0:float=None):
+    def downmix(self,t0:float=None,baseline:bool=False):
         """
         Takes the stored signals and downmixes them if they were recorded in the
         lab frame (result replaces Ipwd). Only applied to signals detected with
@@ -369,6 +369,11 @@ class Rho():
             which means we will subtract away self.t_axis[0] from the time
             axis. The parameter to be subtracted may be adjusted by setting t0
             Default is None
+            
+        baseline : bool, optional
+            Subtracts away a baseline that may be brought about strongly tilted
+            spin systems. 
+            Default is False
 
         Returns
         -------
@@ -401,6 +406,8 @@ class Rho():
                     break
             
             Ipwd=self.Ipwd[:,k]
+            if baseline:
+                Ipwd=(Ipwd.T-Ipwd.mean(-1)).T
             Idm=Ipwd*q
             for m in range(self.pwdavg.N):
                 self._Ipwd[m][k]=Idm[m].tolist()

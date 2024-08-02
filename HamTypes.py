@@ -471,7 +471,7 @@ def hyperfine(es,i0:int,i1:int,Axx:float=0,Ayy:float=0,Azz:float=0,euler=[0,0,0]
     if es.Nucs[i0][0]!='e' and es.Nucs[i1][0]!='e':
         warnings.warn(f'Hyperfine coupling between two nuclei ({es.Nucs[i0]},{es.Nucs[i1]})')
     
-    info={'Type':'Hyperfine','i0':i0,'i1':i1,'Axx':Axx,'Ayy':Ayy,'Azz':Azz,'euler':euler}
+    info={'Type':'hyperfine','i0':i0,'i1':i1,'Axx':Axx,'Ayy':Ayy,'Azz':Azz,'euler':euler}
     avg=(Axx+Ayy+Azz)/3
     
     Axx-=avg

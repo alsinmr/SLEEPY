@@ -121,6 +121,10 @@ class PowderAvg():
                         weight.append(w)
             self.alpha,self.beta=np.array(alpha),np.array(beta)
             self.weight=np.array(weight)
+            if 'bcr' in pwdfile:
+                weight=np.sin(beta)
+                self.weight=weight/weight.sum()
+            
             self.PwdType=PwdType
         elif hasattr(PwdAvgFuns,'pwd_'+PwdType):
             out=getattr(PwdAvgFuns,'pwd_'+PwdType)(**kwargs)

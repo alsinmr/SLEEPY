@@ -336,7 +336,8 @@ class Hamiltonian():
                 H+=self.expsys.v0[k]*self.expsys.Op[k].z
             
         rho_eq=expm(6.62607015e-34*H/(1.380649e-23*self.expsys.T_K))
-        rho_eq/=np.trace(rho_eq)
+        # rho_eq/=np.trace(rho_eq)
+        rho_eq/=np.sum(np.abs(rho_eq))
         if sub1:
             eye=np.eye(rho_eq.shape[0])
             rho_eq-=np.trace(rho_eq@eye)/rho_eq.shape[0]*eye

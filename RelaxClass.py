@@ -531,7 +531,7 @@ class RelaxClass():
         if labels is not None:
             if len(self.L.H)>1:
                 label0=[]
-                for k in range(len(self.H)):
+                for k in range(len(self.L.H)):
                     for l in labels:
                         label0.append('|'+l+fr'$\rangle_{{{k+1}}}$')
             else:
@@ -550,7 +550,7 @@ class RelaxClass():
             
             if len(self.L.H)>1:
                 label1=[]
-                for k in range(len(self.H)):
+                for k in range(len(self.L.H)):
                     for l in labels:
                         label1.append(r'$\langle$'+l+fr'$|_{{{k+1}}}$')
             else:

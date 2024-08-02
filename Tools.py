@@ -8,9 +8,12 @@ Created on Fri Nov  8 13:44:13 2019
 
 import os
 import numpy as np
+from copy import copy
 import re
 from .Info import Info
 from .vft import Spher2pars
+from . import Defaults
+
 
 #%% Some useful tools (Gyromagnetic ratios, spins, dipole couplings)
 class NucInfo(Info):
@@ -455,6 +458,183 @@ def twoSite_S_eta(theta:float,p:float=0.5):
     
     return S[0],eta[0]
 
+def SetupTumbling(expsys,tc:float,q:int=3):
+    """
+    Takes an expsys and adds a simulated tumbling to it, returning a list
+    of expsys's and an exchange matrix to use to set up a Liouvillian
+    
+    e.g.
+    L=sl.Liouvillian(ex_list,kex=kex)
+
+    Parameters
+    ----------
+    expsys : TYPE
+        SLEEPY expsys
+    tc : float
+        Desired correlation time of tumbling.
+
+    Returns
+    -------
+    ex_list : list
+        list of expsys
+    kex : np.array
+        Exchange matrix
+    """
+    
+    
+    kex,euler=tumbling(tc,q)
+    
+    H=expsys.Hamiltonian()[0].Hinter
+    
+    ex_list=[]
+    for k,euler0 in enumerate(euler):
+        ex_list.append(expsys.copy())
+        for H0 in H:
+            if not(H0.isotropic):
+                kwargs=copy(H0.info)
+                if hasattr(kwargs['euler'][0],'__len__'):
+                    kwargs['euler'].append(euler0)
+                else:
+                    kwargs['euler']=[kwargs['euler'],euler0]
+                
+                ex_list[-1].set_inter(**kwargs)
+                
+    return ex_list,kex
+            
+
+def tumbling(tc:float,q:int=3):
+    """
+    Constructs an exchange matrix for isotropic tumbling based on one of the
+    "rep" powder averages. q (index from 0 to 10, 0 is just a tetrahedral hop).
+    Returns the exchange matrix and the corresponding list of euler angles.
+    
+    Currently set up only for averaging symmetrix (eta=0) tensors
+    
+
+    Parameters
+    ----------
+    pwdavg : TYPE
+        DESCRIPTION.
+    tc : float
+        DESCRIPTION.
+
+    Returns
+    -------
+    kex : np.array
+        Exchange matrix
+        
+    euler : np.array
+        Euler angles corresponding to exchange matrix
+
+    """
+    
+    assert q>=0 and q<=11,"q must be an integer between 0 and 11"
+    
+
+    n0=[4,10,20,30,66,100,144,168,256,320,678,2000]
+    nc0=[3,5,6,6,6,6,6,6,6,6,6,6]
+
+    n=n0[q]
+    nc=nc0[q]
+
+    if q==0:
+        tetra=np.arccos(-1/3)
+        beta=np.array([0,tetra,tetra,tetra])
+        gamma=np.array([0,0,2*np.pi/3,4*np.pi/3])
+    else:
+        pwdpath=os.path.join(os.path.dirname(os.path.realpath(__file__)),'PowderFiles')
+        pwdfile=os.path.join(pwdpath,f'rep{n}.txt')
+        
+        with open(pwdfile,'r') as f:
+            alpha,beta=list(),list()
+            for line in f:
+                if len(line.strip().split(' '))==3:
+                    a,b,w=[float(x) for x in line.strip().split(' ')]
+                    alpha.append(a*np.pi/180)
+                    beta.append(b*np.pi/180)
+        
+        
+        gamma,beta=np.array(alpha),np.array(beta)
+        
+    euler=np.concatenate([[np.zeros(n)],[beta],[gamma]],axis=0).T
+        
+    x,y,z=np.sin(beta)*np.cos(gamma),np.sin(beta)*np.sin(gamma),np.cos(beta)
+    
+    kex=np.zeros([len(gamma),len(gamma)],dtype=Defaults['rtype'])
+
+    for k in range(n):
+        c=x[k]*x+y[k]*y+z[k]*z
+        i=np.argsort(c)[-nc-1:-1]
+        for i0 in i:
+            kex[k,i0]=(1/np.arccos(c[i0]))**2
+    
+    kex=(kex+kex.T)/2
+            
+    kex-=np.diag(kex.sum(0))
+    
+    _,_,tc0,A=kex2A(kex,euler)
+    
+    kavg=((1/tc0)*A).sum()
+    
+    kex/=kavg*tc
+    
+    return kex,euler
+    
+    
+def kex2A(kex,euler):
+    """
+    Calculates the order parameter, correlation times, and amplitudes resulting
+    from an exchange matrix, and the corresponding n Euler angles.
+    
+    The corresponding correlation function is then
+    
+    C(t)=S2 + (1-S2)*sum(Ai*np.exp(-t/tci))
+
+    Parameters
+    ----------
+    kex : np.array
+        nxn exchange matrix (should satisfy mass conservation and detailed balance).
+    euler : np.array
+        list of euler angles corresponding to each state in the exchange matrix.
+
+    Returns
+    -------
+    S2 : float
+        Order parameter (S^2, not S).
+    peq : np.array
+        Equilibrium populations
+    tc : np.array
+        correlation times.
+    A : np.array
+        Amplitudes.
+
+    """
+    
+    tci,v=np.linalg.eigh(kex)
+    tc=-1/tci[:-1]
+    
+    peq=v[:,-1]
+    peq/=peq.sum()
+    
+    beta,gamma=euler.T[-2:]
+    
+    x,y,z=np.sin(beta)*np.cos(gamma),np.sin(beta)*np.sin(gamma),np.cos(beta)
+    
+    P2=-1/2+3/2*(np.sum([np.atleast_2d(q).T@np.atleast_2d(q) for q in [x,y,z]],0)**2)
+    
+    S2=((np.atleast_2d(peq).T@np.atleast_2d(peq))*P2).sum()
+    
+    vi=np.linalg.pinv(v)
+    
+    A=list()
+    for vim,vm in zip(vi,v.T):
+        A.append((np.dot(np.atleast_2d(vm).T,np.atleast_2d(vim*peq))*P2).sum())
+
+    A=np.array(A).real
+    
+    A=A[:-1]/(1-S2)
+    
+    return S2,peq,tc,A
 
 def commute(A,B):
     """
