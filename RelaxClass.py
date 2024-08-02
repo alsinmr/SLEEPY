@@ -278,10 +278,10 @@ class RelaxClass():
 
             out=np.zeros(Mp.shape,dtype=Mp.dtype)
             for i0,i1 in index:
-                out[i0,i1]=0.5/T1
-                out[i1,i0]=0.5/T1
-                out[i0,i0]-=0.5/T1
-                out[i1,i1]-=0.5/T1
+                out[i0,i1]=-0.5/T1*np.sign(Mp[i0,i1])
+                out[i1,i0]=-0.5/T1*np.sign(Mp[i1,i0])
+                out[i0,i0]=-0.5/T1*np.sign(Mp[i0,i0])
+                out[i1,i1]=-0.5/T1*np.sign(Mp[i1,i1])
             
             
             
@@ -368,7 +368,7 @@ class RelaxClass():
             out=np.zeros(Mp.shape,dtype=Mp.dtype)
             for i0 in index:
                 if not(i0 in index0):
-                    out[i0,i0]=-1/T2
+                    out[i0,i0]=-1/T2*np.sign(Mp[i0,i0])
 
             # out=np.zeros(Mp.shape,dtype=Mp.dtype)
             # for i0 in index:
