@@ -800,6 +800,7 @@ class Liouvillian():
             if t0 is None:t0=self.expsys._tprop%self.taur
         
         if isinstance(channel,str):
+            if channel.lower()=='e':channel='e-'
             i=np.argwhere([channel==Nuc for Nuc in self.expsys.Nucs])[:,0]
         else:
             i=np.atleast_1d(channel)
