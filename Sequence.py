@@ -226,7 +226,7 @@ class Sequence():
         for x,name in zip((v1,voff,phase),('_v1','_voff','_phase')):  #Loop over v1,voff,phase
             if not(hasattr(x,'__len__')):
                 new=np.ones(self.t.shape)*x
-            elif np.all(t==self.t):
+            elif len(t)==len(self.t) and np.all(t==self.t):
                 new=np.array(x)
             else:
                 if len(x)==len(t)-1:
