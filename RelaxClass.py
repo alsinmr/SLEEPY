@@ -185,9 +185,9 @@ class RelaxClass():
             # Case 1: i0 has switched sign
                 
                 
-            out[i0,i1]=-Del*np.sign(M[i0,i1])
+            out[i0,i1]=-Del*M[i0,i1]/np.abs(M[i0,i1])
             out[i1,i1]+=Del
-            out[i1,i0]=Del*np.sign(M[i0,i1])
+            out[i1,i0]=Del*M[i0,i1]/np.abs(M[i0,i1])
             out[i0,i0]+=-Del
             
         return out
@@ -283,10 +283,10 @@ class RelaxClass():
 
             out=np.zeros(Mp.shape,dtype=Mp.dtype)
             for i0,i1 in index:
-                out[i0,i1]=-0.5/T1*np.sign(Mp[i0,i1])
-                out[i1,i0]=-0.5/T1*np.sign(Mp[i1,i0])
-                out[i0,i0]=-0.5/T1*np.sign(Mp[i0,i0])
-                out[i1,i1]=-0.5/T1*np.sign(Mp[i1,i1])
+                out[i0,i1]=-0.5/T1*Mp[i0,i1]/np.abs(Mp[i0,i1])
+                out[i1,i0]=-0.5/T1*Mp[i1,i0]/np.abs(Mp[i1,i0])
+                out[i0,i0]-=0.5/T1
+                out[i1,i1]-=0.5/T1
             
             
             

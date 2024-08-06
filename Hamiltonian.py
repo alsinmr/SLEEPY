@@ -198,7 +198,12 @@ class Hamiltonian():
             (U,Ui,v)
 
         """
-        a,b=np.linalg.eigh(self.H(step))
+        H=self.H(step)
+        for LF,v0,Op in zip(self.expsys.LF,self.expsys.v0,self.expsys.Op):
+            if not(LF):
+                H+=v0*Op.z 
+        
+        a,b=np.linalg.eigh(H)
         U=RightSuper(b)@LeftSuper(b.T.conj())
         Ui=RightSuper(b.T.conj())@LeftSuper(b)
         v=(np.tile(a,a.size)+np.repeat(a,a.size))/2

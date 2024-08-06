@@ -478,8 +478,24 @@ def hyperfine(es,i0:int,i1:int,Axx:float=0,Ayy:float=0,Azz:float=0,euler=[0,0,0]
     Ayy-=avg
     Azz-=avg
     
-    i=np.argsort(np.abs([Axx,Ayy,Azz]))
-    Ayy,Axx,Azz=np.array([Axx,Ayy,Azz])[i]
+    q=np.argsort(np.abs([Axx,Ayy,Azz]))
+    Ayy,Axx,Azz=np.array([Axx,Ayy,Azz])[q]
+    if not(np.all(q==[1,0,2])):
+        if np.all(q==[0,1,2]):
+            euler0=[0,np.pi,np.pi/2]
+        elif np.all(q==[1,2,0]):
+            euler0=[np.pi,np.pi/2,0]
+        elif np.all(q==[2,1,0]):
+            euler0=[np.pi/2,np.pi/2,np.pi]
+        elif np.all(q==[2,0,1]):
+            euler0=[3*np.pi/2,np.pi/2,3*np.pi/2]
+        elif np.all(q==[0,2,1]):
+            euler0=[0,np.pi/2,np.pi/2]
+        
+        if hasattr(euler[0],'__len__'):
+            euler=[euler0,*euler]
+        else:
+            euler=[euler0,euler]
     
     
     delta=Azz
@@ -600,6 +616,23 @@ def g(es,i:int,gxx:float=2.0023193,gyy:float=2.0023193,gzz:float=2.0023193,euler
     
     q=np.argsort(np.abs([gxx,gyy,gzz]))
     gyy,gxx,gzz=np.array([gxx,gyy,gzz])[q]
+    if not(np.all(q==[1,0,2])):
+        if np.all(q==[0,1,2]):
+            euler0=[0,np.pi,np.pi/2]
+        elif np.all(q==[1,2,0]):
+            euler0=[np.pi,np.pi/2,0]
+        elif np.all(q==[2,1,0]):
+            euler0=[np.pi/2,np.pi/2,np.pi]
+        elif np.all(q==[2,0,1]):
+            euler0=[3*np.pi/2,np.pi/2,3*np.pi/2]
+        elif np.all(q==[0,2,1]):
+            euler0=[0,np.pi/2,np.pi/2]
+        
+        if hasattr(euler[0],'__len__'):
+            euler=[euler0,*euler]
+        else:
+            euler=[euler0,euler]
+    
     
     mub=-9.2740100783e-24/6.62607015e-34  #Bohr magneton in Hz. Take positive g-values by convention
     

@@ -531,13 +531,16 @@ def tumbling(tc:float,q:int=3):
     assert q>=0 and q<=11,"q must be an integer between 0 and 11"
     
 
-    n0=[4,10,20,30,66,100,144,168,256,320,678,2000]
-    nc0=[3,5,6,6,6,6,6,6,6,6,6,6]
+    n0=[3,4,10,20,30,66,100,144,168,256,320,678,2000]
+    nc0=[2,3,5,6,6,6,6,6,6,6,6,6,6]
 
     n=n0[q]
     nc=nc0[q]
 
     if q==0:
+        beta=[0,np.pi/2,np.pi/2]
+        gamma=[0,0,np.pi/2]
+    elif q==1:
         tetra=np.arccos(-1/3)
         beta=np.array([0,tetra,tetra,tetra])
         gamma=np.array([0,0,2*np.pi/3,4*np.pi/3])

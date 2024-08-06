@@ -417,6 +417,8 @@ class Liouvillian():
         self.relax_info=[]
         self._Lrelax=None
         self._LrelaxOS.clear()
+        if hasattr(self,'recovery'):
+            delattr(self,'recovery')
         return self
         
     def validate_relax(self):
