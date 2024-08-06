@@ -500,7 +500,58 @@ def SetupTumbling(expsys,tc:float,q:int=3):
                 ex_list[-1].set_inter(**kwargs)
                 
     return ex_list,kex
+
+def SetupTetraHop(expsys,tc:float,n:int=4):
+    """
+    Sets up a system undergoing tetrahedral hopping with from 2-4 sites
+
+    Parameters
+    ----------
+    expsys : TYPE
+        SLEEPY expsys
+    tc : float
+        Desired correlation time of tumbling.
+    n  : number of tetrahedral sites in exchange (2-4)
+
+    Returns
+    -------
+    ex_list : list
+        list of expsys
+    kex : np.array
+        Exchange matrix
+    """
             
+    ex_list,kex=SetupTumbling(expsys, tc,q=1)
+    if n==4:return kex,ex_list
+    return ex_list[4-n:],nSite_sym(n=n, tc=tc)
+
+def Setup3siteSym(expsys,tc:float,phi:float=np.arccos(-1/3)):
+    """
+    Sets up a system undergoing 3-site symmetric hopping
+
+    Parameters
+    ----------
+    expsys : TYPE
+        SLEEPY expsys
+    tc : float
+        Desired correlation time of tumbling.
+    n  : Desired opening angle of hopping
+
+    Returns
+    -------
+    ex_list : list
+        list of expsys
+    kex : np.array
+        Exchange matrix
+    """
+    ex_list,kex=SetupTetraHop(expsys,tc=tc,n=3)
+    
+    for ex in ex_list:
+        for inter in ex.inter:
+            if 'euler' in inter:
+                inter['euler'][-1][1]=phi
+                
+    return ex_list,kex
 
 def tumbling(tc:float,q:int=3):
     """
