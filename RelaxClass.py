@@ -76,7 +76,8 @@ class RelaxClass():
     @property        
     def L(self):
         if self._L.reduced:
-            self._L._L=self._L._L[self._L._index]
+            # self._L._L=self._L._L[self._L._index]
+            self._L._L._index=self._L._index
             return self._L._L
         else:
             return self._L

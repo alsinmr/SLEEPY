@@ -62,6 +62,29 @@ class Propagator():
     def block(self):
         return self.L.block
     
+    def getBlock(self,block):
+        """
+        Returns a object that has been reduced for a particular block. Provide
+        the logical index for the given block.
+
+        Parameters
+        ----------
+        block : np.array (bool type)
+            Logical array specifying the block to propagate.
+
+        Returns
+        -------
+        Propagator
+
+        """
+        out=copy(self)
+        out.L=self.L.getBlock(block)
+        if self.calculated:
+            for k,U in enumerate(self.U):
+                out.U[k]=U[block][:,block]
+                
+        return out
+            
     def eig(self,back_calc:bool=True):
         """
         Calculates eigenvalues/eigenvectors of all stored propagators. Stored for

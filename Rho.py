@@ -206,20 +206,16 @@ class Rho():
         if self.L is None:return None
         return self.L.block
     
-    def Blocks(self,*seq):
+    def Blocks(self,*seq_U):
         """
         Returns a list of logical indices, where each list element consists of
         a block of the Liouvillian that needs to be calculated. Note that not
         all blocks need to be calculated, but this depends on the value of the
         current density matrix and the detection operator.
-        
-        Block propagation is only implemented for the DetProp function, and 
-        disables operation on the density matrix, since we no longer have the
-        full state of the system when using block propagation.
 
         Parameters
         ----------
-        seq : TYPE
+        seq_U : Propagators or sequences to be used in the block-diagonalization
             DESCRIPTION.
 
         Returns
@@ -228,27 +224,38 @@ class Rho():
             DESCRIPTION.
 
         """
-        if self.L is None:self.L=seq[0].L  #Initialize self if necessary
+        if self.L is None:self.L=seq_U[0].L  #Initialize self if necessary
         
-        ini_fields=copy(seq[0].rf.fields) #Store initial field settings
+        
+        ini_fields=copy(self.L.rf.fields) #Store initial field settings
+        rf=self.L.rf
+        for k in rf.fields:rf.add_field(k) #Set all fields first to zero
         
         x=np.zeros(self.L.shape,dtype=bool)
-        for seq0 in seq:
-            
-            for k in seq0.rf.fields:seq0.rf.add_field(k) #Set all fields first to zero
-            
-            for k,v1 in enumerate(seq0.v1):
-                if np.any(v1):seq0.rf.add_field(k,v1=1) #Turn field on
-                x+=self.L.Lrf.astype(bool)  #Add it to the logical matrix
-                seq0.rf.add_field(k) #Turn field off
-            
+        for seq0 in seq_U:
+            if hasattr(seq0,'rf') or not(seq0.calculated):
+                v10=seq0.v1 if hasattr(seq0,'rf') else seq0.U['v1']
+                    
+                for k,v1 in enumerate(v10):
+                    if np.any(v1):rf.add_field(k,v1=1) #Turn field on
+                    x+=self.L.Lrf.astype(bool)  #Add it to the logical matrix
+                    rf.add_field(k) #Turn field off
+            else:
+                x+=np.abs(seq0[0])>1e-5  #Tolerance ok?
+                # We try to avoid any weird orientations that are missing cross terms so check a few orientations
+                x+=np.abs(seq0[len(self.L)//2])>1e-5
+                x+=np.abs(seq0[len(self.L)//3])>1e-5  #Tolerance ok?
+                x+=np.abs(seq0[len(self.L)//4])>1e-5  #Tolerance ok?
+
+        
+        rf.fields=ini_fields
+        
         x+=self.L[0].L(0).astype(bool)
         # We try to avoid any weird orientations that are missing cross terms so check a few orientations
         x+=self.L[len(self.L)//2].L(0).astype(bool)
         x+=self.L[len(self.L)//3].L(0).astype(bool)
         x+=self.L[1*len(self.L)//4].L(0).astype(bool)
         
-        seq[0].rf.fields=ini_fields
         
         B=BlockDiagonal(x)
         blocks=[]
@@ -276,7 +283,7 @@ class Rho():
         """
         
         rho=copy(self)
-        rho.L=self.L.getBlock(block)
+        rho._L=self.L.getBlock(block)
         rho._rho0=[rho0[block] for rho0 in self._rho0] if isinstance(self._rho0,list) else self._rho0[block]
         # rho._rho0=self._rho0[block]
         rho._detect=[d[block] for d in self._detect]
@@ -285,11 +292,9 @@ class Rho():
         rho._taxis=[]
         rho.Reduce=False
         
-        
-        
         return rho
     
-    def ReducedSetup(self,*seq):
+    def ReducedSetup(self,*seq_U):
         """
         Sets up reduced matrices for the density matrix and all provided sequences.
         Note that one should prepare all sequences to be used in the simulation
@@ -302,12 +307,14 @@ class Rho():
 
         Returns
         -------
-        None.
+        tuple
+            rho,*seq_U_red
+            Reduced density matrix and reduced sequences or propagators
 
         """
-        block=np.sum(self.Blocks(*seq),axis=0).astype(bool)
+        block=np.sum(self.Blocks(*seq_U),axis=0).astype(bool)
         rho=self.getBlock(block)
-        seq_red=[s.getBlock(block) for s in seq]
+        seq_red=[s.getBlock(block) for s in seq_U]
         
         if Defaults['verbose']:
             if block.sum()==0:
@@ -316,13 +323,16 @@ class Rho():
                 if block.sum()==len(block):
                     rho.Reduced=False
                     rho.Reduce=False
-                    return (rho,*seq)
+                    return (rho,*seq_U)
                 else:
                     print(f'State-space reduction: {block.__len__()}->{block.sum()}')
-                
+        
+        for x in seq_red:x.L=rho.L
         
         return (rho,*seq_red)
     
+    
+    # Is this function used anywhere?
     def _reduce(self,*seq):
         """
         Reduces rho (self) and all provided sequences for faster propagation.
@@ -622,6 +632,12 @@ class Rho():
         self._detect=[self.Op2vec(self.strOp2vec(det,detect=True),detect=True) for det in self.detect]
         self._phase_accum0=np.zeros(self.expsys.nspins)
         self.reset()
+        if self.L.reduced:
+            warnings.warn('Reduced Liouvillian applied to uninitialized propagator. Make sure reduction was perfomed with same Rho')
+            rho=self.getBlock(self.L.block)
+            self.__dict__=rho.__dict__
+            
+        
         
     def reset(self):
         """
