@@ -630,6 +630,10 @@ class Rho():
         else:
             self._rho0=self.Op2vec(self.strOp2vec(self.rho0))
         self._detect=[self.Op2vec(self.strOp2vec(det,detect=True),detect=True) for det in self.detect]
+        for k,det in enumerate(self._detect):
+            if np.any(np.isnan(det)):
+                warnings.warn(f'Detector {k} is not valid')
+                
         self._phase_accum0=np.zeros(self.expsys.nspins)
         self.reset()
         if self.L.reduced:
@@ -1457,7 +1461,7 @@ class Rho():
         self.apodize=ap
         return ax
             
-    def extract_decay_rates(self,U,det_num:int=0,avg:bool=True,pwdavg:bool=False,reweight=False):
+    def extract_decay_rates(self,U,det_num:int=0,avg:bool=True,pwdavg:bool=False):
         """
         Uses eigenvalue decomposition to determine all relaxation rates present
         for a density matrix, rho, and their corresponding amplitudes, based
@@ -1514,7 +1518,16 @@ class Rho():
         if not(avg):assert not(pwdavg),"If avg is False, then pwdavg must also be false"
         
         if self.L is None:self.L=U.L
+
+        if not(self.reduced):
+            r,U=self.ReducedSetup(U)
+            return r.extract_decay_rates(U,det_num=det_num,avg=avg,pwdavg=pwdavg)
         
+        if not(hasattr(U,'calcU')):  #Sequence instead of U was provided
+            U=U.U()   #Calculate U from sequence
+            
+
+
 
         R=np.zeros([U.L.pwdavg.N,U.shape[0]],dtype=float)
         f=np.zeros([U.L.pwdavg.N,U.shape[0]],dtype=float)
@@ -1547,7 +1560,7 @@ class Rho():
             # R/=A.sum(-1)
             # A=A.sum(-1)
             if pwdavg:
-                wt=U.L.pwdavg.weight*(1 if reweight else A)
+                wt=U.L.pwdavg.weight*A
                 wt/=wt.sum()
                 Ravg=(R*wt).sum()
                 return Ravg
