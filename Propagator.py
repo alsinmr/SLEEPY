@@ -135,9 +135,27 @@ class Propagator():
                     # Actually....it's totally wrong to do this. Ignore the above
                     # I'm leaving my comments in case I remember why
                     # I thought this was a good idea...oops
+                    #
+                    # And now I don't know why I thought it was wrong...I think
+                    # I'm mixing up what the Liouvillian and the propagator
+                    # should do.
                     
+                    # And a final comment: I think it's always ok for the full
+                    # matrix to set one state to have an eigenvalue of 1, 
+                    # representing the equilibrium position of the density
+                    # matrix. This is analogous to the null-space of the 
+                    # Liouvillian (which, btw, if only coherent, then has
+                    # a larger null-space, but once relaxation/dynamics come
+                    # in, then the null-space seems to reduce to 1 element)
                     
-                    i=np.argmax(d)
+                    # However, it is not correct under irradiation to force
+                    # the corresponding eigenvector to be equal to the equilibrium
+                    # density operator. In particular, it destroys DNP
+                    # transfers.
+                    
+                    i=np.argmax(d.real)
+                    
+                    # The
                     # v[:,i]=self.L.rho_eq(pwdindex=k)
                     # v[:,i]/=np.sqrt((v[:,i].conj()*v[:,i]).sum())
                     d[i]=1.

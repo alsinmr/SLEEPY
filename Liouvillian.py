@@ -370,6 +370,8 @@ class Liouvillian():
         if hasattr(self,'recovery'):
             warnings.warn('recovery should always be the last term added to Lrelax')
         
+        if Type in ['DynamicThermal']:OS=True   #List methods only in RelaxClass here
+        
         if OS:
             getattr(self.LrelaxOS,Type)(**kwargs)
             kwargs.update({'OS':OS})

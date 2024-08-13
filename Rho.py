@@ -290,6 +290,7 @@ class Rho():
         rho._rho=[r[block] for r in self._rho]
         rho._Ipwd=[[[] for _ in range(len(self._detect))] for _ in range(len(self.L))]
         rho._taxis=[]
+        self._phase_accum=list()
         rho.Reduce=False
         
         return rho

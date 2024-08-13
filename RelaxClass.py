@@ -24,6 +24,9 @@ class RelaxClass():
     will not be called. Calling RelaxClass() will run all stored methods, or
     access the cache if methods have already been run for that orientation.
     """
+    
+    h=6.62607015e-34
+    
     def __init__(self,L):
         """
         Initializes the Relaxation Class. This 
@@ -46,6 +49,7 @@ class RelaxClass():
         self.methods=[]
         self.clear_cache()
         self.Peq=False
+        self._deactivate=False
     
     def __call__(self,step:int):
         if not(self.active):return 0
@@ -178,18 +182,41 @@ class RelaxClass():
         
         for i0,i1 in index:
             DelE=E[i0]-E[i1]
-            rat=np.exp(DelE/(1.380649e-23*self.T_K))
+            rat=np.exp(DelE/(1.380649e-23*155.15))
             
-            Del=M[i0,i1]*(1-rat)/(1+rat)*np.sign(M[i0,i1])
+            # Del=M[i0,i1]*(1-rat)/(1+rat)*np.sign(M[i0,i1])
+            
             #Suppose Del should b positive. 
-            # Del is corrected above
-            # Case 1: i0 has switched sign
+            #Del is corrected above
+            #Case 1: i0 has switched sign
                 
                 
-            out[i0,i1]=-Del*M[i0,i1]/np.abs(M[i0,i1])
-            out[i1,i1]+=Del
-            out[i1,i0]=Del*M[i0,i1]/np.abs(M[i0,i1])
-            out[i0,i0]+=-Del
+            # out[i0,i1]=-Del*M[i0,i1]/np.abs(M[i0,i1])
+            # out[i1,i1]+=Del
+            # out[i1,i0]=Del*M[i0,i1]/np.abs(M[i0,i1])
+            # out[i0,i0]+=-Del
+            
+            
+            Del=M[i0,i1]*(1-rat)/(1+rat)
+            
+            out[i0,i0]-=np.abs(Del)
+            out[i1,i1]+=np.abs(Del)
+            out[i0,i1]=-Del
+            out[i1,i0]=Del.conj()
+
+            # print(M[i0,i1])
+
+            #This one seems to break DynamicThermal
+            # out[i0,i0]+=M[i0,i0]*(1-rat)/(1+rat)
+            # out[i1,i1]-=M[i1,i1]*(1-rat)/(1+rat)
+            # out[i0,i1]=-M[i0,i1]*(1-rat)/(1+rat)
+            # out[i1,i0]=M[i1,i0]*(1-rat)/(1+rat)
+            
+            # out[i0,i0]-=Del
+            # out[i1,i1]+=Del
+            # out[i0,i1]=-Del
+            # out[i1,i0]=Del
+            
             
         return out
         
@@ -292,7 +319,7 @@ class RelaxClass():
             
             
             if Thermal:
-                out+=self.Lindblad(out, v*6.626e-34)
+                out+=self.Lindblad(out, v*self.h)
                 
             out=Ui@out@U
             
@@ -385,6 +412,79 @@ class RelaxClass():
             Lrelax[k*n**2:(k+1)*n**2][:,k*n**2:(k+1)*n**2]=out
         
         return Lrelax
+    
+    def DynamicThermal(self,step:int=None):
+        """
+        Attempts to thermalize dynamic processes by ???
+
+        Parameters
+        ----------
+        step : int, optional
+            DESCRIPTION. The default is None.
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        if step is None:
+            # Check to see if method is already here for this spin
+            for k,m in enumerate(self.methods):
+                if m['method']=='DynamicThermal':
+                    self.methods.pop(k)
+                    break
+            self.Peq=True
+                
+            self.methods.append({'method':'DynamicThermal'})
+            return self.clear_cache()
+        
+        
+        L=self.L
+        
+        L0=L.Lcoh(step)+L.Lex+L.Lrelax
+        
+        # a,b=np.linalg.eig(L0)
+        
+        # i=np.argmin(np.abs(a))
+        # req=L.rho_eq(step=step)
+        # j=np.argmax(req)
+        # b[:,i]=req*np.sign(req[j]/b[j,i])
+        # #b[:,i]/=np.sqrt((np.abs(b[:,i])**2).sum())
+        # a[i]=0
+        
+        # out=b@np.diag(a)@np.linalg.pinv(b)-L0
+        
+
+        recovery=-L0@L.rho_eq(step=step)
+        n=L.H[0].shape[0]
+        N=len(L.H)
+        one=np.concatenate([np.eye(n).reshape(n**2) for _ in range(N)])
+        
+        out=np.array([one*r for r in recovery])
+
+
+        
+        return out
+        
+        # L=self.L
+        
+        # n=L.H[0].shape[0]**2
+        # U0=np.zeros(L.shape,dtype=Defaults['ctype'])
+        # U0i=np.zeros(L.shape,dtype=Defaults['ctype'])
+        # v0=np.zeros(L.shape[0])
+
+        # for k,H in enumerate(L.H):
+        #     U,Ui,v=H.eig2L(step)
+        #     U0[k*n:(k+1)*n][:,k*n:(k+1)*n]=U
+        #     U0i[k*n:(k+1)*n][:,k*n:(k+1)*n]=Ui
+        #     v0[k*n:(k+1)*n]=v
+            
+        # Lex=U0@L.Lex@U0i
+        # kasym=self.Lindblad(Lex, v0*self.h)
+        
+        # return U0i@kasym@U0
+            
         
     def plot(self,what:str='L',cmap:str=None,mode:str='log',colorbar:bool=True,
              step:int=0,block:int=None,ax=None) -> plt.axes:
