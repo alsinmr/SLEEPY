@@ -379,7 +379,8 @@ class Sequence():
             Initial time relative to the sequence start. That is, t0 tells where
             in the rotor period to start, and t0_seq tells where in the sequence
             to start. Note that if t0_seq is greater than seq.Dt, then the
-            modulo of t0_seq%seq.Dt is used
+            modulo of t0_seq%seq.Dt is used. Note that if sequence is cyclic,
+            then an unspecified t0_seq will default to t0. 
 
         Returns
         -------
