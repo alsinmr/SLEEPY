@@ -239,9 +239,9 @@ class Propagator():
             warnings.warn(f'\nMatrix blocks do not match. This is almost always wrong')
         
         if self.pwdavg:
-            assert U.pwdavg,"Both propagators should have a powder average or bot not"
+            assert U.pwdavg,"Both propagators should have a powder average or both not"
         else:
-            assert not(U.pwdavg),"Both propagators should have a powder average or bot not"
+            assert not(U.pwdavg),"Both propagators should have a powder average or both not"
 
         if U is self:
             Uout=[U1@U1 for U1 in self]
