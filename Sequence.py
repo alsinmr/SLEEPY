@@ -324,7 +324,7 @@ class Sequence():
             a.plot(t*1e6,np.zeros(t.shape),color='black',linewidth=1.5)
             a.text(0,0.95*self.v1.max()/1e3,s if self._spin_specific else self.expsys.Nucs[s])
             a.set_ylabel(r'$v_1$ / kHz')
-            a.set_ylim([0,self.v1.max()*1.1/1e3])
+            a.set_ylim([0,self.v1.max()*1.1/1e3 if self.v1.max()>0 else 100])
             
             for k,t0 in enumerate(self.t[:-1]):
                 
