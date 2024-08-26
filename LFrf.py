@@ -122,7 +122,7 @@ class LFrf():
             DESCRIPTION.
 
         """
-        return 1/(self.v[self.v_index][0]*self.n_steps)
+        return np.abs(1/(self.v[self.v_index][0]*self.n_steps))
 
 #%% Functions to generate short time step propagators
     @property

@@ -183,7 +183,7 @@ class RelaxClass():
         
         for i0,i1 in index:
             DelE=E[i0]-E[i1]
-            rat=np.exp(DelE/(1.380649e-23*155.15))
+            rat=np.exp(DelE/(1.380649e-23*self.T_K))
             
             # Del=M[i0,i1]*(1-rat)/(1+rat)*np.sign(M[i0,i1])
             
@@ -384,7 +384,7 @@ class RelaxClass():
         
         Lrelax=np.zeros([n**2*N,n**2*N],dtype=Defaults['ctype'])
         
-        nt=(np.prod(self.Op.Mult)//(self.Op.Mult[i]))**2*(self.Op.Mult[i]**2-self.Op.Mult[i])  #Number of T2 terms
+        #nt=(np.prod(self.Op.Mult)//(self.Op.Mult[i]))**2*(self.Op.Mult[i]**2-self.Op.Mult[i])  #Number of T2 terms
         
         nt=(np.prod(self.Op.Mult)//(self.Op.Mult[i]))**2*(self.Op.Mult[i]-1)  #Number of T1 transitions
         
@@ -443,18 +443,18 @@ class RelaxClass():
         
         L=self.L
         
-        L0=L.Lcoh(step)+L.Lex+L.Lrelax
+        L0=L.Lcoh(step)+L.Lex
         
-        # a,b=np.linalg.eig(L0)
+    #     # a,b=np.linalg.eig(L0)
         
-        # i=np.argmin(np.abs(a))
-        # req=L.rho_eq(step=step)
-        # j=np.argmax(req)
-        # b[:,i]=req*np.sign(req[j]/b[j,i])
-        # #b[:,i]/=np.sqrt((np.abs(b[:,i])**2).sum())
-        # a[i]=0
+    #     # i=np.argmin(np.abs(a))
+    #     # req=L.rho_eq(step=step)
+    #     # j=np.argmax(req)
+    #     # b[:,i]=req*np.sign(req[j]/b[j,i])
+    #     # #b[:,i]/=np.sqrt((np.abs(b[:,i])**2).sum())
+    #     # a[i]=0
         
-        # out=b@np.diag(a)@np.linalg.pinv(b)-L0
+    #     # out=b@np.diag(a)@np.linalg.pinv(b)-L0
         
 
         recovery=-L0@L.rho_eq(step=step)

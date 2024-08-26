@@ -163,37 +163,37 @@ def T2(expsys,i:int,T2:float):
     
     return out
 
-def Thermal(L,step):
-    if L.reduced:
-        block=L.block
-        L=L._L
-    else:
-        block=None
+# def Thermal(L,step):
+#     if L.reduced:
+#         block=L.block
+#         L=L._L
+#     else:
+#         block=None
     
-    out=np.zeros(L[0].Ln(0).shape,dtype=Defaults['ctype'])
-    index=np.argwhere(L.Lrelax-np.diag(np.diag(L.Lrelax)))
-    index.sort(-1)
-    index=np.unique(index,axis=0)
+#     out=np.zeros(L[0].Ln(0).shape,dtype=Defaults['ctype'])
+#     index=np.argwhere(L.Lrelax-np.diag(np.diag(L.Lrelax)))
+#     index.sort(-1)
+#     index=np.unique(index,axis=0)
         
-    rho_eq=L.rho_eq(pwdindex=L._index,step=step,sub1=False)
-    E=L.Energy2(step)
-    for i0,i1 in index:
-        if rho_eq[i0]==0 or rho_eq[i1]==0 or True:
-            DelE=E[i0]-E[i1]
-            # DelE=(L.Energy[i0]-L.Energy[i1])
-            rat=np.exp(DelE/(1.380649e-23*L.expsys.T_K))
-        else:
-            rat=rho_eq[i0]/rho_eq[i1]
-        Del=L.Lrelax[i0,i1]*(1-rat)/(1+rat)
-        out[i0,i1]=-Del
-        out[i1,i1]+=Del
-        out[i1,i0]=Del
-        out[i0,i0]+=-Del
+#     rho_eq=L.rho_eq(pwdindex=L._index,step=step,sub1=False)
+#     E=L.Energy2(step)
+#     for i0,i1 in index:
+#         if rho_eq[i0]==0 or rho_eq[i1]==0 or True:
+#             DelE=E[i0]-E[i1]
+#             # DelE=(L.Energy[i0]-L.Energy[i1])
+#             rat=np.exp(DelE/(1.380649e-23*L.expsys.T_K))
+#         else:
+#             rat=rho_eq[i0]/rho_eq[i1]
+#         Del=L.Lrelax[i0,i1]*(1-rat)/(1+rat)
+#         out[i0,i1]=-Del
+#         out[i1,i1]+=Del
+#         out[i1,i0]=Del
+#         out[i0,i0]+=-Del
         
-    if block is None:
-        return out
-    else:
-        return out[block][:,block]
+#     if block is None:
+#         return out
+#     else:
+#         return out[block][:,block]
     
 
 def recovery(expsys,L):
@@ -266,10 +266,6 @@ def recovery(expsys,L):
     L.recovery=out
     return out
 
-# (1-(1-rat)/(1+rat))/(1+(1-rat)/(1+rat))
-# = (1+rat-(1-rat))/(1+rat+(1-rat))
-# = 2*rat/2=rat
-    
 
 #%% Spin-swap/spin exchange
 def SpinExchange(expsys,i:list,tc:float):
