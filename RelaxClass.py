@@ -7,6 +7,7 @@ import numpy as np
 from .Tools import Ham2Super,BlockDiagonal
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
+from . import Constants
 
 class RelaxClass():
     """
@@ -25,7 +26,8 @@ class RelaxClass():
     access the cache if methods have already been run for that orientation.
     """
     
-    h=6.62607015e-34
+    h=Constants['h']
+    # h=6.62607015e-34
     
     def __init__(self,L):
         """
@@ -56,6 +58,7 @@ class RelaxClass():
         
         assert self.L.sub,"Calling LrelaxOS (RelaxClass) requires indexing to a specific element of the power average"
         
+        
         if Defaults['cache']:
             cache=self._cache[self.L._index][step%self.L.expsys.n_gamma]
             if cache is not None:
@@ -72,7 +75,7 @@ class RelaxClass():
             
             out+=fun(step=step,**kwargs)[self.block][:,self.block]
             
-        if Defaults['cache']:
+        if Defaults['cache'] and False:
             self._cache[self.L._index][step%self.L.expsys.n_gamma]=out
             
         return out
@@ -127,6 +130,7 @@ class RelaxClass():
 
         """
         self.methods=[]
+        self.Peq=False
         self.clear_cache()
     
     def clear_cache(self):
@@ -183,7 +187,7 @@ class RelaxClass():
         
         for i0,i1 in index:
             DelE=E[i0]-E[i1]
-            rat=np.exp(DelE/(1.380649e-23*self.T_K))
+            rat=np.exp(DelE/(Constants['kB']*self.T_K))
             
             # Del=M[i0,i1]*(1-rat)/(1+rat)*np.sign(M[i0,i1])
             
@@ -416,7 +420,7 @@ class RelaxClass():
     
     def DynamicThermal(self,step:int=None):
         """
-        Attempts to thermalize dynamic processes by ???
+        Attempts to thermalize dynamic processes.
 
         Parameters
         ----------
@@ -428,7 +432,6 @@ class RelaxClass():
         None.
 
         """
-        
         if step is None:
             # Check to see if method is already here for this spin
             for k,m in enumerate(self.methods):
@@ -443,7 +446,16 @@ class RelaxClass():
         
         L=self.L
         
-        L0=L.Lcoh(step)+L.Lex
+
+        L0=L.Lcoh(step)+L.Lex+L.Lrelax
+        
+        _=L.rho_eq(Hindex=0,step=0)
+        _=L.Lcoh(step)
+        
+        # a,b=np.linalg.eig(L0)
+        # i=np.argmin(np.abs(a))
+        # b[:,i]=0
+        # Del=L0-b@np.diag(a)@np.linalg.pinv(b)
         
     #     # a,b=np.linalg.eig(L0)
         
@@ -458,33 +470,14 @@ class RelaxClass():
         
 
         recovery=-L0@L.rho_eq(step=step)
+        
         n=L.H[0].shape[0]
         N=len(L.H)
         one=np.concatenate([np.eye(n).reshape(n**2) for _ in range(N)])
-        
         out=np.array([one*r for r in recovery])
-
-
+        
         
         return out
-        
-        # L=self.L
-        
-        # n=L.H[0].shape[0]**2
-        # U0=np.zeros(L.shape,dtype=Defaults['ctype'])
-        # U0i=np.zeros(L.shape,dtype=Defaults['ctype'])
-        # v0=np.zeros(L.shape[0])
-
-        # for k,H in enumerate(L.H):
-        #     U,Ui,v=H.eig2L(step)
-        #     U0[k*n:(k+1)*n][:,k*n:(k+1)*n]=U
-        #     U0i[k*n:(k+1)*n][:,k*n:(k+1)*n]=Ui
-        #     v0[k*n:(k+1)*n]=v
-            
-        # Lex=U0@L.Lex@U0i
-        # kasym=self.Lindblad(Lex, v0*self.h)
-        
-        # return U0i@kasym@U0
             
         
     def plot(self,what:str='L',cmap:str=None,mode:str='log',colorbar:bool=True,

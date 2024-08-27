@@ -112,6 +112,7 @@ class Liouvillian():
     def clear_cache(self):
         self._Ln_H=None
         self._PropCache.reset()
+        if self._LrelaxOS is not None:self.LrelaxOS.clear_cache()
         return self
     
     @property
@@ -279,6 +280,7 @@ class Liouvillian():
 
         """
         out=copy(self)
+        out._LrelaxOS=copy(out.LrelaxOS)
         
         out.H=[H0[i] for H0 in self.H]
         out._Ln=None
@@ -421,6 +423,7 @@ class Liouvillian():
         self._LrelaxOS.clear()
         if hasattr(self,'recovery'):
             delattr(self,'recovery')
+        self.clear_cache()
         return self
         
     def validate_relax(self):
@@ -523,8 +526,13 @@ class Liouvillian():
         out=np.zeros(self.shape,dtype=self._ctype)
         q=np.prod(self.H[0].shape)
         for k,H0 in enumerate(self.H):
+            # TODO The next line should not be necessary. H0 should automatically be updated to its index
+            # Maybe somewhere we just changed the index instead of calling for the specific item
+            
+            H0=H0[H0._index] 
             out[k*q:(k+1)*q][:,k*q:(k+1)*q]=H0.Ln(n)
         out*=-1j*2*np.pi
+        
         
         # if self._Ln_H is not None:self._Ln_H[self._index][n+2]=out
         
@@ -620,8 +628,8 @@ class Liouvillian():
         # return np.sum([Ln0*ph**(-m) for Ln0,m in zip(Ln,range(-2,3))],axis=0)+self.Lrf
     
         ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
-        return np.sum([self.Ln_H(m)*(ph**(-m)) for m in range(-2,3)],axis=0)   
-    
+        out=np.sum([self.Ln_H(m)*(ph**(-m)) for m in range(-2,3)],axis=0)   
+        return out
     
     def U(self,Dt:float=None,t0:float=None,calc_now:bool=False):
         """
@@ -1254,7 +1262,7 @@ class Liouvillian():
             out+='\nHamiltonians are coupled by exchange matrix:\n\t'
             out+=self.kex.__repr__().replace('\n','\n\t')
             
-        if np.any(self.Lrelax)>0:
+        if self.relax_info:
             out+='\n\nExplicit relaxation\n'
             for ri in self.relax_info:
                 if len(ri[1]):

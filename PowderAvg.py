@@ -172,6 +172,18 @@ class PowderAvg():
 
         """
         
+        if isinstance(i,slice):
+            out=copy(self)
+            out._gamma_incl=True
+            out.ngamma=1
+            out.alpha=self.alpha[i]
+            out.beta=self.beta[i]
+            out.gamma=self.gamma[i]
+            # out.N=1
+            out.weight=self.weight[i]
+            out.weight/=out.weight.sum()
+            
+            return out
         out=copy(self)
         out._gamma_incl=True
         out.ngamma=1

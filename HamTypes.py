@@ -14,6 +14,7 @@ from . import Defaults
 from .Tools import NucInfo
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
+from . import Constants
 
 class Ham1inter():
     def __init__(self,M=None,H=None,T=None,isotropic=False,delta=0,eta=0,euler=[0,0,0],
@@ -634,7 +635,8 @@ def g(es,i:int,gxx:float=2.0023193,gyy:float=2.0023193,gzz:float=2.0023193,euler
             euler=[euler0,euler]
     
     
-    mub=-9.2740100783e-24/6.62607015e-34  #Bohr magneton in Hz. Take positive g-values by convention
+    mub=Constants['mub']
+    # -9.2740100783e-24/6.62607015e-34  #Bohr magneton in Hz. Take positive g-values by convention
     
     avg1=mub*avg-NucInfo('e-')            #Values in Hz. Note that we take this in the rotating frame
     delta=gzz*mub*es.B0

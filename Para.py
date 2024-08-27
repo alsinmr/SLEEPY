@@ -63,7 +63,9 @@ class ParallelManager():
         out._index=i%len(self)
         out.L=self.L[out._index]
         if self.LrelaxOS is not None:
-            self.LrelaxOS.L=out.L
+            # This is a bit tricky. We have to be careful to get an independent copy of LrelaxOS
+            # Otherwise, it seems like we end up with the same instance for all orientations
+            out.LrelaxOS=copy(out.L.LrelaxOS)
         return out
         
     def __len__(self):
@@ -130,12 +132,12 @@ class ParallelManager():
             out=[(pm.Ln,self.L.Lrf,pm.LrelaxOS,*self.pars,self.sm0,self.sm1,self.index,self.step_index,self.PropCache.SZ) for pm in self]
         else:
             out=((pm.Ln,self.L.Lrf,pm.LrelaxOS,*self.pars,self.sm0,self.sm1,self.index,self.step_index,self.PropCache.SZ) for pm in self)
+        
         # TODO why is the next line necessary?
         # There's some failure to update reduced in LrelaxOS without it
         # self.L[0].LrelaxOS.reduced
         # print(self[0].L.reduced)
         return out
-        # FIGURE OUT HOW TO GET THE CACHE TO NON-PARALLEL PROCESSES!
 
     
     @property
