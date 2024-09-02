@@ -75,7 +75,7 @@ class RelaxClass():
             
             out+=fun(step=step,**kwargs)[self.block][:,self.block]
             
-        if Defaults['cache'] and False:
+        if Defaults['cache']:
             self._cache[self.L._index][step%self.L.expsys.n_gamma]=out
             
         return out
