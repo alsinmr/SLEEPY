@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+ # -*- coding: utf-8 -*-
 
 import numpy as np
 import warnings
@@ -199,7 +199,7 @@ class LFrf():
         I[:,0]/=2
         S=np.fft.fftshift(np.fft.fft(I,2*I.shape[1],axis=-1),axes=[-1])
         S/=I.shape[1]
-        f=1/(2*self.Dt0*nreps)*np.linspace(-1,1,S.shape[1])
+        f=1/(2*self.Dt0/nreps)*np.linspace(-1,1,S.shape[1])
         f-=(f[1]-f[0])/2
         
         return f,S
@@ -231,6 +231,7 @@ class LFrf():
         ax.plot(f/1e6,((S).imag.T))
         
         ax.set_xlabel('f / MHz')
+        ax.legend(('Abs','Real','Imag'))
         
         return ax
 
