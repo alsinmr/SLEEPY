@@ -154,9 +154,11 @@ class LFrf():
         if not(self.L.static):
             assert step is not None,"step required except for static measurements"
 
-        t0=step*self.taur/self.n_gamma
-        U0=self.seq.U(t0=t0)
-        
+            t0=step*self.taur/self.n_gamma
+            U0=self.seq.U(t0=t0)
+        else:
+            U0=self.seq.U()
+            
         p=self.Dt/U0.Dt if self.L.static else self.taur/self.n_gamma/U0.Dt
         
         warnings.filterwarnings("ignore", 
