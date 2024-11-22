@@ -32,3 +32,28 @@ def pwd_JCP59(q=3):
     weight*=1/weight.sum();
 
     return alpha,beta,gamma,weight
+
+def pwd_grid(n_alpha:int=50,n_beta:int=30):
+    """
+    Powder average with a grid of alpha and beta angles
+
+    Parameters
+    ----------
+    n_alpha : int, optional
+        Number of alpha angles. The default is 100.
+    n_beta : int, optional
+        Number of beta angles. The default is 50.
+
+    """
+    
+    alpha=np.arange(n_alpha)*2*np.pi/n_alpha
+    beta=np.arange(n_beta)*np.pi/n_beta
+    beta+=beta[1]/2
+    alpha,beta=np.meshgrid(alpha,beta)
+    alpha=alpha.flatten()
+    beta=beta.flatten()
+    weight=np.sin(beta)
+    weight/=weight.sum()
+    
+    return alpha,beta,weight
+    

@@ -9,6 +9,7 @@ Created on Mon Jul  5 10:14:04 2021
 import numpy as np
 import os
 from copy import copy
+import matplotlib.pyplot as plt
 from .Tools import D2,d2
 from . import PwdAvgFuns
 
@@ -38,7 +39,7 @@ class PowderAvg():
         self.n_gamma=n_gamma
         self.n_alpha=0
         self._gamma_incl=gamma_encoded 
-        self.gamma_encoded=gamma_encoded
+        self._gamma_encoded=gamma_encoded
         
         self._pwdpath=os.path.join(os.path.dirname(os.path.realpath(__file__)),'PowderFiles')
         self._inter=list()
@@ -51,7 +52,10 @@ class PowderAvg():
         self.__index=-1
         
 
-        
+    @property
+    def gamma_encoded(self):
+        return self._gamma_encoded
+    
     @property
     def alpha(self):
         if self._alpha is None:return
@@ -100,7 +104,7 @@ class PowderAvg():
         return self.n_alpha if self._gamma_incl else self.n_alpha*self.n_gamma
         
                 
-    def set_powder_type(self,PwdType,**kwargs):
+    def set_powder_type(self,PwdType,gamma_encoded=None,**kwargs):
         """
         Set the powder type. Provide the type of powder average 
         (either a filename in PowderFiles, or a function in this file, don't 
@@ -108,6 +112,7 @@ class PowderAvg():
         the powder files and the functions, then the files will be used
         """
         self._gamma=None
+        if gamma_encoded is not None:self._gamma_encoded=gamma_encoded
         self._gamma_incl=self.gamma_encoded
         pwdfile=os.path.join(self._pwdpath,PwdType+'.txt')
         if os.path.exists(pwdfile):
@@ -146,10 +151,44 @@ class PowderAvg():
                     print(fname[4:]+' with args: '+','.join(fun.__code__.co_varnames[:fun.__code__.co_argcount]))
         # self.n_alpha=len(self._alpha)
     
-    
-    
+    def plot(self,ax=None,beta_gamma:bool=False,color='darkcyan',s=3):
+        """
+        Plots the powder average. By default, plots the alpha and beta angles.
+        Changing beta_gamma to True will plot beta and gamma instead
 
+        Parameters
+        ----------
+        ax : TYPE, optional
+            Axis to plot the powder average onto. The default is None.
+        mode : TYPE, optional
+            DESCRIPTION. The default is 'alphabeta'.
+        color : Type, optional
+            color to plot with
+        s : float, optional
+            scatter size
+
+        Returns
+        -------
+        ax
+
+        """
+        if ax is None:ax=plt.figure().add_subplot(111,projection='3d')
         
+        beta=self.beta
+        theta=self.gamma if beta_gamma else self.alpha
+        x=np.sin(beta)*np.cos(theta)
+        y=np.sin(beta)*np.sin(theta)
+        z=np.cos(beta)
+        
+        ax.scatter3D(x,y,z,s=s,color=color)
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+        ax.set_zticklabels([])
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_zlabel('z')
+        ax.set_box_aspect([1,1,1])
+        return ax
     
     def __eq__(self,pwdavg):
         if pwdavg is self:return True
