@@ -280,7 +280,7 @@ def SpinExchange(expsys,i:list,tc:float):
     elements, but more is also possible. For example, methyl 3-site hopping
     would have a list such as [1,2,3]. This means that we either have the
     exchange process 1–>2, 2->3, and 3->1, or 1->3, 2->1, 3->2. The process must
-    always be cyclic, with equal populations.
+    always be cyclic, with equal populations/equal probabilities in both directions.
     
     The correlation time is the inverse of the mean hopping rate constant. For
     two- and three-site exchange, there is only one unique hopping rate, but for
