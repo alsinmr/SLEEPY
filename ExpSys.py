@@ -51,6 +51,11 @@ class ExpSys():
         self.vr=vr
         self.T_K=T_K
         self.rotor_angle=rotor_angle
+        
+        if isinstance(pwdavg,str):
+            pwdavg=PowderAvg(pwdavg)
+        elif isinstance(pwdavg,int):
+            pwdavg=PowderAvg(q=pwdavg)
         self.pwdavg=pwdavg
         self.n_gamma=n_gamma
         self.inter=[]
