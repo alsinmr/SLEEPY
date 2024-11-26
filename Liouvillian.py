@@ -1077,6 +1077,9 @@ class Liouvillian():
         """
     
         mode=mode.lower()
+        
+        if what=='Lrelax' and np.max(np.abs(self.Lrelax))==0 and self.LrelaxOS.active:
+            what='LrelaxOS'
     
         if ax is None:
             fig,ax=plt.subplots()

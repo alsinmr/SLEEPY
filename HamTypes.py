@@ -134,13 +134,10 @@ class Ham1inter():
         done, then we jump to the halfway point of the powder average
         
         what:
-        'L' : Full Liouvillian. Optionally specify time step
-        'Lrelax' : Full relaxation matrix
-        'Lrf' : Applied field matrix
-        'recovery' : Component of relaxation matrix responsible for magnetizaton recovery
-        'L0', 'L1', 'L2', 'L-1', 'L-2' : Liouvillians from different components of the
-        Hamiltonian (does not include relaxaton / RF)
-        
+        'H' : Full Hamiltonian. Optionally specify time step
+        'H0,H-1,H1,H-2,H2' : Component of Hamiltonian
+        'rf' : Applied field matrix
+         
         mode:
         'abs' : Colormap of the absolute value of the plot
         'log' : Similar to abs, but on a logarithmic scale
@@ -172,108 +169,110 @@ class Ham1inter():
         None.
 
         """
+
+        return HamPlot(self,what=what,cmap=cmap,mode=mode,colorbar=colorbar,
+                                step=step,ax=ax)
+        # mode=mode.lower()
     
-        mode=mode.lower()
-    
-        if ax is None:
-            fig,ax=plt.subplots()
-        else:
-            fig=None
+        # if ax is None:
+        #     fig,ax=plt.subplots()
+        # else:
+        #     fig=None
         
-        if cmap is None:
-            if mode == 'abs' or mode=='log':
-                cmap='YlOrRd'
-            elif mode == 'signed':
-                cmap='BrBG'
-            elif mode == 'spy':
-                cmap= 'binary'
+        # if cmap is None:
+        #     if mode == 'abs' or mode=='log':
+        #         cmap='YlOrRd'
+        #     elif mode == 'signed':
+        #         cmap='BrBG'
+        #     elif mode == 'spy':
+        #         cmap= 'binary'
                 
-        if what in ['H0','H1','H-1','H-2']:
-            x=self.Hn(int(what[1:]))
-        elif what=='H':
-            x=np.sum([self.Hn(k) for k in range(-2,3)],axis=0)
-        else:
-            x=getattr(self[len(self)//2] if self._index==-1 else self,what)
-            if hasattr(x,'__call__'):
-                x=x(step)
+        # if what in ['H0','H1','H-1','H-2']:
+        #     x=self.Hn(int(what[1:]))
+        # elif what=='H':
+        #     x=np.sum([self.Hn(k) for k in range(-2,3)],axis=0)
+        # else:
+        #     x=getattr(self[len(self)//2] if self._index==-1 else self,what)
+        #     if hasattr(x,'__call__'):
+        #         x=x(step)
         
-        sc0,sc1,sc=1,1,1
-        if mode=='abs':
-            x=np.abs(x)
-            sc=x.max()
-            x/=sc
-        elif mode in ['re','im']:
-            x=copy(x.real if mode=='re' else x.imag)
-            sc=np.abs(x).max()
-            x/=sc*2
-            x+=.5
-        elif mode=='spy':
-            cutoff=np.abs(x).max()*1e-6
-            x=np.abs(x)>cutoff
-        elif mode=='log':
-            x=np.abs(x)
-            i=np.logical_not(x==0)
-            if i.sum()!=0:
-                if x[i].min()==x[i].max():
-                    sc0=sc1=np.log10(x[i].max())
-                    x[i]=1
-                else:
-                    x[i]=np.log10(x[i])
-                    sc0=x[i].min()
-                    x[i]-=sc0
-                    x[i]+=x[i].max()*.2
-                    sc1=x[i].max()
-                    x[i]/=sc1
+        # sc0,sc1,sc=1,1,1
+        # if mode=='abs':
+        #     x=np.abs(x)
+        #     sc=x.max()
+        #     x/=sc
+        # elif mode in ['re','im']:
+        #     x=copy(x.real if mode=='re' else x.imag)
+        #     sc=np.abs(x).max()
+        #     x/=sc*2
+        #     x+=.5
+        # elif mode=='spy':
+        #     cutoff=np.abs(x).max()*1e-6
+        #     x=np.abs(x)>cutoff
+        # elif mode=='log':
+        #     x=np.abs(x)
+        #     i=np.logical_not(x==0)
+        #     if i.sum()!=0:
+        #         if x[i].min()==x[i].max():
+        #             sc0=sc1=np.log10(x[i].max())
+        #             x[i]=1
+        #         else:
+        #             x[i]=np.log10(x[i])
+        #             sc0=x[i].min()
+        #             x[i]-=sc0
+        #             x[i]+=x[i].max()*.2
+        #             sc1=x[i].max()
+        #             x[i]/=sc1
                     
-                    sc1=sc1/1.2+sc0
-        else:
-            assert 0,'Unknown plotting mode (Try "abs", "re", "im", "spy", or "log")'
+        #             sc1=sc1/1.2+sc0
+        # else:
+        #     assert 0,'Unknown plotting mode (Try "abs", "re", "im", "spy", or "log")'
             
-        hdl=ax.imshow(x,cmap=cmap,vmin=0,vmax=1)
+        # hdl=ax.imshow(x,cmap=cmap,vmin=0,vmax=1)
         
-        if colorbar and mode!='spy':
-            hdl=plt.colorbar(hdl)
-            if mode=='abs':
-                hdl.set_ticks(np.linspace(0,1,6))
-                hdl.set_ticklabels([f'{q:.2e}' for q in np.linspace(0,sc,6)])
-                hdl.set_label(r'$|H_{n,n}|$')
-            elif mode=='log':
-                hdl.set_ticks(np.linspace(0,1,6))
-                labels=['0',*[f'{10**q:.2e}' for q in np.linspace(sc0,sc1,5)]]
-                hdl.set_ticklabels(labels)
-                hdl.set_label(r'$|H_{n,n}|$')
-            elif mode in ['re','im']:
-                hdl.set_ticks(np.linspace(0,1,5))
-                labels=[f'{q:.2e}' for q in np.linspace(-sc,sc,5)]
-                hdl.set_ticklabels(labels)
-                hdl.set_label(r'$H_{n,n}$')
+        # if colorbar and mode!='spy':
+        #     hdl=plt.colorbar(hdl)
+        #     if mode=='abs':
+        #         hdl.set_ticks(np.linspace(0,1,6))
+        #         hdl.set_ticklabels([f'{q:.2e}' for q in np.linspace(0,sc,6)])
+        #         hdl.set_label(r'$|H_{n,n}|$')
+        #     elif mode=='log':
+        #         hdl.set_ticks(np.linspace(0,1,6))
+        #         labels=['0',*[f'{10**q:.2e}' for q in np.linspace(sc0,sc1,5)]]
+        #         hdl.set_ticklabels(labels)
+        #         hdl.set_label(r'$|H_{n,n}|$')
+        #     elif mode in ['re','im']:
+        #         hdl.set_ticks(np.linspace(0,1,5))
+        #         labels=[f'{q:.2e}' for q in np.linspace(-sc,sc,5)]
+        #         hdl.set_ticklabels(labels)
+        #         hdl.set_label(r'$H_{n,n}$')
             
-        labels=self.expsys.Op.Hlabels
-        if labels is not None:
-            def format_func(value,tick_number):
-                value=int(value)
-                if value>=len(labels):return ''
-                elif value<0:return ''
-                return r'$\left|'+labels[value].replace('$','')+r'\right\rangle$'
+        # labels=self.expsys.Op.Hlabels
+        # if labels is not None:
+        #     def format_func(value,tick_number):
+        #         value=int(value)
+        #         if value>=len(labels):return ''
+        #         elif value<0:return ''
+        #         return r'$\left|'+labels[value].replace('$','')+r'\right\rangle$'
 
             
-            ax.set_xticklabels('',rotation=-90)
-            ax.xaxis.set_major_formatter(plt.FuncFormatter(format_func))
+        #     ax.set_xticklabels('',rotation=-90)
+        #     ax.xaxis.set_major_formatter(plt.FuncFormatter(format_func))
             
-            def format_func(value,tick_number):
-                value=int(value)
-                if value>=len(labels):return ''
-                elif value<0:return ''
-                return r'$\left\langle'+labels[value].replace('$','')+r'\right|$'
-            ax.yaxis.set_major_formatter(plt.FuncFormatter(format_func))
+        #     def format_func(value,tick_number):
+        #         value=int(value)
+        #         if value>=len(labels):return ''
+        #         elif value<0:return ''
+        #         return r'$\left\langle'+labels[value].replace('$','')+r'\right|$'
+        #     ax.yaxis.set_major_formatter(plt.FuncFormatter(format_func))
             
         
 
-        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-        if fig is not None:fig.tight_layout()
+        # ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        # ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+        # if fig is not None:fig.tight_layout()
             
-        return ax
+        # return ax
     
 
 def _larmor(es,i:int):
@@ -658,6 +657,166 @@ def g(es,i:int,gxx:float=2.0023193,gyy:float=2.0023193,gzz:float=2.0023193,euler
             return Ham1inter(M=M,H=H,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
         else:
             return Ham1inter(H=H,isotropic=True,info=info,es=es)
+        
+        
+def HamPlot(H,what:str='H',cmap:str=None,mode:str='log',colorbar:bool=True,
+             step:int=0,ax=None):
+    """
+    Visualizes the Liouvillian matrix. Options are what to view (what) and 
+    how to display it (mode), as well as colormaps and one may optionally
+    provide the axis.
+    
+    Note, one should index the Liouvillian before running. If this is not
+    done, then we jump to the halfway point of the powder average
+    
+    what:
+    'H' : Full Hamiltonian. Optionally specify time step
+    'H0,H-1,H1,H-2,H2' : Component of Hamiltonian
+    'rf' : Applied field matrix
+     
+    mode:
+    'abs' : Colormap of the absolute value of the plot
+    'log' : Similar to abs, but on a logarithmic scale
+    're' : Real part of the Hamiltonian, where we indicate both
+                negative and positive values (imaginary part will be omitted)
+    'im' : Imaginary part of the Hamiltonian, where we indicate both
+                negative and positive values (real part will be omitted)
+    'spy' : Black/white for nonzero/zero (threshold applied at 1/1e6 of the max)
+
+
+
+    Parameters
+    ----------
+    what : str, optional
+        DESCRIPTION. The default is 'L'.
+    cmap : str, optional
+        DESCRIPTION. The default is 'YOrRd'.
+    mode : str, optional
+        DESCRIPTION. The default is 'abs'.
+    colorbar : bool, optional
+        DESCRIPTION. The default is True.
+    step : int, optional
+        DESCRIPTION. The default is 0.
+    ax : TYPE, optional
+        DESCRIPTION. The default is None.
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    mode=mode.lower()
+
+    if ax is None:
+        fig,ax=plt.subplots()
+    else:
+        fig=None
+    
+    if cmap is None:
+        if mode == 'abs' or mode=='log':
+            cmap='YlOrRd'
+        elif mode == 'signed':
+            cmap='BrBG'
+        elif mode == 'spy':
+            cmap= 'binary'
+    
+
+    H=H[len(H)//2] if hasattr(H,'_index') and H._index==-1 else H
+    if what in ['H0','H1','H-1','H-2']:
+        x=H.Hn(int(what[1:]))
+    elif what=='H':
+        if hasattr(H,'_index'):
+            x=H.H(step)
+        else:
+            ph=np.exp(1j*2*np.pi*step/H.expsys.n_gamma)
+            x=np.sum([H.Hn(m)*(ph**(-m)) for m in range(-2,3)],axis=0)
+    else:
+        x=getattr(H,what)
+        if hasattr(x,'__call__'):
+            if what=='rf':
+                x=x()
+            else:
+                x=x(step)
+
+    sc0,sc1,sc=1,1,1
+    if mode=='abs':
+        x=np.abs(x)
+        sc=x.max()
+        x/=sc
+    elif mode in ['re','im']:
+        x=copy(x.real if mode=='re' else x.imag)
+        sc=np.abs(x).max()
+        x/=sc*2
+        x+=.5
+    elif mode=='spy':
+        cutoff=np.abs(x).max()*1e-6
+        x=np.abs(x)>cutoff
+    elif mode=='log':
+        # This isn't always working if only one value present (??)
+        x=np.abs(x)
+        i=np.logical_not(x==0)
+        if i.sum()!=0:
+            if x[i].min()==x[i].max():
+                sc0=sc1=np.log10(x[i].max())
+                x[i]=1
+            else:
+                x[i]=np.log10(x[i])
+                sc0=x[i].min()
+                x[i]-=sc0
+                x[i]+=x[i].max()*.2
+                sc1=x[i].max()
+                x[i]/=sc1
+                
+                sc1=sc1/1.2+sc0
+    else:
+        assert 0,'Unknown plotting mode (Try "abs", "re", "im", "spy", or "log")'
+        
+    hdl=ax.imshow(x,cmap=cmap,vmin=0,vmax=1)
+    
+    if colorbar and mode!='spy':
+        hdl=plt.colorbar(hdl)
+        if mode=='abs':
+            hdl.set_ticks(np.linspace(0,1,6))
+            hdl.set_ticklabels([f'{q:.2e}' for q in np.linspace(0,sc,6)])
+            hdl.set_label(r'$|H_{n,n}|$')
+        elif mode=='log':
+            hdl.set_ticks(np.linspace(0,1,6))
+            labels=['0',*[f'{10**q:.2e}' for q in np.linspace(sc0,sc1,5)]]
+            hdl.set_ticklabels(labels)
+            hdl.set_label(r'$|H_{n,n}|$')
+        elif mode in ['re','im']:
+            hdl.set_ticks(np.linspace(0,1,5))
+            labels=[f'{q:.2e}' for q in np.linspace(-sc,sc,5)]
+            hdl.set_ticklabels(labels)
+            hdl.set_label(r'$H_{n,n}$')
+        
+    labels=H.expsys.Op.Hlabels
+    if labels is not None:
+        def format_func(value,tick_number):
+            value=int(value)
+            if value>=len(labels):return ''
+            elif value<0:return ''
+            return r'$\left|'+labels[value].replace('$','')+r'\right\rangle$'
+
+        
+        ax.set_xticklabels('',rotation=-90)
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(format_func))
+        
+        def format_func(value,tick_number):
+            value=int(value)
+            if value>=len(labels):return ''
+            elif value<0:return ''
+            return r'$\left\langle'+labels[value].replace('$','')+r'\right|$'
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(format_func))
+        
+    
+
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+    if fig is not None:fig.tight_layout()
+        
+    return ax
 
 
 

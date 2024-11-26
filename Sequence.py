@@ -12,7 +12,7 @@ from copy import copy
 from .Propagator import Propagator
 
 class Sequence():
-    def __init__(self,L,cyclic=False,rho=None):
+    def __init__(self,L,cyclic=True,rho=None):
         """
         Generates a propagator for a specific pulse sequence. If the generated
         propagator is an integer number of rotor periods, then we can expect

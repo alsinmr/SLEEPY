@@ -12,6 +12,8 @@ import warnings
 from copy import copy
 from scipy.linalg import expm
 from . import Defaults
+import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 
 tol=1e-10
 
@@ -307,7 +309,184 @@ class Propagator():
         
         out=Propagator(Uout,t0=self.t0,tf=self.t0+self.Dt*n,taur=self.taur,L=self.L,isotropic=self.isotropic,phase_accum=self.phase_accum*n)
         out._eig=_eig
-        return out            
+        return out   
+
+    def plot(self,index:int=None,mode:str='log',cmap:str=None,colorbar:bool=True,
+             ax=None) -> plt.axes:
+        """
+        Visualizes the Liouvillian matrix. Options are what to view (what) and 
+        how to display it (mode), as well as colormaps and one may optionally
+        provide the axis.
+        
+        Note, one should index the Liouvillian before running. If this is not
+        done, then we jump to the halfway point of the powder average
+        
+        what:
+        'L' : Full Liouvillian. Optionally specify time step
+        'Lcoh' : Coherent Hamiltonian. Optionally specify time step
+        'Lrelax' : Full relaxation matrix
+        'Lrf' : Applied field matrix
+        'recovery' : Component of relaxation matrix responsible for magnetizaton recovery
+        'L0', 'L1', 'L2', 'L-1', 'L-2' : Liouvillians from different components of the
+        Hamiltonian (does not include relaxaton / RF)
+        
+        mode:
+        'abs' : Colormap of the absolute value of the plot
+        'log' : Similar to abs, but on a logarithmic scale
+        'signed' : Usually applied for real matrices (i.e. relaxation), which
+                    shifts the data to show both negative and positive values
+                    (imaginary part will be omitted)
+        'spy' : Black/white for nonzero/zero (threshold applied at 1/1e6 of the max)
+
+
+
+        Parameters
+        ----------
+        what : str, optional
+            Specifies which Liouville matrix to plot. The default is 'L'.
+        seq : Sequence, optional
+            Include a sequence, which is used to determine what channels will
+            have rf turn on at some point. Uses the max v1 setting for each
+            channel in the sequence for plotting.
+        cmap : str, optional
+            Colormap used for plotting. The default is 'YOrRd'.
+        mode : str, optional
+            Plotting mode. The default is 'abs'.
+        colorbar : bool, optional
+            Turn color bar on/off. The default is True.
+        step : int, optional
+            Specify which step in the rotor period to plot. The default is 0.
+        ax : plt.axis, optional
+            Provide an axis to plot into. The default is None.
+
+        Returns
+        -------
+        plt.axes
+            Returns the plot axis object
+
+        """
+    
+        mode=mode.lower()
+        
+    
+        if ax is None:
+            fig,ax=plt.subplots()
+        else:
+            fig=None
+                    
+        
+        if cmap is None:
+            if mode == 'abs' or mode=='log':
+                cmap='YlOrRd'
+            elif mode == 'signed':
+                cmap='BrBG'
+            elif mode == 'spy':
+                cmap= 'binary'
+               
+        x=self[len(self)//2 if index is None else index]
+                
+        if mode=='log' and np.max(np.abs(x[x!=0]))==np.min(np.abs(x[x!=0])):
+            mode='abs'
+        
+        sc0,sc1,sc=1,1,1
+        if mode=='abs':
+            x=np.abs(x)
+            sc=x.max()
+            x/=sc
+        elif mode in ['re','im']:
+            x=copy(x.real if mode=='re' else x.imag)
+            sc=np.abs(x).max()
+            x/=sc*2
+            x+=.5
+        elif mode=='spy':
+            cutoff=np.abs(x).max()*1e-6
+            x=np.abs(x)>cutoff
+        elif mode=='log':
+            x=np.abs(x)
+            i=np.logical_not(x==0)
+            if i.sum()!=0:
+                if x[i].min()==x[i].max():
+                    sc0=sc1=np.log10(x[i].max())
+                    x[i]=1
+                else:
+                    x[i]=np.log10(x[i])
+                    sc0=x[i].min()
+                    x[i]-=sc0
+                    x[i]+=x[i].max()*.2
+                    sc1=x[i].max()
+                    x[i]/=sc1
+                    
+                    sc1=sc1/1.2+sc0
+        else:
+            assert 0,'Unknown plotting mode (Try "abs", "re", "im", "spy", or "log")'
+        
+        if hasattr(self,'block'):
+            bi=self.block
+        else:
+            bi=np.ones(len(x),dtype=bool)
+        
+        hdl=ax.imshow(x,cmap=cmap,vmin=0,vmax=1)
+        
+        if colorbar and mode!='spy':
+            hdl=plt.colorbar(hdl)
+            if mode=='abs':
+                hdl.set_ticks(np.linspace(0,1,6))
+                hdl.set_ticklabels([f'{q:.2e}' for q in np.linspace(0,sc,6)])
+                hdl.set_label(r'$|L_{n,n}|$')
+            elif mode=='log':
+                hdl.set_ticks(np.linspace(0,1,6))
+                labels=['0',*[f'{10**q:.2e}' for q in np.linspace(sc0,sc1,5)]]
+                hdl.set_ticklabels(labels)
+                hdl.set_label(r'$|L_{n,n}|$')
+            elif mode in ['re','im']:
+                hdl.set_ticks(np.linspace(0,1,5))
+                labels=[f'{q:.2e}' for q in np.linspace(-sc,sc,5)]
+                hdl.set_ticklabels(labels)
+                hdl.set_label(r'$L_{n,n}$')
+            
+        labels=self.expsys.Op.Llabels
+        if labels is not None:
+            if len(self.L.H)>1:
+                label0=[]
+                for k in range(len(self.L.H)):
+                    for l in labels:
+                        label0.append('|'+l+fr'$\rangle_{{{k+1}}}$')
+            else:
+                label0=['|'+l+r'$\rangle$' for l in labels]
+            label0=np.array(label0)[bi]
+            
+            
+            def format_func(value,tick_number):
+                value=int(value)
+                if value>=len(label0):return ''
+                elif value<0:return ''
+                return label0[value]
+
+            ax.set_xticklabels('',rotation=-90)
+            ax.xaxis.set_major_formatter(plt.FuncFormatter(format_func))
+            
+            if len(self.L.H)>1:
+                label1=[]
+                for k in range(len(self.L.H)):
+                    for l in labels:
+                        label1.append(r'$\langle$'+l+fr'$|_{{{k+1}}}$')
+            else:
+                label1=[r'$\langle$'+l+'|' for l in labels]
+            label1=np.array(label1)[bi]    
+            
+                
+            def format_func(value,tick_number):
+                value=int(value)
+                if value>=len(label0):return ''
+                elif value<0:return ''
+                return label1[value]
+            ax.yaxis.set_major_formatter(plt.FuncFormatter(format_func))
+            
+        ax.xaxis.set_major_locator(MaxNLocator(min([bi.sum(),20]),integer=True))
+        ax.yaxis.set_major_locator(MaxNLocator(min([bi.sum(),20]),integer=True))
+        if fig is not None:fig.tight_layout()
+            
+        return ax         
     
     def __getitem__(self,i:int):
         """
