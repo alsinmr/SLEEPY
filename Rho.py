@@ -79,7 +79,7 @@ class Rho():
         self._phase_accum=None
         self._phase_accum0=None
         self._downmixed=False
-        self.apod_pars={'WDW':'em','LB':None,'SSB':2,'GB':15,'ZF':None}
+        self.apod_pars={'WDW':'em','LB':None,'SSB':2,'GB':15,'SI':None}
     
     @property
     def _rtype(self):
@@ -495,7 +495,7 @@ class Rho():
         None.
 
         """
-        ZF=len(self.t_axis)*2 if self.apod_pars['ZF'] is None else int(self.apod_pars['ZF'])
+        ZF=len(self.t_axis)*2 if self.apod_pars['SI'] is None else int(self.apod_pars['SI'])
         if self._tstatus!=1:
             return np.arange(ZF)
             
@@ -550,7 +550,7 @@ class Rho():
                 apod=np.ones(t.shape)
             I*=apod
 
-        ZF=I.shape[1]*2 if self.apod_pars['ZF'] is None else int(self.apod_pars['ZF'])
+        ZF=I.shape[1]*2 if self.apod_pars['SI'] is None else int(self.apod_pars['SI'])
             
         return np.fft.fftshift(np.fft.fft(I,n=ZF,axis=1),axes=[1])
     

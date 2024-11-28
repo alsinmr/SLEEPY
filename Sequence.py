@@ -409,7 +409,7 @@ class Sequence():
             t0_seq=self.t0_seq%self.Dt if self.cyclic else 0
         
         
-        if self.cyclic:
+        if self.cyclic and len(self.t)>2:
             t0_seq%=self.Dt
             nreps=int((Dt+t0_seq)/self.Dt)+1
             t=copy(self.t)
