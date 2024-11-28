@@ -496,6 +496,11 @@ class Rho():
 
         """
         ZF=len(self.t_axis)*2 if self.apod_pars['ZF'] is None else int(self.apod_pars['ZF'])
+        if self._tstatus!=1:
+            return np.arange(ZF)
+            
+            
+        
         v=1/(self.t_axis[1]-self.t_axis[0])/2*np.linspace(-1,1,ZF)
         v-=np.diff(v[:2])/2
         return v
