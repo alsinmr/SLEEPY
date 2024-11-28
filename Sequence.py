@@ -64,6 +64,8 @@ class Sequence():
         self.cyclic=cyclic
         self._rho=None
         self.rho=rho
+        
+        self.t0_seq=0
     
     @property
     def rho(self):
@@ -404,7 +406,7 @@ class Sequence():
         tf=t0+Dt
         
         if t0_seq is None:
-            t0_seq=t0 if self.cyclic else 0
+            t0_seq=self.t0_seq%self.Dt if self.cyclic else 0
         
         
         if self.cyclic:
@@ -420,6 +422,8 @@ class Sequence():
             voff=np.tile(self.voff[:,:-2],nreps)
             voff=np.concatenate((voff,self.voff[:,-2:-1]),axis=-1)
             
+            
+            self.t0_seq=(t0_seq+Dt)%self.Dt
         else:
             t=copy(self.t)
             v1=copy(self.v1)
@@ -460,6 +464,8 @@ class Sequence():
         self.expsys._tprop=0 if self.taur is None else tf%self.taur
         
         out=Propagator(U=dct,t0=t0,tf=tf,taur=self.taur,L=self.L,isotropic=self.isotropic,phase_accum=ph_acc)
+        
+        
         return out
     
     def __repr__(self):

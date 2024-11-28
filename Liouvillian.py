@@ -850,7 +850,7 @@ class Liouvillian():
         d[i]/=np.abs(d[i])
         return d,v
     
-    def Sequence(self,Dt:float=None,cyclic:bool=False,rho=None) -> Sequence:
+    def Sequence(self,Dt:float=None,cyclic:bool=True,rho=None) -> Sequence:
         """
         Returns a Sequence object initialized from this Liouvillian
 

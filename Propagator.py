@@ -185,7 +185,10 @@ class Propagator():
 
         """
         
+        
         if not(self.calculated):
+            ct=self.expsys.current_time  #This operation should not change the current time
+            
             dct=self.U
             t=dct['t']
             
@@ -203,6 +206,8 @@ class Propagator():
             L.fields.update(ini_fields)
             
             self.U=U.U
+            
+            self.expsys._tprop=ct  #This operation should not change the current time
         return self
          
     @property
