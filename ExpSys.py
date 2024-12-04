@@ -339,22 +339,22 @@ class ExpSys():
         return out
     
 #Here we add some functionality to ExpSys dynamically
-def list_inter_pars(self,k):
-    out=[]
-    for inter in self:
-        print(k)
-        if inter['Type']==k:
-            out.append(inter)
-    return out
+
+
+def list_gen(k):
+    def list_inter_pars(self):
+        out=[]
+        for inter in self:
+            if inter['Type']==k:
+                out.append(inter)
+        return out
+    return list_inter_pars
     
 for k in dir(HamTypes):
     fun=getattr(HamTypes,k)
     if hasattr(fun,'__code__') and fun.__code__.co_varnames[0]=='es':
-        q=copy(k)
-        def fun(self):
-            list_inter_pars(self,k=q)
-        print(k)
-        setattr(ExpSys,k,fun)
+        setattr(ExpSys,k,property(list_gen(k)))
+        # setattr(ExpSys,k,list_inter_pars)
         
         
 def ElectronSpin(string):
