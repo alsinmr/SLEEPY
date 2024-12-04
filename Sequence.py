@@ -406,7 +406,10 @@ class Sequence():
         tf=t0+Dt
         
         if t0_seq is None:
-            t0_seq=self.t0_seq%self.Dt if self.cyclic else 0
+            if self.Dt is None:
+                t0_seq=0
+            else:
+                t0_seq=self.t0_seq%self.Dt if self.cyclic else 0
         
         
         if self.cyclic and len(self.t)>2:

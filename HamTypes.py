@@ -373,9 +373,9 @@ def J(es,i0:int,i1:int,J:float):
     
     return Ham1inter(H=H,isotropic=True,info=info,es=es)
 
-def CS(es,i:int,ppm:float):
+def CS(es,i:int,ppm:float=None,Hz:float=None):
     """
-    Isotropic chemical shift
+    Isotropic chemical shift. Provide shift in Hz or ppm.
 
     Parameters
     ----------
@@ -385,6 +385,8 @@ def CS(es,i:int,ppm:float):
         index of the spin.
     ppm : float
         Chemical shift offset in ppm.
+    Hz : float
+        Chemical shift offset in Hz.
 
     Returns
     -------
@@ -392,10 +394,21 @@ def CS(es,i:int,ppm:float):
 
     """
     
-    S=es.Op[i]
-    H=ppm*es.v0[i]/1e6*S.z
     
-    info={'Type':'CS','i':i,'ppm':ppm}
+    
+    S=es.Op[i]
+    if Hz is not None and ppm is not None:
+        warnings.warn('Chemical shift provided in both Hz and ppm. Hz will be used')
+        
+    
+    if Hz is None:
+        assert ppm is not None,"ppm or Hz must be provided for CS"
+        H=ppm*es.v0[i]/1e6*S.z
+        info={'Type':'CS','i':i,'ppm':ppm}
+    else:
+        H=Hz*S.z
+        info={'Type':'CS','i':i,'Hz':Hz}
+        
     return Ham1inter(H=H,isotropic=True,info=info,es=es)
     
 def CSA(es,i:int,delta:float,eta:float=0,euler=[0,0,0]):

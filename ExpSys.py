@@ -17,12 +17,21 @@ from copy import copy
 from .Hamiltonian import RF,Hamiltonian
 from .Liouvillian import Liouvillian
 
+
+inter_types=dict()
+for k in dir(HamTypes):
+    fun=getattr(HamTypes,k)
+    if hasattr(fun,'__code__') and fun.__code__.co_varnames[0]=='es':
+        inter_types[k]=fun.__code__.co_varnames[1:fun.__code__.co_argcount]
+
 class ExpSys():
     """
     Stores various information about the spin system. Initialize with a list of
     all nuclei in the spin system.
     """
     _iso_powder=PowderAvg('alpha0beta0')
+    inter_types=inter_types
+    
     def __init__(self,v0H=None,B0=None,Nucs=[],vr=10000,T_K=298,rotor_angle:float=None,n_gamma=100,pwdavg=PowderAvg(),LF:list=None):
         
         if rotor_angle is None:
@@ -62,13 +71,13 @@ class ExpSys():
         self._rf=RF(expsys=self)
         self._tprop=0
         
-        self.inter_types=dict()
+        # self.inter_types=dict()
                     
-        for k in dir(HamTypes):
-            fun=getattr(HamTypes,k)
-            if hasattr(fun,'__code__') and fun.__code__.co_varnames[0]=='es':
-                self.inter_types[k]=fun.__code__.co_varnames[1:fun.__code__.co_argcount]
-                setattr(self,k,[])
+        # for k in dir(HamTypes):
+        #     fun=getattr(HamTypes,k)
+        #     if hasattr(fun,'__code__') and fun.__code__.co_varnames[0]=='es':
+        #         self.inter_types[k]=fun.__code__.co_varnames[1:fun.__code__.co_argcount]
+                # setattr(self,k,[])
     
     @property
     def n_gamma(self):
@@ -216,7 +225,7 @@ class ExpSys():
         
         assert Type in self.inter_types.keys(),"Unknown interaction type"
         
-        getattr(self,Type).append(kwargs)
+        # getattr(self,Type).append(kwargs)
         self.inter.append({'Type':Type,**kwargs})
         
         return self
@@ -328,6 +337,24 @@ class ExpSys():
                     ','.join([f'{key}={ef(value)}' if key=="euler" else f'{key}={value:.2f}' for key,value in dct.items()])+')\n'
         out+='\n'+super().__repr__()    
         return out
+    
+#Here we add some functionality to ExpSys dynamically
+def list_inter_pars(self,k):
+    out=[]
+    for inter in self:
+        print(k)
+        if inter['Type']==k:
+            out.append(inter)
+    return out
+    
+for k in dir(HamTypes):
+    fun=getattr(HamTypes,k)
+    if hasattr(fun,'__code__') and fun.__code__.co_varnames[0]=='es':
+        q=copy(k)
+        def fun(self):
+            list_inter_pars(self,k=q)
+        print(k)
+        setattr(ExpSys,k,fun)
         
         
 def ElectronSpin(string):
