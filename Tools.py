@@ -13,6 +13,7 @@ import re
 from .Info import Info
 from .vft import Spher2pars
 from . import Defaults
+import warnings
 
 
 #%% Some useful tools (Gyromagnetic ratios, spins, dipole couplings)
@@ -708,7 +709,216 @@ def commute(A,B):
 
     """
     return A@B-B@A
+
+def ApodizationFun(t,WDW:str='em',LB:float=None,SSB:float=2,GB:float=15,**kwargs):
+    wdw=WDW.lower()
+    if LB is None:LB=5/t[-1]/np.pi
     
+    if wdw=='em':
+        apod=np.exp(-t*LB*np.pi)
+    elif wdw=='gm':
+        apod=np.exp(-np.pi*LB*t+(np.pi*LB*t**2)/(2*GB*t[-1]))
+    elif wdw=='sine':
+        if SSB>=2:
+            apod=np.sin(np.pi*(1-1/SSB)*t/t[-1]+np.pi/SSB)
+        else:
+            apod=np.sin(np.pi*t/t[-1])
+    elif wdw=='qsine':
+        if SSB>=2:
+            apod=np.sin(np.pi*(1-1/SSB)*t/t[-1]+np.pi/SSB)**2
+        else:
+            apod=np.sin(np.pi*t/t[-1])**2
+    elif wdw=='sinc':
+        apod=np.sin(2*np.pi*SSB*(t/t[-1]-GB))
+    elif wdw=='qsinc':
+        apod=np.sin(2*np.pi*SSB*(t/t[-1]-GB))**2
+    else:
+        warnings.warn(f'Unrecognized apodization function: "{wdw}"')
+        apod=np.ones(t.shape)
+    return apod
+
+
+class TwoD_Builder():
+    """
+    Class for building, running, and processing two-dimensional spectra
+    """
+    
+    def __init__(self,rho,seq_in,seq_dir,seq_trX,seq_trY):
+        """
+        Sets up the two-D sequence
+        
+
+        Parameters
+        ----------
+        rho : Rho
+            Density operator, prepared in the desired starting state.
+        seq_in : Sequence
+            Sequence to run during the indirect dimension
+        seq_dir : Sequence
+            Sequence to run during the direct dimension
+        seq_trX : Sequence
+            Sequence to run between direct and indirect dimensions (to capture x-component)
+        seq_trY : Sequence
+            Sequence to run between direct and indirect dimensions (to capture y-component)
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        rho,seq_in,seq_dir,seq_trX,seq_trY=rho.ReducedSetup(seq_in,seq_dir,seq_trX,seq_trY)
+        
+        if len(rho.detect)>1:warnings.warn('TwoD_Builder will only use the first detection operator')
+        
+        self.rho=rho
+        self.seq_in=seq_in
+        self.seq_dir=seq_dir
+        self.seq_trX=seq_trX
+        self.seq_trY=seq_trY
+        
+        self._U=None
+        self.Ireal=None
+        self.Iimag=None
+        self.Sreal=None
+        self.Ireal=None
+    
+        self.apod_pars={'WDW':['em','em'],'LB':[None,None],'SSB':[2,2],'GB':[15,15],'SI':[None,None]}
+        
+    def __call__(self,n_in:int,n_dir:int):
+        """
+        Run the twoD sequence
+
+        Parameters
+        ----------
+        n_in : int
+            DESCRIPTION.
+        n_dir : int
+            DESCRIPTION.
+
+        Returns
+        -------
+        self
+
+        """
+        Ireal=list()
+        Iimag=list()
+        
+        self.L.reset_prop_time()
+        for k in range(n_in):
+            rho0=copy(self.rho)
+            if self.Uin is not None:
+                self.Uin**k*rho0
+            else:
+                for _ in range(k):
+                    self.seq_in*rho0
+            if self.UtrX is not None:
+                self.UtrX*rho0
+            else:                
+                self.seq_trX*rho0
+            if self.Udir is not None:
+                rho0.DetProp(self.Udir,n=n_dir)
+            Ireal.append(rho0.I[0])
+        
+        self.L.reset_prop_time()
+        for k in range(n_in):
+            rho0=copy(self.rho)
+            if self.Uin is not None:
+                self.Uin**k*rho0
+            else:
+                for _ in range(k):
+                    self.seq_in*rho0
+            if self.UtrY is not None:
+                self.UtrY*rho0
+            else:                
+                self.seq_trY*rho0
+            if self.Udir is not None:
+                rho0.DetProp(self.Udir,n=n_dir)
+            Iimag.append(rho0.I[0])
+            
+        self.Ireal=np.array(Ireal)
+        self.Iimag=np.array(Iimag)
+        
+    def proc(self):
+        if self.Ireal is None:return
+        ap={key:value[0] for key,value in self.apod_pars.items()}
+        apod_in=ApodizationFun(self.t_in, **ap)
+        if apod_in['SI'] is None:apod_in['SI']=self.Ireal.shape[0]*2
+        ap={key:value[1] for key,value in self.apod_pars.items()}
+        apod_dir=ApodizationFun(self.t_dir, **ap)
+        if apod_dir['SI'] is None:apod_dir['SI']=self.Ireal.shape[1]*2
+        RE=copy(self.Ireal)
+        IM=copy(self.Iimag)
+        
+        # Divide first points by two
+        RE[:,0]/=2
+        RE[0,:]/=2
+        IM[:,0]/=2
+        IM[0,:]/=2
+        
+        RE=RE*apod_dir
+        IM=IM*apod_dir
+        RE=(RE.T*apod_in).T
+        IM=(IM.T*apod_in).T
+        
+        RE=np.fft.fft(RE,n=apod_dir['SI'],axis=1)
+        IM=np.fft.fft(IM,n=apod_dir['SI'],axis=1)
+        
+        self.Sreal=np.fftshift.fft(np.fft.fft(RE.real+1j*IM.real,n=apod_in['SI'],axis=0),axes=[0,1])
+        self.Ireal=np.fftshift.fft(np.fft.fft(RE.imag+1j*IM.imaj,n=apod_in['SI'],axis=0),axis=[0,1])
+            
+    
+    @property
+    def t_in(self):
+        if self.Ireal is None:return None
+        return np.arange(self.Ireal.shape[0])*self.seq_in.Dt
+    
+    @property
+    def t_dir(self):
+        if self.Ireal is None:return None
+        return np.arange(self.Ireal.shape[1])*self.seq_dir.Dt
+    
+    @property
+    def L(self):
+        return self.rho.L
+    
+    @property
+    def _seq(self):
+        return self.seq_in,self.seq_dir,self.seq_trX,self.seq_trY
+    
+    @property
+    def fixedU(self):
+        if self.L.static:return [True,True,True,True]
+        Dt=self.L.taur
+        out=[]
+        for seq in self._seq:
+            out.append(Dt==seq.Dt)
+        return out
+    
+    @property
+    def U(self):
+        if self._U is not None:
+            return self._U
+        
+        self._U=[]
+        for k,seq in enumerate(self._seq):
+            if self.fixedU[k]:
+                self._U.append(self._seq[k].U())
+            else:
+                self._U.append(None)
+                
+    @property
+    def Uin(self):
+        return self.U[0]
+    @property
+    def Udir(self):
+        return self.U[1]
+    @property
+    def UtrX(self):
+        return self.U[2]
+    @property
+    def UtrY(self):
+        return self.U[3]
     
     
        

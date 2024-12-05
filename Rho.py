@@ -11,7 +11,7 @@ import numpy as np
 import warnings
 import matplotlib.pyplot as plt
 from . import Defaults
-from .Tools import NucInfo,BlockDiagonal
+from .Tools import NucInfo,BlockDiagonal,ApodizationFun
 import re
 
 
@@ -522,32 +522,7 @@ class Rho():
 
         I=np.concatenate((self.I[:,:1]/2,self.I[:,1:]),axis=1)
         if self.apodize:
-            ap=self.apod_pars
-            wdw=ap['WDW'].lower()
-            t=self.t_axis
-            LB=ap['LB'] if ap['LB'] is not None else 5/t[-1]/np.pi
-            
-            if wdw=='em':
-                apod=np.exp(-t*LB*np.pi)
-            elif wdw=='gm':
-                apod=np.exp(-np.pi*LB*t+(np.pi*LB*t**2)/(2*ap['GB']*t[-1]))
-            elif wdw=='sine':
-                if ap['SSB']>=2:
-                    apod=np.sin(np.pi*(1-1/ap['SSB'])*t/t[-1]+np.pi/ap['SSB'])
-                else:
-                    apod=np.sin(np.pi*t/t[-1])
-            elif wdw=='qsine':
-                if ap['SSB']>=2:
-                    apod=np.sin(np.pi*(1-1/ap['SSB'])*t/t[-1]+np.pi/ap['SSB'])**2
-                else:
-                    apod=np.sin(np.pi*t/t[-1])**2
-            elif wdw=='sinc':
-                apod=np.sin(2*np.pi*ap['SSB']*(t/t[-1]-ap['GB']))
-            elif wdw=='qsinc':
-                apod=np.sin(2*np.pi*ap['SSB']*(t/t[-1]-ap['GB']))**2
-            else:
-                warnings.warn(f'Unrecognized apodization function: "{wdw}"')
-                apod=np.ones(t.shape)
+            apod=ApodizationFun(self.t_axis,**self.apod_pars)
             I*=apod
 
         ZF=I.shape[1]*2 if self.apod_pars['SI'] is None else int(self.apod_pars['SI'])
