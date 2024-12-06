@@ -14,7 +14,7 @@ from .Info import Info
 from .vft import Spher2pars
 from . import Defaults
 import warnings
-
+import matplotlib.pyplot as plt
 
 #%% Some useful tools (Gyromagnetic ratios, spins, dipole couplings)
 class NucInfo(Info):
@@ -781,9 +781,10 @@ class TwoD_Builder():
         self.Ireal=None
         self.Iimag=None
         self.Sreal=None
-        self.Ireal=None
+        self.Simag=None
     
         self.apod_pars={'WDW':['em','em'],'LB':[None,None],'SSB':[2,2],'GB':[15,15],'SI':[None,None]}
+        self._apod_pars={'WDW':['em','em'],'LB':[None,None],'SSB':[2,2],'GB':[15,15],'SI':[None,None]}
         
     def __call__(self,n_in:int,n_dir:int):
         """
@@ -801,6 +802,10 @@ class TwoD_Builder():
         self
 
         """
+        
+        self.Sreal=None
+        self.Simag=None
+        
         Ireal=list()
         Iimag=list()
         
@@ -840,7 +845,17 @@ class TwoD_Builder():
         self.Iimag=np.array(Iimag)
         
     def proc(self):
+        """
+        Processes the data in two dimensions, according to the processing 
+        parameters found in apod_pars
+
+        Returns
+        -------
+        None.
+
+        """
         if self.Ireal is None:return
+        if self.Sreal is not None and self.apod_pars==self._apod_pars:return
         ap={key:value[0] for key,value in self.apod_pars.items()}
         apod_in=ApodizationFun(self.t_in, **ap)
         if apod_in['SI'] is None:apod_in['SI']=self.Ireal.shape[0]*2
@@ -866,6 +881,13 @@ class TwoD_Builder():
         
         self.Sreal=np.fftshift.fft(np.fft.fft(RE.real+1j*IM.real,n=apod_in['SI'],axis=0),axes=[0,1])
         self.Ireal=np.fftshift.fft(np.fft.fft(RE.imag+1j*IM.imaj,n=apod_in['SI'],axis=0),axis=[0,1])
+        
+        for k,v in self.apod_pars:
+            self._apod_pars[k]==v
+        
+    def plot(self,ax=None):
+        pass
+        
             
     
     @property
