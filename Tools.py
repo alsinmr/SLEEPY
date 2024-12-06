@@ -803,48 +803,46 @@ class TwoD_Builder():
 
         """
         
+        
         self.Sreal=None
         self.Simag=None
         
-        Ireal=list()
-        Iimag=list()
-        
         self.L.reset_prop_time()
         for k in range(n_in):
-            rho0=copy(self.rho)
+            self.rho.reset()
             if self.Uin is not None:
-                self.Uin**k*rho0
+                self.Uin**k*self.rho
             else:
                 for _ in range(k):
-                    self.seq_in*rho0
+                    self.seq_in*self.rho
             if self.UtrX is not None:
-                self.UtrX*rho0
+                self.UtrX*self.rho
             else:                
-                self.seq_trX*rho0
+                self.seq_trX*self.rho
             if self.Udir is not None:
-                rho0.DetProp(self.Udir,n=n_dir)
-            Ireal.append(rho0.I[0])
+                self.rho.DetProp(self.Udir,n=n_dir)
+            # Ireal.append(rho0.I[0])
         
         self.L.reset_prop_time()
         for k in range(n_in):
-            rho0=copy(self.rho)
+            self.rho.reset()
             if self.Uin is not None:
-                self.Uin**k*rho0
+                self.Uin**k*self.rho
             else:
                 for _ in range(k):
-                    self.seq_in*rho0
+                    self.seq_in*self.rho
             if self.UtrY is not None:
-                self.UtrY*rho0
+                self.UtrY*self.rho
             else:                
-                self.seq_trY*rho0
+                self.seq_trY*self.rho
             if self.Udir is not None:
-                rho0.DetProp(self.Udir,n=n_dir)
-            Iimag.append(rho0.I[0])
+                self.rho.DetProp(self.Udir,n=n_dir)
+            # Iimag.append(rho0.I[0])
             
-        self.Ireal=np.array(Ireal)
-        self.Iimag=np.array(Iimag)
+        self.Ireal=self.rho.I[0][:n_in*n_dir].reshape([n_dir,n_in]).T
+        self.Iimag=self.rho.I[0][n_in*n_dir:].reshape([n_dir,n_in]).T
         
-    def proc(self):
+    def proc(self,apodize:bool=True):
         """
         Processes the data in two dimensions, according to the processing 
         parameters found in apod_pars
@@ -858,10 +856,8 @@ class TwoD_Builder():
         if self.Sreal is not None and self.apod_pars==self._apod_pars:return
         ap={key:value[0] for key,value in self.apod_pars.items()}
         apod_in=ApodizationFun(self.t_in, **ap)
-        if apod_in['SI'] is None:apod_in['SI']=self.Ireal.shape[0]*2
         ap={key:value[1] for key,value in self.apod_pars.items()}
         apod_dir=ApodizationFun(self.t_dir, **ap)
-        if apod_dir['SI'] is None:apod_dir['SI']=self.Ireal.shape[1]*2
         RE=copy(self.Ireal)
         IM=copy(self.Iimag)
         
@@ -871,25 +867,40 @@ class TwoD_Builder():
         IM[:,0]/=2
         IM[0,:]/=2
         
-        RE=RE*apod_dir
-        IM=IM*apod_dir
-        RE=(RE.T*apod_in).T
-        IM=(IM.T*apod_in).T
+        if apodize:
+            RE=RE*apod_dir
+            IM=IM*apod_dir
+            RE=(RE.T*apod_in).T
+            IM=(IM.T*apod_in).T
         
-        RE=np.fft.fft(RE,n=apod_dir['SI'],axis=1)
-        IM=np.fft.fft(IM,n=apod_dir['SI'],axis=1)
+        if self.apod_pars['SI'][0] is None:
+            self.apod_pars['SI'][0]=RE.shape[0]*2
+            
+        if self.apod_pars['SI'][1] is None:
+            self.apod_pars['SI'][1]=RE.shape[1]*2
         
-        self.Sreal=np.fftshift.fft(np.fft.fft(RE.real+1j*IM.real,n=apod_in['SI'],axis=0),axes=[0,1])
-        self.Ireal=np.fftshift.fft(np.fft.fft(RE.imag+1j*IM.imaj,n=apod_in['SI'],axis=0),axis=[0,1])
+        RE=np.fft.fft(RE,n=self.apod_pars['SI'][1],axis=1)
+        IM=np.fft.fft(IM,n=self.apod_pars['SI'][1],axis=1)
         
-        for k,v in self.apod_pars:
-            self._apod_pars[k]==v
+        self.Sreal=np.fft.fftshift(np.fft.fft(RE.real.astype(complex)+1j*IM.real,n=self.apod_pars['SI'][0],axis=0),axes=[0,1])
+        self.Simag=np.fft.fftshift(np.fft.fft(RE.imag+1j*IM.imag,n=self.apod_pars['SI'][0],axis=0),axes=[0,1])
+        
+        # for k,v in self.apod_pars:
+        #     self._apod_pars[k]==v
         
     def plot(self,ax=None):
-        pass
+        if self.Sreal is None and self.Ireal is not None:self.proc()
+        if ax is None:ax=plt.figure().add_subplot(1,1,1,projection='3d')
         
-            
-    
+        x,y=np.meshgrid(self.v_in,self.v_dir)
+        
+        ax.plot_surface(x/1e3,y/1e3,self.Sreal.real,cmap='coolwarm',linewidth=0,color='None')
+        
+        ax.set_xlabel(r'$\delta$ / kHz')
+        ax.set_ylabel(r'$\delta$ / kHz')
+        
+        return ax
+        
     @property
     def t_in(self):
         if self.Ireal is None:return None
@@ -899,6 +910,20 @@ class TwoD_Builder():
     def t_dir(self):
         if self.Ireal is None:return None
         return np.arange(self.Ireal.shape[1])*self.seq_dir.Dt
+    
+    @property
+    def v_in(self):
+        if self.apod_pars['SI'][0] is None:return None
+        v=1/(2*self.seq_in.Dt)*np.linspace(-1,1,self.apod_pars['SI'][0])
+        v-=(v[1]-v[0])/2
+        return v
+    
+    @property
+    def v_dir(self):
+        if self.apod_pars['SI'][1] is None:return None
+        v=1/(2*self.seq_dir.Dt)*np.linspace(-1,1,self.apod_pars['SI'][1])
+        v-=(v[1]-v[0])/2
+        return v
     
     @property
     def L(self):
@@ -914,7 +939,10 @@ class TwoD_Builder():
         Dt=self.L.taur
         out=[]
         for seq in self._seq:
-            out.append(Dt==seq.Dt)
+            if hasattr(seq,'add_channel'):
+                out.append(Dt==seq.Dt)
+            else:
+                out.append(True) #U provided instead of sequence
         return out
     
     @property
@@ -925,9 +953,15 @@ class TwoD_Builder():
         self._U=[]
         for k,seq in enumerate(self._seq):
             if self.fixedU[k]:
-                self._U.append(self._seq[k].U())
+                if hasattr(seq,'add_channel'):
+                    self._U.append(self._seq[k].U())                    
+                else:
+                    self._U.append(seq) #U provided instead of sequence
+
             else:
                 self._U.append(None)
+                
+        return self._U
                 
     @property
     def Uin(self):
