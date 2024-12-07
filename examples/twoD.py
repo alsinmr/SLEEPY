@@ -30,7 +30,7 @@ seq_trY=L.Sequence().add_channel('13C',t=t,v1=[v1,0,v1],phase=[0,0,np.pi/2])
 twoD=sl.Tools.TwoD_Builder(rho.clear(),seq,seq,seq_trX,seq_trY)
 
 twoD(n_in=32,n_dir=32)
-twoD.apod_pars['wdw']='qsine'
+twoD.apod_pars['WDW']=['qsine','qsine']
 twoD.apod_pars['SI']=[1024,1024]
 
 

@@ -766,7 +766,7 @@ class TwoD_Builder():
         None.
 
         """
-        
+        rho.clear()
         rho,seq_in,seq_dir,seq_trX,seq_trY=rho.ReducedSetup(seq_in,seq_dir,seq_trX,seq_trY)
         
         if len(rho.detect)>1:warnings.warn('TwoD_Builder will only use the first detection operator')
@@ -853,7 +853,6 @@ class TwoD_Builder():
 
         """
         if self.Ireal is None:return
-        if self.Sreal is not None and self.apod_pars==self._apod_pars:return
         ap={key:value[0] for key,value in self.apod_pars.items()}
         apod_in=ApodizationFun(self.t_in, **ap)
         ap={key:value[1] for key,value in self.apod_pars.items()}
@@ -882,11 +881,9 @@ class TwoD_Builder():
         RE=np.fft.fft(RE,n=self.apod_pars['SI'][1],axis=1)
         IM=np.fft.fft(IM,n=self.apod_pars['SI'][1],axis=1)
         
-        self.Sreal=np.fft.fftshift(np.fft.fft(RE.real.astype(complex)+1j*IM.real,n=self.apod_pars['SI'][0],axis=0),axes=[0,1])
+        self.Sreal=np.fft.fftshift(np.fft.fft(RE.real.astype(complex)+1j*IM.real.astype(complex),n=self.apod_pars['SI'][0],axis=0),axes=[0,1])
         self.Simag=np.fft.fftshift(np.fft.fft(RE.imag+1j*IM.imag,n=self.apod_pars['SI'][0],axis=0),axes=[0,1])
         
-        # for k,v in self.apod_pars:
-        #     self._apod_pars[k]==v
         
     def plot(self,ax=None):
         if self.Sreal is None and self.Ireal is not None:self.proc()
