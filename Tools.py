@@ -849,7 +849,6 @@ class TwoD_Builder():
             # Iimag.append(rho0.I[0])
             
         I=(np.array(self.rho._Ipwd[0]).T*self.rho.pwdavg.weight).sum(-1)
-        print(I.shape)
             
         self.Ireal=I[:n_in*n_dir].reshape([n_in,n_dir]).T
         self.Iimag=I[n_in*n_dir:].reshape([n_in,n_dir]).T
