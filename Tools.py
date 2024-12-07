@@ -772,6 +772,8 @@ class TwoD_Builder():
         if len(rho.detect)>1:warnings.warn('TwoD_Builder will only use the first detection operator')
         
         self.rho=rho
+        self._t=self.rho._t
+        self._rho=copy(rho._rho)
         self.seq_in=seq_in
         self.seq_dir=seq_dir
         self.seq_trX=seq_trX
@@ -810,6 +812,8 @@ class TwoD_Builder():
         self.L.reset_prop_time()
         for k in range(n_in):
             self.rho.reset()
+            self.rho._t=self._t
+            self.rho._rho=copy(self._rho)
             if self.Uin is not None:
                 self.Uin**k*self.rho
             else:
@@ -821,11 +825,15 @@ class TwoD_Builder():
                 self.seq_trX*self.rho
             if self.Udir is not None:
                 self.rho.DetProp(self.Udir,n=n_dir)
+            else:
+                self.rho.DetProp(self.seq_dir,n=n_dir)
             # Ireal.append(rho0.I[0])
         
         self.L.reset_prop_time()
         for k in range(n_in):
             self.rho.reset()
+            self.rho._t=self._t
+            self.rho._rho=copy(self._rho)
             if self.Uin is not None:
                 self.Uin**k*self.rho
             else:
@@ -837,10 +845,16 @@ class TwoD_Builder():
                 self.seq_trY*self.rho
             if self.Udir is not None:
                 self.rho.DetProp(self.Udir,n=n_dir)
+            else:
+                self.rho.DetProp(self.seq_dir,n=n_dir)
             # Iimag.append(rho0.I[0])
             
-        self.Ireal=self.rho.I[0][:n_in*n_dir].reshape([n_dir,n_in]).T
-        self.Iimag=self.rho.I[0][n_in*n_dir:].reshape([n_dir,n_in]).T
+        I=(np.array(self.rho._Ipwd[0]).T*self.rho.pwdavg.weight).sum(-1)
+        print(I.shape)
+            
+        self.Ireal=I[:n_in*n_dir].reshape([n_in,n_dir]).T
+        self.Iimag=I[n_in*n_dir:].reshape([n_in,n_dir]).T
+        return I
         
     def proc(self,apodize:bool=True):
         """
@@ -857,6 +871,7 @@ class TwoD_Builder():
         apod_in=ApodizationFun(self.t_in, **ap)
         ap={key:value[1] for key,value in self.apod_pars.items()}
         apod_dir=ApodizationFun(self.t_dir, **ap)
+        plt.figure().add_subplot(1,1,1).plot(apod_dir)
         RE=copy(self.Ireal)
         IM=copy(self.Iimag)
         
@@ -878,11 +893,11 @@ class TwoD_Builder():
         if self.apod_pars['SI'][1] is None:
             self.apod_pars['SI'][1]=RE.shape[1]*2
         
-        RE=np.fft.fft(RE,n=self.apod_pars['SI'][1],axis=1)
-        IM=np.fft.fft(IM,n=self.apod_pars['SI'][1],axis=1)
+        RE=np.fft.fft(RE,n=self.apod_pars['SI'][1],axis=0)
+        IM=np.fft.fft(IM,n=self.apod_pars['SI'][1],axis=0)
         
-        self.Sreal=np.fft.fftshift(np.fft.fft(RE.real.astype(complex)+1j*IM.real.astype(complex),n=self.apod_pars['SI'][0],axis=0),axes=[0,1])
-        self.Simag=np.fft.fftshift(np.fft.fft(RE.imag+1j*IM.imag,n=self.apod_pars['SI'][0],axis=0),axes=[0,1])
+        self.Sreal=np.fft.fftshift(np.fft.fft(RE.real+1j*IM.real,n=self.apod_pars['SI'][0],axis=1),axes=[0,1])
+        self.Simag=np.fft.fftshift(np.fft.fft(RE.imag+1j*IM.imag,n=self.apod_pars['SI'][0],axis=1),axes=[0,1])
         
         
     def plot(self,ax=None):

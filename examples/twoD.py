@@ -9,8 +9,8 @@ Created on Wed Dec  4 16:27:14 2024
 import SLEEPY as sl
 import numpy as np
 
-ex0=sl.ExpSys(v0H=600,Nucs='13C').set_inter('CS',i=0,ppm=5)
-ex1=ex0.copy().set_inter('CS',i=0,ppm=-5)
+ex0=sl.ExpSys(v0H=600,Nucs='13C').set_inter('CS',i=0,ppm=-5)
+ex1=ex0.copy().set_inter('CS',i=0,ppm=5)
 
 L=sl.Liouvillian(ex0,ex1,kex=sl.Tools.twoSite_kex(tc=1,p1=.75))
 
