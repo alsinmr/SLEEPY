@@ -785,8 +785,7 @@ class TwoD_Builder():
         self.Sreal=None
         self.Simag=None
     
-        self.apod_pars={'WDW':['em','em'],'LB':[None,None],'SSB':[2,2],'GB':[15,15],'SI':[None,None]}
-        self._apod_pars={'WDW':['em','em'],'LB':[None,None],'SSB':[2,2],'GB':[15,15],'SI':[None,None]}
+        self.apod_pars={'WDW':['qsine','qsine'],'LB':[None,None],'SSB':[2,2],'GB':[15,15],'SI':[None,None]}
         
     def __call__(self,n_in:int,n_dir:int):
         """
@@ -901,6 +900,9 @@ class TwoD_Builder():
         
         
     def plot(self,ax=None):
+        if self.Ireal is None:
+            warnings.warn('Run TwoD_Builder before plotting')
+            return
         if self.Sreal is None and self.Ireal is not None:self.proc()
         if ax is None:ax=plt.figure().add_subplot(1,1,1,projection='3d')
         
