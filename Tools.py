@@ -852,7 +852,7 @@ class TwoD_Builder():
             
         self.Ireal=I[:n_in*n_dir].reshape([n_in,n_dir]).T
         self.Iimag=I[n_in*n_dir:].reshape([n_in,n_dir]).T
-        return I
+        return self
         
     def proc(self,apodize:bool=True):
         """
@@ -896,6 +896,7 @@ class TwoD_Builder():
         self.Sreal=np.fft.fftshift(np.fft.fft(RE.real+1j*IM.real,n=self.apod_pars['SI'][0],axis=1),axes=[0,1])
         self.Simag=np.fft.fftshift(np.fft.fft(RE.imag+1j*IM.imag,n=self.apod_pars['SI'][0],axis=1),axes=[0,1])
         
+        return self
         
     def plot(self,ax=None):
         if self.Ireal is None:

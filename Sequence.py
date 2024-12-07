@@ -41,6 +41,7 @@ class Sequence():
             defined sequence. The default is True
         rho : Density matrix/detector object
             Include to run the sequence using reduced (block-diagonal) matrices
+            Probably not used anymore....
         
 
         Returns
@@ -55,35 +56,41 @@ class Sequence():
         self.fields.clear()
         self.fields.update({k:(0,0,0) for k in range(ns)}) #Current field values for each spin
         
+        self.clear()
+
+        
+        self._spin_specific=False
+        self.cyclic=cyclic
+        # self._rho=None
+        # self.rho=rho
+        
+        self.t0_seq=0
+        
+    def clear(self):
+        ns=self.nspins
         self._t=np.array([0,np.inf])
         self._v1=np.zeros([ns,2])
         self._voff=np.zeros([ns,2])
         self._phase=np.zeros([ns,2])
-        
-        self._spin_specific=False
-        self.cyclic=cyclic
-        self._rho=None
-        self.rho=rho
-        
-        self.t0_seq=0
+        return self
     
-    @property
-    def rho(self):
-        return self._rho
+    # @property
+    # def rho(self):
+    #     return self._rho
     
-    @rho.setter
-    def rho(self,rho):
-        if rho is None:return
-        assert self._rho is None,"rho cannot be changed for a sequence"
-        self._rho=rho
+    # @rho.setter
+    # def rho(self,rho):
+    #     if rho is None:return
+    #     assert self._rho is None,"rho cannot be changed for a sequence"
+    #     self._rho=rho
         
-        if rho.BlockDiagonal:
-            rho.L=self.L
-            blocks=rho.Blocks(self)
-            block=np.sum(blocks,0).astype(bool)
-            self.L=self.L.getBlock(block)
-            self.block=block
-            rho._reduce(self)
+    #     if rho.BlockDiagonal:
+    #         rho.L=self.L
+    #         blocks=rho.Blocks(self)
+    #         block=np.sum(blocks,0).astype(bool)
+    #         self.L=self.L.getBlock(block)
+    #         self.block=block
+    #         rho._reduce(self)
             
     @property
     def block(self):
