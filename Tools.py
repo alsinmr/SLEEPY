@@ -870,7 +870,6 @@ class TwoD_Builder():
         apod_in=ApodizationFun(self.t_in, **ap)
         ap={key:value[1] for key,value in self.apod_pars.items()}
         apod_dir=ApodizationFun(self.t_dir, **ap)
-        plt.figure().add_subplot(1,1,1).plot(apod_dir)
         RE=copy(self.Ireal)
         IM=copy(self.Iimag)
         
