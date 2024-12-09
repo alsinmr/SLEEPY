@@ -1260,6 +1260,9 @@ class Rho():
         """
         if ax is None:ax=plt.figure().add_subplot(111)
         
+        if self.t_axis[-1]*np.abs(self.L[len(self.L)//2].L(step=0)).max()>1e12:
+            warnings.warn('Evolution time is more than 12 orders of magnitude different than largest Liouvillian term:\nNumerical error possible')
+        
         def det2label(detect):
             if isinstance(detect,str):
                 if detect[0]=='S':

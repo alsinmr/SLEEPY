@@ -536,7 +536,7 @@ def Setup3siteSym(expsys,tc:float,phi:float=np.arccos(-1/3)):
         SLEEPY expsys
     tc : float
         Desired correlation time of tumbling.
-    n  : Desired opening angle of hopping
+    phi : Desired opening angle of hopping
 
     Returns
     -------
