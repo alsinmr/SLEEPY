@@ -391,7 +391,10 @@ class Liouvillian():
         if Type in ['DynamicThermal']:OS=True   #List methods only in RelaxClass here
         
         if OS:
-            getattr(self.LrelaxOS,Type)(state=state,**kwargs)
+            if state is not None:
+                getattr(self.LrelaxOS,Type)(state=state,**kwargs)
+            else:
+                getattr(self.LrelaxOS,Type)(**kwargs)
             kwargs.update({'OS':OS})
             self.relax_info.append((Type,kwargs))
             return self
