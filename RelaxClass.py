@@ -258,7 +258,7 @@ class RelaxClass():
         
         return self.Lindblad(L.Lrelax,L.Energy2(step))
     
-    def T1(self,i:int,T1:float,Thermal:bool=False,step:int=None):
+    def T1(self,i:int,T1:float,Thermal:bool=False,step:int=None,state:int=None):
         """
         Introduces T1 relaxation on a single spin. Relaxation is introduced in
         the eigenbasis. Transitions in the eigenbasis will be included based
@@ -276,6 +276,9 @@ class RelaxClass():
         step : int, optional
             The default is None, which runs setup for this method, and returns 
             self. Providing a value for step will return a relaxation matrix
+        state : int, optional
+            For states in exchange, this index allows us to specify relaxation 
+            for each state separately. The default is None.
 
         Returns
         -------
@@ -285,11 +288,11 @@ class RelaxClass():
         if step is None:
             # Check to see if method is already here for this spin
             for k,m in enumerate(self.methods):
-                if m['method']=='T1' and m['i']==i:
+                if m['method']=='T1' and m['i']==i and m['state']==state:
                     self.methods.pop(k)
                     break
                 
-            self.methods.append({'method':'T1','i':i,'T1':T1,'Thermal':Thermal})
+            self.methods.append({'method':'T1','i':i,'T1':T1,'Thermal':Thermal,'state':state})
             if Thermal:self.Peq=True
             return self.clear_cache()
         
@@ -306,7 +309,9 @@ class RelaxClass():
         
         nt=(np.prod(self.Op.Mult)//(self.Op.Mult[i]))**2*(self.Op.Mult[i]-1)  #Number of T1 transitions
         
-        for k,H in enumerate(L.H):
+        loop=[(k,H) for k,H in enumerate(L.H)] if state is None else [(state,L.H[state])]
+        
+        for k,H in loop:
             U,Ui,v=H.eig2L(step)
             Mp=U@M@Ui
             
@@ -341,7 +346,7 @@ class RelaxClass():
         return Lrelax
     
     
-    def T2(self,i:int,T2:float,step:int=None):
+    def T2(self,i:int,T2:float,step:int=None,state:int=None):
         """
         Introduces T2 relaxation on a single spin. Relaxation is introduced in
         the eigenbasis. Transitions in the eigenbasis will be included based
@@ -358,6 +363,9 @@ class RelaxClass():
         step : int, optional
             The default is None, which runs setup for this method, and returns 
             self. Providing a value for step will return a relaxation matrix
+        state : int, optional
+            For states in exchange, this index allows us to specify relaxation 
+            for each state separately. The default is None.
 
         Returns
         -------
@@ -367,11 +375,11 @@ class RelaxClass():
         if step is None:
             # Check to see if method is already here for this spin
             for k,m in enumerate(self.methods):
-                if m['method']=='T2' and m['i']==i:
+                if m['method']=='T2' and m['i']==i and m['state']==state:
                     self.methods.pop(k)
                     break
                 
-            self.methods.append({'method':'T2','i':i,'T2':T2})
+            self.methods.append({'method':'T2','i':i,'T2':T2,'state':state})
             return self.clear_cache()
         
         L=self.L
@@ -392,8 +400,8 @@ class RelaxClass():
         
         nt=(np.prod(self.Op.Mult)//(self.Op.Mult[i]))**2*(self.Op.Mult[i]-1)  #Number of T1 transitions
         
-        
-        for k,H in enumerate(L.H):
+        loop=[(k,H) for k,H in enumerate(L.H)] if state is None else [(state,L.H[state])]
+        for k,H in loop:
             U,Ui,v=H.eig2L(step)
             Mp=U@M@Ui
             

@@ -69,7 +69,6 @@ class Rho():
         self._taxis=[]
         self._t=None
         
-        if L is not None:self.L=L
         
         self.Reduce=Reduce
         self._BDP=False #Flag to indicate that Block-diagonal propagation was used.
@@ -80,6 +79,8 @@ class Rho():
         self._phase_accum0=None
         self._downmixed=False
         self.apod_pars={'WDW':'em','LB':None,'SSB':2,'GB':15,'SI':None}
+        
+        if L is not None:self.L=L
     
     @property
     def _rtype(self):
@@ -98,13 +99,12 @@ class Rho():
         return self.L.static
         
     @property
-    def L(self):
-        return self._L
-    
-    @property
     def shape(self):
         if self.L is None:return None
         return self.L.shape[:1]
+    @property
+    def L(self):
+        return self._L
     
     @L.setter
     def L(self,L):
@@ -332,6 +332,18 @@ class Rho():
         
         return (rho,*seq_red)
     
+    def copy_reduced(self):
+        """
+        Returns a new rho object which has been reduced using the same elements
+        as the current rho object
+
+        Returns
+        -------
+        Rho
+            Rho object with reduced dimensionality
+
+        """
+        return Rho(rho0=self.rho0,detect=self.detect,L=self.L._L).getBlock(self.block)
     
     # Is this function used anywhere?
     def _reduce(self,*seq):
@@ -650,10 +662,7 @@ class Rho():
         but want to retain the amplitudes and times recorded, run rho.reset()
         instead of rho.clear()
 
-        Parameters
-        ----------
-        clear_all : bool, optional
-            Completely reset rho. The default is False.
+
 
         Returns
         -------
@@ -918,7 +927,7 @@ class Rho():
             if self._t is None:self._t=U.t0
             if not(self.static) and np.abs((self.t-U.t0)%self.taur)>tol and np.abs((U.t0-self.t)%self.taur)>tol:
                 warnings.warn('The initial time of the propagator is not equal to the current time of the density matrix')
-            if not(self.static) and np.abs(U.Dt%self.taur)>tol and np.abs((self.taur-U.Dt)%self.taur)>tol:
+            if not(self.static) and np.abs(U.Dt%self.taur)>tol and np.abs((U.Dt%self.taur)-self.taur)>tol:
                 warnings.warn('The propagator length is not an integer multiple of the rotor period')
          
         elif self._t is None:

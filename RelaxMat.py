@@ -33,9 +33,6 @@ def T1(expsys,i:int,T1:float):
         Index of the spin.
     T1 : float
         Desired T1 relaxation time.
-    Peq : bool, optional
-        Use relaxation toward thermal equilibrium. By default, relaxation simply
-        goes to zero. Temperature taken from expsys.
 
     Returns
     -------

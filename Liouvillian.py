@@ -334,7 +334,7 @@ class Liouvillian():
         
         return self
     
-    def add_relax(self,M=None,Type:str=None,OS:bool=False,**kwargs):
+    def add_relax(self,M=None,Type:str=None,OS:bool=False,state:int=None,**kwargs):
         """
         Add explicit relaxation to the Liouvillian. This is either provided
         directly by the user via a matrix, or by type, where currently T1, T2, 
@@ -344,25 +344,41 @@ class Liouvillian():
         T1: provide T1 and i, specifying the spin's index
         T2: provide T2 and i, specifying the spin's index
         
+        In Orientation-specific mode (OS=True), the recovery towards thermal
+        equilibrium needs to be specified when setting T1, by including
+        Thermal=True as an argument to add_relax
         
-        This is provided by a matrix,
-        M, directly. The matrix itself can be produced with the RelaxationMatrix
-        class. Note that the matrix can either have the same shape as the full
-        Liouvillian, or the shape for just one Hamiltonian. For example, for
-        a two-spin 1/2 system in two-site exchange, M may have size 16x16 or
-        32x32. The 32x32 matrix allows different relaxation properties for the
-        two sites.
+        
+        The exchange matrix can be explicitely provided by M directly. Note 
+        that the matrix can either have the same shape as the full Liouvillian,
+        or the shape for just one Hamiltonian. For example, for a two-spin 1/2 
+        system in two-site exchange, M may have size 16x16 or 32x32. The 32x32
+        matrix allows different relaxation properties for the two sites.
 
         Parameters
         ----------
         M : np.array, optional
-            DESCRIPTION. The default is None.
+            Provide the relaxation matrix explicitly. The default is None.
+        Type : str, optional
+            Type of relaxation to include. The default is None.
+        OS : bool, optional
+            Orientation-specific relaxation. Can be necessary where the 
+            quantization axis of a spin-system is not along the z-axis.
+            The default is False.
+        state : int, optional
+            For states in exchange, this index allows us to specify relaxation 
+            for each state separately. The default is None.
+        **kwargs : TYPE
+            Arguments sent to the relaxation .
 
         Returns
         -------
-        None.
+        TYPE
+            DESCRIPTION.
 
         """
+    
+
         self._PropCache.reset()
         
         if isinstance(M,str): #In case Type is input as the first argument, just fix for the user
@@ -375,10 +391,12 @@ class Liouvillian():
         if Type in ['DynamicThermal']:OS=True   #List methods only in RelaxClass here
         
         if OS:
-            getattr(self.LrelaxOS,Type)(**kwargs)
+            getattr(self.LrelaxOS,Type)(state=state,**kwargs)
             kwargs.update({'OS':OS})
             self.relax_info.append((Type,kwargs))
             return self
+        
+        
                 
         
         if M is None:
@@ -401,10 +419,17 @@ class Liouvillian():
         if M.shape[0]==self.shape[0]:
             self._Lrelax+=M
         elif M.shape[0]==q:
-            for k,H0 in enumerate(self.H):
-                self._Lrelax[k*q:(k+1)*q][:,k*q:(k+1)*q]+=M
+            if state is not None:
+                self._Lrelax[state*q:(state+1)*q][:,state*q:(state+1)*q]+=M
+            else:
+                for k in range(len(self.H)):
+                    self._Lrelax[k*q:(k+1)*q][:,k*q:(k+1)*q]+=M
         else:
             assert False,f"M needs to have size ({q},{q}) or {self.shape}"   
+            
+        if state is not None:
+            kwargs['state']=state
+            
         return self
     
     def clear_relax(self):
