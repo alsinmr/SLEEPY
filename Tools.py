@@ -907,7 +907,7 @@ class TwoD_Builder():
         
         x,y=np.meshgrid(self.v_in,self.v_dir)
         
-        ax.plot_surface(x/1e3,y/1e3,self.Sreal.real,cmap='coolwarm',linewidth=0,color='None')
+        ax.plot_surface(x/1e3,y/1e3,self.Sreal.real,cmap='coolwarm',linewidth=0)
         
         ax.set_xlabel(r'$\delta$ / kHz')
         ax.set_ylabel(r'$\delta$ / kHz')
