@@ -898,25 +898,17 @@ class Rho():
         if seq is not None and self.Reduce:
             rb,sb=self.ReducedSetup(seq)
             
-            # blocks=self.Blocks(seq)
-            # block=np.sum(blocks,0).astype(bool)
-            # if not(np.all(np.sum(blocks,axis=0))):
-            #     print(f'State-space reduction: {blocks[0].__len__()}->{block.sum()}')
-            #     #Block diagonalization doesn't really help if we still have to calculate all blocks
-                
-            #     rb=self.getBlock(block)
-            #     sb=seq.getBlock(block)
-            
-            rb.DetProp(seq=sb,n=n,n_per_seq=n_per_seq)
-            Ipwd=rb.Ipwd
-            for k in range(Ipwd.shape[0]):
-                for j in range(Ipwd.shape[1]):
-                    self._Ipwd[k][j].extend(Ipwd[k,j])
-            self._taxis.extend(rb._taxis)
-            self._phase_accum.extend(rb._phase_accum)
-            self._BDP=True
-            self._t=rb._t
-            return self
+            if not(np.all(rb.block)):
+                rb.DetProp(seq=sb,n=n,n_per_seq=n_per_seq)
+                Ipwd=rb.Ipwd
+                for k in range(Ipwd.shape[0]):
+                    for j in range(Ipwd.shape[1]):
+                        self._Ipwd[k][j].extend(Ipwd[k,j])
+                self._taxis.extend(rb._taxis)
+                self._phase_accum.extend(rb._phase_accum)
+                self._BDP=True
+                self._t=rb._t
+                return self
                 
             
         
