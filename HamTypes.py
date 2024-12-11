@@ -411,7 +411,7 @@ def CS(es,i:int,ppm:float=None,Hz:float=None):
         
     return Ham1inter(H=H,isotropic=True,info=info,es=es)
     
-def CSA(es,i:int,delta:float,eta:float=0,euler=[0,0,0]):
+def CSA(es,i:int,delta:float=None,deltaHz:float=None,eta:float=0,euler=[0,0,0]):
     """
     Chemical shift anisotropy
 
@@ -421,11 +421,13 @@ def CSA(es,i:int,delta:float,eta:float=0,euler=[0,0,0]):
         Experimental system object.
     i : int
         index of the spin.
-    delta : float
+    delta : float, optional
         anisotropy of the CSA (ppm)
-    eta   : float
+    deltaHz : float, optional
+        anisotropy of the CSA (Hz)
+    eta   : float, optional
         asymmetry of the CSA. Default is 0
-    euler : list
+    euler : list, optional
         3 elements giving the euler angles for the CSA (or a list of 3 element euler angles)
         Default is [0,0,0]
 
@@ -435,20 +437,25 @@ def CSA(es,i:int,delta:float,eta:float=0,euler=[0,0,0]):
 
     """
     
-    info={'Type':'CSA','i':i,'delta':delta,'eta':eta,'euler':euler}
+    assert delta is not None or deltaHz is not None,"delta or deltaHz must be specified"
+    if delta is not None:
+        info={'Type':'CSA','i':i,'delta':delta,'eta':eta,'euler':euler}
+        deltaHz=delta*es.v0[i]/1e6
+    else:
+        info={'Type':'CSA','i':i,'deltaHz':deltaHz,'eta':eta,'euler':euler}
     
-    delta=delta*es.v0[i]/1e6
+    
     
     if es.LF[i]:  #Lab frame calculation
         T=es.Op[i].T
         T.set_mode('B0_LF')
        
-        return Ham1inter(T=T,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
+        return Ham1inter(T=T,isotropic=False,delta=deltaHz,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
     else:
         S=es.Op[i]
         M=np.sqrt(2/3)*S.z    
     
-    return Ham1inter(M=M,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
+    return Ham1inter(M=M,isotropic=False,delta=deltaHz,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
  
 
 def hyperfine(es,i0:int,i1:int,Axx:float=0,Ayy:float=0,Azz:float=0,euler=[0,0,0]):
