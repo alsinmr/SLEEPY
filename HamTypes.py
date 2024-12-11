@@ -568,7 +568,7 @@ def quadrupole(es,i:int,delta:float=0,eta:float=0,euler=[0,0,0]):
 
     Returns
     -------
-    None.
+    Ham1inter
 
     """
     
@@ -614,7 +614,7 @@ def g(es,i:int,gxx:float=2.0023193,gyy:float=2.0023193,gzz:float=2.0023193,euler
 
     Returns
     -------
-    None.
+    Ham1inter
 
     """
     
@@ -679,6 +679,61 @@ def g(es,i:int,gxx:float=2.0023193,gyy:float=2.0023193,gzz:float=2.0023193,euler
             return Ham1inter(H=H,isotropic=True,info=info,es=es)
         
         
+def ZeroField(es,i:int,D:float,E:float=0,euler=[0,0,0]):
+    """
+    Electron zero-field splitting. This is equivalent to the quadrupole
+    coupling, but uses the parameters D and E, as is commonly done in EPR. The
+    principal components of the zero-field splitting are then given as
+    
+    D*[-1/3,-1/3,2/3]+E*[1,-1,0]
+    
+
+    Parameters
+    ----------
+    es : exp_sys
+        Experimental system object.
+    i : int
+        index of the spin.
+    D : float
+        D parameter in Hz
+    E : float, optional
+        E parameter in Hz. The default is 0
+    euler : TYPE, optional
+        3 elements giving the euler angles for the g-tensor
+        The default is [0,0,0].
+
+    Returns
+    -------
+    Ham1inter
+
+    """
+    
+    info={'Type':'ZeroField','i':i,'D':D,'E':E,'euler':euler}
+    
+    pc=D*np.array([-1,-1,2])/3+E*np.array([1,-1,0])
+    
+    q=np.argsort(np.abs(pc))
+    
+    y,x,z=pc[q]
+    delta=z
+    eta=(y-x)/delta
+    
+    S=es.Op[i]
+    
+    if es.LF[i]:
+        T=S.T
+        T=T*T
+        return Ham1inter(T=T,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
+    else:
+        I=es.S[i]
+    
+        M=np.sqrt(2/3)*1/2*(3*S.z@S.z-I*(I+1)*S.eye)  
+        
+        return Ham1inter(M=M,isotropic=False,delta=delta,eta=eta,euler=euler,
+                          rotor_angle=es.rotor_angle,info=info,es=es)
+    
+    
+        
 def HamPlot(H,what:str='H',cmap:str=None,mode:str='log',colorbar:bool=True,
              step:int=0,ax=None):
     """
@@ -722,7 +777,7 @@ def HamPlot(H,what:str='H',cmap:str=None,mode:str='log',colorbar:bool=True,
 
     Returns
     -------
-    None.
+    axis
 
     """
     
