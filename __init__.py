@@ -41,12 +41,13 @@ if 'google.colab' in _sys.modules:
     from google.colab import output
     is_dark = output.eval_js('document.documentElement.matches("[theme=dark]")')
     if is_dark:
-        import matplotlib as mpl
+        import matplotlib.pyplot as plt
         x=56
-        mpl.rcParams["figure.facecolor"]=(x/256,x/256,x/256)
-        mpl.rcParams["axes.facecolor"]=(x/256,x/256,x/256)
-        mpl.rcParams["axes.edgecolor"]=(1,1,1)
-        mpl.rcParams["axes.labelcolor"]=(1,1,1)
-        mpl.rcParams["xtick.color"]=(1,1,1)
-        mpl.rcParams["ytick.color"]=(1,1,1)
+        plt.rcParams["figure.facecolor"]=(x/256,x/256,x/256)
+        plt.rcParams["axes.facecolor"]=(x/256,x/256,x/256)
+        plt.rcParams["axes.edgecolor"]=(1,1,1)
+        plt.rcParams["axes.labelcolor"]=(1,1,1)
+        plt.rcParams["xtick.color"]=(1,1,1)
+        plt.rcParams["ytick.color"]=(1,1,1)
+        plt.rcParams["text.color"]=(1,1,1)
     
