@@ -1217,7 +1217,7 @@ class Rho():
             Op=Op.T.conj()
             # Op/=np.abs(np.trace(Op.T.conj()@Op))*self.expsys.Op.Mult.prod()/2
             Op/=np.abs(np.trace(Op.T.conj()@Op))
-            if self.L.Peq:Op*=self.expsys.Op.Mult.prod()/2
+            if (self.L.Peq or self.rho0=='Thermal'):Op*=self.expsys.Op.Mult.prod()/2
             return np.tile(Op.reshape(Op.size),nHam)
         else:
             # Op/=np.abs(np.trace(Op.T.conj()@Op))

@@ -258,7 +258,7 @@ class RelaxClass():
         
         return self.Lindblad(L.Lrelax,L.Energy2(step))
     
-    def T1(self,i:int,T1:float,Thermal:bool=False,step:int=None,state:int=None):
+    def T1(self,i:int,T1:float,Thermal:bool=False,state:int=None,step:int=None):
         """
         Introduces T1 relaxation on a single spin. Relaxation is introduced in
         the eigenbasis. Transitions in the eigenbasis will be included based
@@ -346,7 +346,7 @@ class RelaxClass():
         return Lrelax
     
     
-    def T2(self,i:int,T2:float,step:int=None,state:int=None):
+    def T2(self,i:int,T2:float,state:int=None,step:int=None):
         """
         Introduces T2 relaxation on a single spin. Relaxation is introduced in
         the eigenbasis. Transitions in the eigenbasis will be included based

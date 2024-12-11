@@ -35,3 +35,18 @@ if hasattr(_SubplotSpec,'is_first_col'):
     def _fun(self):
         return self.get_subplotspec().is_last_row()
     _Subplot.is_last_row=_fun
+
+import sys as _sys
+if 'google.colab' in _sys.modules:
+    from google.colab import output
+    is_dark = output.eval_js('document.documentElement.matches("[theme=dark]")')
+    if is_dark:
+        import matplotlib as mpl
+        x=56
+        mpl.rcParams["figure.facecolor"]=(x/256,x/256,x/256)
+        mpl.rcParams["axes.facecolor"]=(x/256,x/256,x/256)
+        mpl.rcParams["axes.edgecolor"]=(1,1,1)
+        mpl.rcParams["axes.labelcolor"]=(1,1,1)
+        mpl.rcParams["xtick.color"]=(1,1,1)
+        mpl.rcParams["ytick.color"]=(1,1,1)
+    
