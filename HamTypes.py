@@ -578,8 +578,8 @@ def quadrupole(es,i:int,delta:float=0,eta:float=0,euler=[0,0,0]):
         M=np.sqrt(2/3)*1/2*(3*S.z@S.z-I*(I+1)*S.eye)  
         
         info={'Type':'quadrupole','i':i,'delta':delta,'eta':eta,'euler':euler}
-        if Defaults['verbose']:
-            print('Quadrupole Hamiltonian does not include 2nd order terms')
+        # if Defaults['verbose']:
+        #     print('Quadrupole Hamiltonian does not include 2nd order terms')
         return Ham1inter(M=M,isotropic=False,delta=delta,eta=eta,euler=euler,
                           rotor_angle=es.rotor_angle,info=info,es=es)
 

@@ -133,18 +133,18 @@ class LFrf():
             for k,v_index in enumerate(self.v_index):
                 if v_index:
                     if self.n_steps==2 and self.phase[k]==0:
-                        v1=2*self.v1[k]*np.cos(2*np.pi*t*self.v[k]+self.phase[k])
+                        v1=2*self.v1[k]*np.cos(2*np.pi*t*self.v[k])
                         v1*=np.pi/4
                         phase=np.pi*(v1<0)+np.pi/2
                         v1=np.abs(v1)
                         seq.add_channel(k,t=t,v1=v1,phase=phase)
                     else:
-                        v1=2*self.v1[k]*np.cos(2*np.pi*t*self.v[k]+self.phase[k])
+                        v1=2*self.v1[k]*np.cos(2*np.pi*t*self.v[k])
                         FT=self.FT(v1=v1)[1][0]
                         i=np.argmax(np.abs(FT[:len(FT)//2]))
                         sc=self.v1[k]/np.abs(FT[i]).max()
                         v1*=sc
-                        phase=np.pi*(v1<0)+np.arctan2(FT[i].imag,FT[i].real)
+                        phase=np.pi*(v1<0)+np.arctan2(FT[i].imag,FT[i].real)+self.phase[k]
                         v1=np.abs(v1)
                         seq.add_channel(k,t=t,v1=v1,phase=phase)
                 else:
