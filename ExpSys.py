@@ -199,8 +199,8 @@ class ExpSys():
 
         Returns
         -------
-        TYPE
-            DESCRIPTION.
+        Liouvillian
+            Liouvillian for this ExpSys object
 
         """
         return Liouvillian(self)
@@ -281,9 +281,11 @@ class ExpSys():
             ax.set_xlabel('Hz')
             ax.set_ylabel('Hz')
             ax.set_zlabel('Hz')
+            ax.set_title(f'n={n}')
+            return ax
             
         H.Hinter[i].rotInter.plot(avg=H.Hinter[i].avg,n=n,ax=ax)
-        
+        ax.set_title(f'n={n}')
         return ax
         
         

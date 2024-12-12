@@ -459,11 +459,19 @@ class RotInter():
         else:
             l=A.real+avg
         
+        sc=1
+        lbl='Hz'
+        if np.abs(A).max()>2e3:
+            sc=1e-3
+            lbl='kHz'
+        if np.abs(A).max()>2e6:
+            sc=1e-6  
+            lbl='MHz'
         
         
-        x=l*np.cos(alpha)*np.sin(beta)
-        y=l*np.sin(alpha)*np.sin(beta)
-        z=l*np.cos(beta)
+        x=l*np.cos(alpha)*np.sin(beta)*sc
+        y=l*np.sin(alpha)*np.sin(beta)*sc
+        z=l*np.cos(beta)*sc
         
         cmap=plt.get_cmap('hsv')
         if n:
@@ -483,9 +491,9 @@ class RotInter():
         
         
         ax.set_box_aspect((1,1,1))
-        ax.set_xlabel('Hz')
-        ax.set_ylabel('Hz')
-        ax.set_zlabel('Hz')
+        ax.set_xlabel(lbl)
+        ax.set_ylabel(lbl)
+        ax.set_zlabel(lbl)
         
         return ax
         

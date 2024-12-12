@@ -85,6 +85,18 @@ class Hamiltonian():
     @property
     def pwdavg(self):
         return self.expsys.pwdavg
+    
+    def Liouvillian(self):
+        """
+        Creates a Liouvillian from the Hamiltonian
+
+        Returns
+        -------
+        Liouvillian
+            Liouvillian for this Hamiltonian
+
+        """
+        return self.expsys.Liouvillian()
 
     
     def __setattr__(self,name,value):
