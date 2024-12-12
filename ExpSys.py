@@ -16,6 +16,7 @@ from copy import deepcopy as DC
 from copy import copy
 from .Hamiltonian import RF,Hamiltonian
 from .Liouvillian import Liouvillian
+import matplotlib.pyplot as plt
 
 
 inter_types=dict()
@@ -229,6 +230,59 @@ class ExpSys():
         self.inter.append({'Type':Type,**kwargs})
         
         return self
+    
+    def plot_inter(self,i:int,ax=None):
+        """
+        Creates 3D scatter plots representing the size of the z-component of the
+        interaction as a function of orientation. Helpful in visualizing
+        tensors, and also in determining how well a powder average may deal
+        with a given interaction.
+        
+        Provide the index of the interaction, an optionally a 3D axis onto
+        which the tensor will be plotted.
+        
+
+        Parameters
+        ----------
+        i : int
+            Index of the desired interaction.
+        ax : TYPE, optional
+            DESCRIPTION. The default is None.
+
+        Returns
+        -------
+        axis
+
+        """
+        
+        H=self.Hamiltonian()
+        H[0]  #Index once to finish initialization
+        
+        if ax is None:ax=plt.figure().add_subplot(1,1,1,projection='3d')
+        
+        if H.Hinter[i].rotInter is None:
+            A=H.Hinter[i].avg
+            alpha=self.pwdavg.alpha
+            beta=self.pwdavg.beta
+            if not(self.pwdavg._gamma_incl):
+                i=self.pwdavg.gamma==0
+                alpha=alpha[i]
+                beta=beta[i]
+            
+            x=np.cos(alpha)*np.sin(beta)*A
+            y=np.sin(alpha)*np.sin(beta)*A
+            z=np.cos(beta)*A
+            
+            ax.scatter3D(x,y,z,linewidth=0.2,antialiased=True,color='red' if A>0 else 'blue')
+            ax.set_box_aspect((1,1,1))
+            ax.set_xlabel('Hz')
+            ax.set_ylabel('Hz')
+            ax.set_zlabel('Hz')
+            
+        H.Hinter[i].rotInter.plot(avg=H.Hinter[i].avg,ax=ax)
+        
+        return ax
+        
         
     def __getitem__(self,n):
         """

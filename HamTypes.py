@@ -17,7 +17,7 @@ from matplotlib.ticker import MaxNLocator
 from . import Constants
 
 class Ham1inter():
-    def __init__(self,M=None,H=None,T=None,isotropic=False,delta=0,eta=0,euler=[0,0,0],
+    def __init__(self,M=None,H=None,T=None,isotropic=False,delta=0,eta=0,euler=[0,0,0],avg=0,
                  rotor_angle=np.arccos(np.sqrt(1/3)),info={},es=None):
         
         self.M=M
@@ -27,6 +27,7 @@ class Ham1inter():
         self.delta=delta
         self.eta=eta
         self.euler=euler
+        self.avg=avg
         self.pwdavg=None
         self.rotInter=None
         self.info=info
@@ -82,6 +83,10 @@ class Ham1inter():
                 '\n\t'.join([f'{key}={ef(value) if key=="euler" else value}' for key,value in dct.items()])+'\n'
         out+='\n'+super().__repr__()    
         return out
+    
+    def __len__(self):
+        if self.pwdavg is None:return 1
+        return self.pwdavg.N
             
             
     def Hn(self,n=0,t=None):
@@ -371,7 +376,7 @@ def J(es,i0:int,i1:int,J:float):
         
     info={'Type':'J','i0':i0,'i1':i1,'J':J}
     
-    return Ham1inter(H=H,isotropic=True,info=info,es=es)
+    return Ham1inter(H=H,avg=J,isotropic=True,info=info,es=es)
 
 def CS(es,i:int,ppm:float=None,Hz:float=None):
     """
@@ -409,7 +414,7 @@ def CS(es,i:int,ppm:float=None,Hz:float=None):
         H=Hz*S.z
         info={'Type':'CS','i':i,'Hz':Hz}
         
-    return Ham1inter(H=H,isotropic=True,info=info,es=es)
+    return Ham1inter(H=H,avg=ppm*es.v0[i]/1e6,isotropic=True,info=info,es=es)
     
 def CSA(es,i:int,delta:float=None,deltaHz:float=None,eta:float=0,euler=[0,0,0]):
     """
@@ -534,17 +539,17 @@ def hyperfine(es,i0:int,i1:int,Axx:float=0,Ayy:float=0,Azz:float=0,euler=[0,0,0]
         H=-np.sqrt(3)*avg*T[0,0]   #Rank-0 contribution
         
         if delta:
-            return Ham1inter(H=H,T=T,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
+            return Ham1inter(H=H,T=T,isotropic=False,delta=delta,eta=eta,euler=euler,avg=avg,rotor_angle=es.rotor_angle,info=info,es=es)
         else:
-            return Ham1inter(H=H,isotropic=True,info=info,es=es)
+            return Ham1inter(H=H,isotropic=True,avg=avg,info=info,es=es)
     else:  #Rotating frame calculation
         S,I=es.Op[i0],es.Op[i1]
         M=np.sqrt(2/3)*S.z*I.z
         H=avg*S.z*I.z
         if delta:                        
-            return Ham1inter(M=M,H=H,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
+            return Ham1inter(M=M,H=H,isotropic=False,delta=delta,eta=eta,euler=euler,avg=avg,rotor_angle=es.rotor_angle,info=info,es=es)
         else:
-            return Ham1inter(H=H,isotropic=True,info=info,es=es)
+            return Ham1inter(H=H,avg=avg,isotropic=True,info=info,es=es)
 
 def quadrupole(es,i:int,delta:float=0,eta:float=0,euler=[0,0,0]):
     """
@@ -661,22 +666,24 @@ def g(es,i:int,gxx:float=2.0023193,gyy:float=2.0023193,gzz:float=2.0023193,euler
     delta=gzz*mub*es.B0
     eta=(gyy-gxx)/gzz if delta else 0
     
+    plt_avg=mub*avg*es.B0
+    
     if es.LF[i]:  #Lab frame calculation
         T=es.Op[i].T
         T.set_mode('B0_LF')
         H=-np.sqrt(3)*avg1*T[0,0]*es.B0   #Rank-0 contribution
         if delta:
-            return Ham1inter(H=H,T=T,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
+            return Ham1inter(H=H,T=T,isotropic=False,delta=delta,eta=eta,euler=euler,avg=plt_avg,rotor_angle=es.rotor_angle,info=info,es=es)
         else:
-            return Ham1inter(H=H,isotropic=True,info=info,es=es)
+            return Ham1inter(H=H,avg=plt_avg,isotropic=True,info=info,es=es)
     else:  #Rotating frame calculation
         S=es.Op[i]
         M=np.sqrt(2/3)*S.z
-        H=(avg1)*S.z
+        H=(avg1*es.B0)*S.z
         if delta:                        
-            return Ham1inter(M=M,H=H,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
+            return Ham1inter(M=M,H=H,isotropic=False,delta=delta,eta=eta,euler=euler,avg=plt_avg,rotor_angle=es.rotor_angle,info=info,es=es)
         else:
-            return Ham1inter(H=H,isotropic=True,info=info,es=es)
+            return Ham1inter(H=H,avg=plt_avg,isotropic=True,info=info,es=es)
         
         
 def ZeroField(es,i:int,D:float,E:float=0,euler=[0,0,0]):
@@ -797,7 +804,7 @@ def HamPlot(H,what:str='H',cmap:str=None,mode:str='log',colorbar:bool=True,
             cmap= 'binary'
     
 
-    H=H[len(H)//2] if hasattr(H,'_index') and H._index==-1 else H
+    H=H[len(H)//2] if (hasattr(H,'_index') and H._index==-1) or (hasattr(H,'A') and H.A is None ) else H
     if what in ['H0','H1','H-1','H-2']:
         x=H.Hn(int(what[1:]))
     elif what=='H':

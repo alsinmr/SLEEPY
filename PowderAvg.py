@@ -319,8 +319,6 @@ class RotInter():
     def MOL2LAB_Azz(self):
         """
         Applies the powder average to the tensor stored in the molecular frame.
-        One may provide the powder average, although usually this will already
-        be stored in this object.
         
         This returns the n=-2,-1,0,1,2 rotating components of the term A0 in the
         lab frame, after scaling by 2/np.sqrt(6) (that is, we return the Azz 
@@ -352,8 +350,6 @@ class RotInter():
     def MOL2LAB_A(self):
         """
         Applies the powder average to the tensor stored in the molecular frame.
-        One may provide the powder average, although usually this will already
-        be stored in this object.
         
         This returns the lab components of the interaction (no rotor angle 
         considered)
@@ -431,4 +427,52 @@ class RotInter():
     def Afull(self):
         if self._Afull is None:self.MOL2LAB_Afull()
         return self._Afull.copy()
+    
+    
+    def plot(self,avg=0,ax=None):
+        """
+        Creates a 3D plot of the tensor stored in RotInter. May add an isotropic
+        term, avg. This is not available from RotInter, but is available to
+        the Hamiltonian.
+
+        Returns
+        -------
+        axis
+
+        """
+        if ax is None:ax=plt.figure().add_subplot(1,1,1,projection='3d')
+        alpha=self.pwdavg.alpha
+        beta=self.pwdavg.beta
+        A=self.A[:,2].real*np.sqrt(2/3)
+        if not(self.pwdavg._gamma_incl):
+            i=self.pwdavg.gamma==0
+            alpha=alpha[i]
+            beta=beta[i]
+            A=A[i]
+        
+        x=(A+avg)*np.cos(alpha)*np.sin(beta)
+        y=(A+avg)*np.sin(alpha)*np.sin(beta)
+        z=(A+avg)*np.cos(beta)
+        
+        
+        i=(A+avg)>=0
+        if np.any(i):
+            ax.scatter3D(x[i],y[i],z[i],linewidth=0.2,antialiased=True,color='red')
+        i=(A+avg)<=0
+        if np.any(i):
+            ax.scatter3D(x[i],y[i],z[i],linewidth=0.2,antialiased=True,color='blue')
+        
+        lim=max([ax.get_xlim()[1],ax.get_ylim()[1],ax.get_zlim()[1]])
+        ax.set_xlim([-lim,lim])
+        ax.set_ylim([-lim,lim])
+        ax.set_zlim([-lim,lim])
+        
+        
+        ax.set_box_aspect((1,1,1))
+        ax.set_xlabel('Hz')
+        ax.set_ylabel('Hz')
+        ax.set_zlabel('Hz')
+        
+        return ax
+        
     
