@@ -231,7 +231,7 @@ class ExpSys():
         
         return self
     
-    def plot_inter(self,i:int,ax=None):
+    def plot_inter(self,i:int,n:int=0,ax=None):
         """
         Creates 3D scatter plots representing the size of the z-component of the
         interaction as a function of orientation. Helpful in visualizing
@@ -246,6 +246,8 @@ class ExpSys():
         ----------
         i : int
             Index of the desired interaction.
+        n : int
+            Component (-2,-1,0,1,2) of the interaction to view. Default is 0
         ax : TYPE, optional
             DESCRIPTION. The default is None.
 
@@ -262,6 +264,7 @@ class ExpSys():
         
         if H.Hinter[i].rotInter is None:
             A=H.Hinter[i].avg
+            if n:A=0
             alpha=self.pwdavg.alpha
             beta=self.pwdavg.beta
             if not(self.pwdavg._gamma_incl):
@@ -279,7 +282,7 @@ class ExpSys():
             ax.set_ylabel('Hz')
             ax.set_zlabel('Hz')
             
-        H.Hinter[i].rotInter.plot(avg=H.Hinter[i].avg,ax=ax)
+        H.Hinter[i].rotInter.plot(avg=H.Hinter[i].avg,n=n,ax=ax)
         
         return ax
         

@@ -429,11 +429,14 @@ class RotInter():
         return self._Afull.copy()
     
     
-    def plot(self,avg=0,ax=None):
+    def plot(self,n:int=0,avg=0,ax=None):
         """
-        Creates a 3D plot of the tensor stored in RotInter. May add an isotropic
-        term, avg. This is not available from RotInter, but is available to
-        the Hamiltonian.
+        Creates a 3D plot of the tensor stored in RotInter. By default, shows
+        the magnitude of the n=0 term, although -2, -1, 0, 1, or 2 may be selected
+        One may also add an isotropic term, avg. This is not available from 
+        RotInter, but is available to the Hamiltonian.
+        
+        Note if n!=0, then avg is ignored.
 
         Returns
         -------
@@ -443,24 +446,35 @@ class RotInter():
         if ax is None:ax=plt.figure().add_subplot(1,1,1,projection='3d')
         alpha=self.pwdavg.alpha
         beta=self.pwdavg.beta
-        A=self.A[:,2].real*np.sqrt(2/3)
+        A=self.A[:,n+2]*np.sqrt(2/3) if n else self.A[:,2].real*np.sqrt(2/3)
+
         if not(self.pwdavg._gamma_incl):
             i=self.pwdavg.gamma==0
             alpha=alpha[i]
             beta=beta[i]
             A=A[i]
+            
+        if n:
+            l=np.abs(A)
+        else:
+            l=A.real+avg
         
-        x=(A+avg)*np.cos(alpha)*np.sin(beta)
-        y=(A+avg)*np.sin(alpha)*np.sin(beta)
-        z=(A+avg)*np.cos(beta)
         
         
-        i=(A+avg)>=0
-        if np.any(i):
-            ax.scatter3D(x[i],y[i],z[i],linewidth=0.2,antialiased=True,color='red')
-        i=(A+avg)<=0
-        if np.any(i):
-            ax.scatter3D(x[i],y[i],z[i],linewidth=0.2,antialiased=True,color='blue')
+        x=l*np.cos(alpha)*np.sin(beta)
+        y=l*np.sin(alpha)*np.sin(beta)
+        z=l*np.cos(beta)
+        
+        cmap=plt.get_cmap('hsv')
+        if n:
+            ax.scatter3D(x,y,z,color=cmap(np.arctan2(A.imag,A.real)/(2*np.pi)+0.5))
+        else:
+            i=(A+avg)>=0
+            if np.any(i):
+                ax.scatter3D(x[i],y[i],z[i],linewidth=0.2,antialiased=True,color='red')
+            i=(A+avg)<=0
+            if np.any(i):
+                ax.scatter3D(x[i],y[i],z[i],linewidth=0.2,antialiased=True,color='blue')
         
         lim=max([ax.get_xlim()[1],ax.get_ylim()[1],ax.get_zlim()[1]])
         ax.set_xlim([-lim,lim])
