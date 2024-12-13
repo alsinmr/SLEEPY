@@ -409,12 +409,14 @@ def CS(es,i:int,ppm:float=None,Hz:float=None):
     if Hz is None:
         assert ppm is not None,"ppm or Hz must be provided for CS"
         H=ppm*es.v0[i]/1e6*S.z
+        avg=ppm*es.v0[i]/1e6
         info={'Type':'CS','i':i,'ppm':ppm}
     else:
         H=Hz*S.z
+        avg=Hz
         info={'Type':'CS','i':i,'Hz':Hz}
         
-    return Ham1inter(H=H,avg=ppm*es.v0[i]/1e6,isotropic=True,info=info,es=es)
+    return Ham1inter(H=H,avg=avg,isotropic=True,info=info,es=es)
     
 def CSA(es,i:int,delta:float=None,deltaHz:float=None,eta:float=0,euler=[0,0,0]):
     """

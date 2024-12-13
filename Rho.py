@@ -1261,9 +1261,11 @@ class Rho():
         """
         if ax is None:ax=plt.figure().add_subplot(111)
         
-        if self.t_axis[-1]*np.abs(self.L[len(self.L)//2].L(step=0)).max()>1e12:
-            warnings.warn('Evolution time is more than 12 orders of magnitude different than largest Liouvillian term:\nNumerical error possible')
-        
+        for x in self.L.relax_info:
+            if x[0]=='DynamicThermal':
+                if self.L.kex.max()/np.abs(self.L[len(self.L)//2].LrelaxOS(0)).max()>1e10:
+                    warnings.warn('Dynamic thermal may not be stable with exchange rates and relaxation matrix separated by more than 10 orders of magnitude')
+
         def det2label(detect):
             if isinstance(detect,str):
                 if detect[0]=='S':
@@ -1330,6 +1332,9 @@ class Rho():
             elif axis.lower()=='khz':
                 v_axis=self.v_axis/1e3
                 label=r'$\nu$ / kHz'
+            elif axis.lower()=='points':
+                v_axis=np.arange(len(self.v_axis))
+                label='points'
             else:
                 v_axis=self.v_axis
                 label=r'$\nu$ / Hz'
@@ -1369,6 +1374,9 @@ class Rho():
                 elif axis.lower()=='ns':
                     x*=1e9
                     xlabel='t / ns'
+                elif axis.lower()=='points':
+                    x=np.arange(len(self.t_axis))
+                    xlabel='points'
                 else:
                     x*=1e3
                     xlabel='t / ms'
