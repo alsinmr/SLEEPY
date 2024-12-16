@@ -1,7 +1,7 @@
 <img src="logo.png" alt="drawing" width="600"/>
 
 # SLEEPY
-Simulation in Liouville space for rElaxation and Exchange in PYthon
+Spins in Liouville space for rElaxation and Exchange in PYthon
 
 Currently under development. Requires standard python packages plus numpy/scipy/matplotlib.
 
