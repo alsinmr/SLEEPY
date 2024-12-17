@@ -553,11 +553,12 @@ def hyperfine(es,i0:int,i1:int,Axx:float=0,Ayy:float=0,Azz:float=0,euler=[0,0,0]
         else:
             return Ham1inter(H=H,avg=avg,isotropic=True,info=info,es=es)
 
-def quadrupole(es,i:int,delta:float=0,eta:float=0,euler=[0,0,0]):
+def quadrupole(es,i:int,delta:float=None,DelPP:float=None,eta:float=0,euler=[0,0,0]):
     """
     Quadrupole coupling defined by its anisotropy (delta) and asymmetry (eta). 
-    
-    (Maybe we would rather have the input be Cqcc?)
+    One may alternatively define the peak-to-peak separation(DelPP). For half integer
+    spins, this is the distance between the central frequence and first peak,
+    and for integer spins, the distance between the two central peaks.
 
     Parameters
     ----------
@@ -566,7 +567,11 @@ def quadrupole(es,i:int,delta:float=0,eta:float=0,euler=[0,0,0]):
     i : int
         index of the spin.
     delta : float
-        anisotropy of the quadrupole coupling. Default is 0
+        anisotropy of the quadrupole coupling. 
+        Default is None (provide DelPP or delta)
+    DelPP : float
+        peak-to-peak distance for the quadrupole coupling. 
+        Default is None (provide DelPP or delta)
     eta   : float
         asymmetry of the quadrupole coupling (usually 0). Default is 0
     euler : list
@@ -579,21 +584,23 @@ def quadrupole(es,i:int,delta:float=0,eta:float=0,euler=[0,0,0]):
 
     """
     
+    assert delta is not None or DelPP is not None,"delta or DelPP must be provided"
+    if delta is None:
+        info={'Type':'quadrupole','i':i,'DelPP':DelPP,'eta':eta,'euler':euler}
+        delta=DelPP*2/3
+    else:
+        info={'Type':'quadrupole','i':i,'delta':delta,'eta':eta,'euler':euler}
+    
     S=es.Op[i]
 
     if es.LF[i]:
         T=S.T
         T=T*T
-        info={'Type':'quadrupole','i':i,'delta':delta,'eta':eta,'euler':euler}
         return Ham1inter(T=T,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
     else:
         I=es.S[i]
-    
         M=np.sqrt(2/3)*1/2*(3*S.z@S.z-I*(I+1)*S.eye)  
         
-        info={'Type':'quadrupole','i':i,'delta':delta,'eta':eta,'euler':euler}
-        # if Defaults['verbose']:
-        #     print('Quadrupole Hamiltonian does not include 2nd order terms')
         return Ham1inter(M=M,isotropic=False,delta=delta,eta=eta,euler=euler,
                           rotor_angle=es.rotor_angle,info=info,es=es)
 
