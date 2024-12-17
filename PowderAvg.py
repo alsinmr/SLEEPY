@@ -196,6 +196,9 @@ class PowderAvg():
             if not(np.all(getattr(pwdavg,key)==getattr(self,key))):return False
         return True
     
+    def __len__(self):
+        return self.N
+    
     def __getitem__(self,i):
         """
         Returns the ith element of the powder average as a new powder average
@@ -226,9 +229,13 @@ class PowderAvg():
         out=copy(self)
         out._gamma_incl=True
         out.ngamma=1
-        out.alpha=self.alpha[i:i+1]
-        out.beta=self.beta[i:i+1]
-        out.gamma=self.gamma[i:i+1]
+        j=i+1
+        i%=len(self)
+        j%=len(self)
+        if j<i:j+=len(self)
+        out.alpha=self.alpha[i:j]
+        out.beta=self.beta[i:j]
+        out.gamma=self.gamma[i:j]
         # out.N=1
         out.weight=np.ones([1])
         return out

@@ -246,8 +246,6 @@ def recovery(expsys,L):
         
     rho_eq=L.rho_eq()
     for i0,i1 in index:
-        # TODO this is still wrong. Somehow we need to thermalize between SalphaI+ SbetaI+ coherences
-        # if out[i0,i1]==0:
 
         if rho_eq[i0]==0 or rho_eq[i1]==0:
             DelE=(L.Energy[i0]-L.Energy[i1])
