@@ -112,6 +112,7 @@ class Propagator():
             Unew=list()
             for k,U in enumerate(self):
                 d,v=np.linalg.eig(U)
+                # d,v=eigs(U,k=U.shape[0]//2)
                 # We do this because anything above 1 would be producing magnetization
                 # The most we can have is 1, which represents equilibrium
                 # under the current conditions
@@ -119,6 +120,7 @@ class Propagator():
                 # Is this correct, though? Does DNP produce magnetization? At
                 # the moment, Solid Effect works. So probably ok.
                 
+                # No eigenvalue can grow in time
                 dabs=np.abs(d) 
                 i=dabs>1
                 d[i]/=dabs[i]
@@ -155,12 +157,26 @@ class Propagator():
                     # density operator. In particular, it destroys DNP
                     # transfers.
                     
+                    # and finally, if the matrix is reduced, it is possible
+                    # that we have excluded the eigenvector with value of 1,
+                    # so we should also not enforce this.
+                    
+                    # n=self.L.H[0].shape[0]
+                    # Force the equilibrium value to exist.
                     i=np.argmax(d.real)
+                    d[i]=1.
+                    # i=np.argsort(d.real)[-n:]
                     
                     # The
                     # v[:,i]=self.L.rho_eq(pwdindex=k)
                     # v[:,i]/=np.sqrt((v[:,i].conj()*v[:,i]).sum())
-                    d[i]=1.
+                    
+                    # q=np.eye(self.L.H[0].shape[0],dtype=bool).flatten()
+                    # q=np.logical_not(np.tile(q,len(self.L.H)))
+                    # v[:,i][q]=0
+                    
+                    # i=np.abs(d)<1e-12
+                    # d[i]=0
                 self._eig.append((d,v))
                 if back_calc:
                     Unew.append(v@np.diag(d)@np.linalg.pinv(v))

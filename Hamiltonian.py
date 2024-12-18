@@ -277,7 +277,7 @@ class Hamiltonian():
         tuple
 
         """
-        return self.expsys.Op.Mult.prod(),self.expsys.Op.Mult.prod()
+        return self.expsys.Op.shape
         
     
     def Ln(self,n:int):

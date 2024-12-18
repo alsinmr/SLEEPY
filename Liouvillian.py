@@ -69,6 +69,8 @@ class Liouvillian():
 
         self._PropCache=PropCache(self)
         
+        self._shape=np.prod(self.H[0].shape)*len(self.H),np.prod(self.H[0].shape)*len(self.H)
+        
         
         # self.sub=False
         
@@ -224,7 +226,7 @@ class Liouvillian():
         tuple
 
         """
-        return np.prod(self.H[0].shape)*len(self.H),np.prod(self.H[0].shape)*len(self.H)
+        return self._shape
     
     @property
     def rf(self):
@@ -1310,13 +1312,49 @@ class LiouvilleBlock(Liouvillian):
         self._block=block
         self._PropCache=PropCache(self)
         self._LrelaxOS=RelaxClass(self)
+        self._shape=block.sum(),block.sum()
         self.LrelaxOS.methods=L.LrelaxOS.methods
         
+    def __getitem__(self,i:int):
+        # TODO edit accordingly
+        """
+        Goes to a particular item of the powder average
+
+        Parameters
+        ----------
+        i : int
+            Element of the powder average to go to.
+
+        Returns
+        -------
+        Liouvillian''
+
+        """
+        out=copy(self)
+        out._LrelaxOS=copy(out.LrelaxOS)
+        
+        out._L=self._L[i]
+        
+        out._index=i
+        out._PropCache=self._PropCache
+        out._PropCache.L=out 
+        out._LrelaxOS.L=out
+        # The above line bothers me. If we extract a particular element and
+        # then later another element, the first element's propagator cache
+        # references the wrong element of the Liouvillian.
+        return out
+        
+    # def L(self,step):
+    #     return self._L[self._index].L(step)[self.block][:,self.block]
+    
+    # def Ln(self,n:int):
+    #     return self._L[self._index].Ln(n)[self.block][:,self.block]
+    
     def L(self,step):
-        return self._L[self._index].L(step)[self.block][:,self.block]
+        return self._L.L(step)[self.block][:,self.block]
     
     def Ln(self,n:int):
-        return self._L[self._index].Ln(n)[self.block][:,self.block]
+        return self._L.Ln(n)[self.block][:,self.block]
     
     @property
     def Lrf(self):
@@ -1329,7 +1367,7 @@ class LiouvilleBlock(Liouvillian):
     
     @property
     def shape(self):
-        return (self.block.sum(),self.block.sum())
+        return self._shape
     
     @property
     def reduced(self):

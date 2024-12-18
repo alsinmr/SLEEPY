@@ -457,8 +457,8 @@ class RelaxClass():
 
         L0=L.Lcoh(step)+L.Lex+L.Lrelax
         
-        _=L.rho_eq(Hindex=0,step=0)
-        _=L.Lcoh(step)
+        # _=L.rho_eq(Hindex=0,step=0)
+        # _=L.Lcoh(step)
         
         # a,b=np.linalg.eig(L0)
         # i=np.argmin(np.abs(a))

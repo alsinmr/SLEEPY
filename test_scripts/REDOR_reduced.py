@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
-sys.path.append('/Users/albertsmith/Documents/GitHub')
+sys.path.append('/Users/albertsmith/Documents/GitHub.nosync')
 import SLEEPY as sl
 import numpy as np
 from time import time
@@ -35,16 +35,19 @@ rho,f,s,c,Ueye=rho.ReducedSetup(first,second,centerH,L.Ueye())
 # rho,f,s,c,Ueye=rho,first,second,centerH,L.Ueye()
 
 Ufirst=f.U()
-Usecond=s.U()
-Ucenter=c.U()
+Ufirst.calcU()
 
-U1=Ueye
-U2=Ueye
+# Ufirst=f.U()
+# Usecond=s.U()
+# Ucenter=c.U()
 
-t0=time()
-for k in range(32):
-    rho.reset()
-    (U2*Ucenter*U1*rho)()
-    U1=Ufirst*U1
-    U2=Usecond*U2
-print(time()-t0)
+# U1=Ueye
+# U2=Ueye
+
+# t0=time()
+# for k in range(32):
+#     rho.reset()
+#     (U2*Ucenter*U1*rho)()
+#     U1=Ufirst*U1
+#     U2=Usecond*U2
+# print(time()-t0)

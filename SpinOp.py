@@ -46,8 +46,11 @@ class SpinOp:
         
         self._index=-1
         
+        self._shape=self.Mult.prod(),self.Mult.prod()
         self._state_index=None
+        
         self._initialized=True
+        
         
             
     def __setattr__(self,name,value):
@@ -64,6 +67,10 @@ class SpinOp:
     @property
     def N(self):
         return len(self.S)
+    
+    @property
+    def shape(self):
+        return self._shape
     
     def __len__(self):
         return self.N

@@ -1263,8 +1263,8 @@ class Rho():
         
         for x in self.L.relax_info:
             if x[0]=='DynamicThermal':
-                if self.L.kex.max()/np.abs(self.L[len(self.L)//2].LrelaxOS(0)).max()>1e10:
-                    warnings.warn('Dynamic thermal may not be stable with exchange rates and relaxation matrix separated by more than 10 orders of magnitude')
+                if self.I.max()>self.expsys.Peq.max():
+                    warnings.warn('Diverging system due to unfavorable scaling')
 
         def det2label(detect):
             if isinstance(detect,str):
@@ -1538,7 +1538,7 @@ class Rho():
 
         if not(self.reduced):
             r,U=self.ReducedSetup(U)
-            return r.extract_decay_rates(U,det_num=det_num,avg=avg,pwdavg=pwdavg)
+            return r.extract_decay_rates(U,det_num=det_num,mode=mode)
         
         if not(hasattr(U,'calcU')):  #Sequence instead of U was provided
             U=U.U()   #Calculate U from sequence
