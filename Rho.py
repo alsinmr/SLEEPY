@@ -1456,7 +1456,7 @@ class Rho():
         self.apodize=ap
         return ax
             
-    def extract_decay_rates(self,U,det_num:int=0,avg:bool=True,pwdavg:bool=False):
+    def extract_decay_rates(self,U,det_num:int=0,mode='pwdavg'):
         """
         Uses eigenvalue decomposition to determine all relaxation rates present
         for a density matrix, rho, and their corresponding amplitudes, based
@@ -1464,31 +1464,47 @@ class Rho():
         returned rate constants will be based on the current rho values. If
         you want to start from rho0, make sure to first run reset.
         
-        Note, I am not sure what this will return for 'p' and 'm' operators
+        This will calculate frequencies (f) and decay rates (R) from the 
+        imaginary and real part of the eigenvalues of the propagator. 
+        Weightings (A) will be determined from the eigenvectors and from the 
+        density matrix.
         
-        For an nxn Liouville matrix, and N powder elements, we obtain with
-        the following settings
-
-        avg = False, pwdavg = False:
-            Returns     R : (N,n) real matrix containing the eigenvector 
-                            specific relaxation rate constants (1/s)
-                        f : (N,n) real matrix containing the eigenvector
-                            specific frequencies (rad/s). These frequencies
-                            can be back-folded, so the maximum absolute frequency
-                            is 1/(2*U.dt).
-                        A : (N,n) real matrix containing the eigenvector
-                            specific amplitude. 
-                            
-        avg = True, pwdavg = False
-            Returns     R : (N,) real matrix containing the rate constants
-                            for each element of the powder average
-                        A : (N,) real matrix containing the amplitude for that
-                            element of the powder average (if Rho.reset())
-                            is run at the beginning, then this is usually all
-                            ones (or constant)
-                            
-        avg =True, pwdavg = True
-            Returns      R : Returns the powder-averaged relaxation rate constant
+        Depending on the program mode, some averaging will be performed.
+        
+        mode:
+        
+        'pwdavg' :  Oscillating terms eliminated. Averaging performed over all
+                    non-oscillating terms and over the powder average to yield 
+                    a single rate constant
+                    
+                returns: rate (float)
+                    
+        'avg'    :  Oscillating terms eliminated. Averaging performed over all
+                    non-oscillating terms separating for each element of the
+                    powder average. Returns a list of rates and weights the
+                    same length as the powder average. The weight is the 
+                    downscaling resulting from elimination of the oscillation
+                    terms. To obtain the powder-averaged rate constant, one
+                    would still need to take the product of this weight with
+                    the powder average weight
+                    
+                returns rates (np.array of floats), weights (np.array of floats)
+                    
+        'rates'  :  Oscillating terms eliminated. Returns lists of rates and
+                    weights. The lists are the length of the powder average
+                    and arrays inside the lists correspond to all non-oscillating
+                    rates
+                    
+                returns rates (list of arrays of floats), weights (list of arrays of floats)
+                    
+        'all'    :  No terms eliminated. Returns an array of rates, frequencies,
+                    and decay rates. The first dimension of the array runs down
+                    the powder average, and the second across the propagator
+                    dimension. In case reduced bases are used, this is usually
+                    less than the full propagator dimension. The missing terms,
+                    however, would all have amplitude of zero.
+                    
+                returns rates (2d array), frequencies (2d array)
                         
         
         
@@ -1498,11 +1514,9 @@ class Rho():
         U : TYPE
             DESCRIPTION.
         det_num : int, optional
-            DESCRIPTION. The default is 0.
-        avg : bool, optional
-            DESCRIPTION. The default is True.
-        pwdavg : bool, optional
-            DESCRIPTION. The default is False.
+            Which detector to use. The default is 0.
+        mode : str, optional.
+            Which averaging mode to use. The default is 'pwdavg'.
 
         Returns
         -------
@@ -1510,7 +1524,15 @@ class Rho():
 
         """
         
-        if not(avg):assert not(pwdavg),"If avg is False, then pwdavg must also be false"
+        if mode.lower()=='pwdavg':
+            pwdavg,avg,decay_only=True,True,True
+        elif mode.lower()=='avg':
+            pwdavg,avg,decay_only=False,True,True
+        elif mode.lower()=='rates':
+            pwdavg,avg,decay_only=False,False,True
+        else:
+            pwdavg,avg,decay_only=False,False,False
+            
         
         if self.L is None:self.L=U.L
 
@@ -1539,28 +1561,43 @@ class Rho():
             f[k]=np.log(d).imag/U.Dt #Frequency
             
 
-        if avg:
+        if decay_only:
             Rout=list()
             Aout=list()
+            
             for R0,A0,f0 in zip(R,A,f):
-                i=np.logical_and(np.abs(f0)<1e-5,np.abs(A0)>1e-2)  #non-oscillating terms (??)
-                Aout.append(A0[i].sum())
-                Rout.append((R0[i]*A0[i]).sum()/Aout[-1])
-                # print([f'{R00:.2f}' for R00 in R0[i]])
-                # print([f'{R00:.2f}' for R00 in A0[i]])
-            R=np.array(Rout)
-            A=np.array(Aout)
+                i=np.logical_and(np.abs(f0)<1e-5,np.abs(A0)>1e-2)  #non-oscillating terms
+                Aout.append(A0[i])
+                Rout.append(R0[i])
+
+            if avg:
+                # Rout=list()
+                # Aout=list()
+                # for R0,A0,f0 in zip(R,A,f):
+                Aavg=list()
+                Ravg=list()
+                for R0,A0 in zip(Rout,Aout):
+                    # i=np.logical_and(np.abs(f0)<1e-5,np.abs(A0)>1e-2)  #non-oscillating terms (??)
+                    # Aout.append(A0[i].sum())
+                    # Rout.append((R0[i]*A0[i]).sum()/Aout[-1])
+                    Aavg.append(A0.sum())
+                    Ravg.append((R0*A0).sum()/Aavg[-1] if Aavg[-1] else 0)
+                    
+                # R=np.array(Rout)
+                # A=np.array(Aout)
+                    
+                R=np.array(Ravg)
+                A=np.array(Aavg)
                 
-            # R=(R*A).sum(-1)
-            # R/=A.sum(-1)
-            # A=A.sum(-1)
-            if pwdavg:
-                wt=U.L.pwdavg.weight*A
-                wt/=wt.sum()
-                Ravg=(R*wt).sum()
-                return Ravg
-                
-            return R,A
+                if pwdavg:
+                    wt=U.L.pwdavg.weight*A
+                    wt/=wt.sum()
+                    Ravg=(R*wt).sum()
+                    return Ravg
+                    
+                return R,A
+            
+            return Rout,Aout
         
         return R,f,A
     
