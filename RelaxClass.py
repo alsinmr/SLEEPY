@@ -51,6 +51,7 @@ class RelaxClass():
         self.clear_cache()
         self.Peq=False
         self._deactivate=False
+        self.sc=1
     
     def __call__(self,step:int):
         if not(self.active):return 0
@@ -448,6 +449,11 @@ class RelaxClass():
             self.Peq=True
                 
             self.methods.append({'method':'DynamicThermal'})
+            
+            # Scaling factor for numerical stability
+            sc=1/np.abs(self.L.expsys.Peq).max()
+        
+            self.sc=sc
             return self.clear_cache()
         
         
@@ -463,20 +469,22 @@ class RelaxClass():
         for k in range(len(rho_eq)):
             rho_eq[k][np.abs(rho_eq[k])<1e-8]=0
             
-        Lex0=np.zeros(L.Lex.shape,dtype=Defaults['ctype'])
-        for k in range(nH):
-            for j in range(k+1,nH):
-                DelK=np.zeros(n,dtype=Defaults['ctype'])
-                d=rho_eq[k]+rho_eq[j]
-                i=d.astype(bool)
-                DelK[i]=(L.kex[k,j]*rho_eq[j]-L.kex[j,k]*rho_eq[k])[i]\
-                    /(d[i])
-                Lex0[j*n:(j+1)*n][:,k*n:(k+1)*n]+=np.diag(DelK)
-                Lex0[k*n:(k+1)*n][:,j*n:(j+1)*n]-=np.diag(DelK)
+        # Lex0=np.zeros(L.Lex.shape,dtype=Defaults['ctype'])
+        # for k in range(nH):
+        #     for j in range(k+1,nH):
+        #         DelK=np.zeros(n,dtype=Defaults['ctype'])
+        #         d=rho_eq[k]+rho_eq[j]
+        #         i=d.astype(bool)
+        #         DelK[i]=(L.kex[k,j]*rho_eq[j]-L.kex[j,k]*rho_eq[k])[i]\
+        #             /(d[i])
+        #         Lex0[j*n:(j+1)*n][:,k*n:(k+1)*n]+=np.diag(DelK)
+        #         Lex0[k*n:(k+1)*n][:,j*n:(j+1)*n]-=np.diag(DelK)
 
-        Lex0-=np.diag(np.sum(Lex0,axis=0))
-        # Lex0=0
-        L0=L.Lcoh(step)+L.Lex+L.Lrelax+Lex0
+        # Lex0-=np.diag(np.sum(Lex0,axis=0))
+        # # Lex0=0
+        # L0=L.Lcoh(step)+L.Lex+L.Lrelax+Lex0
+        
+        L0=L.Lcoh(step)+L.Lex+L.Lrelax
         
         
         # a,b=np.linalg.eig(L.kex)
@@ -495,8 +503,9 @@ class RelaxClass():
         one=np.concatenate([np.eye(n).reshape(n**2) for _ in range(N)])
         out=np.array([one*r for r in recovery])
         
-        
-        return out+Lex0
+
+        return out*self.sc
+        # return (out*self.sc+Lex0)
             
         
     def plot(self,what:str='L',cmap:str=None,mode:str='log',colorbar:bool=True,

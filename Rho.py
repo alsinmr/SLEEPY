@@ -619,7 +619,7 @@ class Rho():
             rhoeq=[]
             for L in self.L:
                 rhoeq.append(L.rho_eq(step=step,sub1=not(self.L.Peq)))
-                # TODO : I'm not sure the next 3 lines should be here
+
                 # if self.L.Peq:
                 #     eye=np.tile(np.ravel(self.expsys.Op[0].eye),len(self.L.H))[self.block]
                 #     rhoeq[-1]+=eye/self.expsys.Op.Mult.prod()
@@ -627,6 +627,7 @@ class Rho():
         else:
             self._rho0=self.Op2vec(self.strOp2vec(self.rho0))
         self._detect=[self.Op2vec(self.strOp2vec(det,detect=True),detect=True) for det in self.detect]
+        
         for k,det in enumerate(self._detect):
             if np.any(np.isnan(det)):
                 warnings.warn(f'Detector {k} is not valid')
@@ -638,6 +639,32 @@ class Rho():
             rho=self.getBlock(self.L.block)
             self.__dict__=rho.__dict__
             
+        if self.L.LrelaxOS is not None and self.L.LrelaxOS.sc!=1:
+            one=np.tile(np.eye(self.L.H[0].shape[0]).flatten(),len(self.L.H))
+            # one/=one.sum()
+            if isinstance(self._rho0,list):
+                for k in range(self.pwdavg.N):
+                    self._rho0[k]-=(self._rho0[k]@one)*one/one.sum()
+                    self._rho0[k]+=one/self.L.LrelaxOS.sc/one.sum()
+            else:
+                self._rho0-=(self._rho0@one)*one/one.sum()
+                self._rho0+=(one/self.L.LrelaxOS.sc)/one.sum()
+                
+                # if self.rho0=='Thermal':
+                #     Dt=0.1 if self.L.static else self.L.taur
+                #     self.L.U(Dt)**np.inf*self
+                #     self._rho0=copy(self._rho)
+                
+            
+            
+            # if self.rho0=='Thermal':
+            #     Dt=0.1 if self.L.static else self.L.taur
+            #     self.L.U(Dt)**np.inf*self
+            #     self._rho0=copy(self._rho)
+            #     self.reset()
+            #     print('checkpoint')
+            # else:
+            #     warnings.warn('DynamicThermal should be initialized with Thermal')
         
         
     def reset(self):
@@ -650,7 +677,7 @@ class Rho():
 
         """
         if self.L is not None:
-            self._rho=self._rho0 if isinstance(self._rho0,list) else [self._rho0 for _ in range(self.pwdavg.N)]
+            self._rho=copy(self._rho0) if isinstance(self._rho0,list) else [self._rho0 for _ in range(self.pwdavg.N)]
             self._phase_accum0=np.zeros(self.expsys.nspins)
         self._t=None
         
