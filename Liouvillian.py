@@ -66,6 +66,8 @@ class Liouvillian():
             assert H.pwdavg==self.pwdavg,"All Hamiltonians must have the same powder average"
             if H.rf is not self.rf:
                 H.expsys._rf=self.rf
+                
+        self._children=[]  #Store reduced children of L for clearling the cache
 
         self._PropCache=PropCache(self)
         
@@ -90,7 +92,7 @@ class Liouvillian():
         
         self.relax_info=[]  #Keeps a short record of what kind of relaxation is used
     
-        self._children=[]  #Store reduced children of L for clearling the cache
+        
         
     def getBlock(self,block):
         """
@@ -117,7 +119,10 @@ class Liouvillian():
         self._Ln_H=None
         self._PropCache.reset()
         if self._LrelaxOS is not None:self.LrelaxOS.clear_cache()
-        for child in self._children:child.clear_cache()
+        for child in self._children: # A bit tricky to reset the reduced Liouvillian
+            child._L=self
+            child._PropCache=PropCache(child)
+            child._LrelaxOS=RelaxClass(child)
             
         return self
     
@@ -258,8 +263,7 @@ class Liouvillian():
         """
         
         if name=='kex':
-            self._Lex=None
-            self._PropCache.reset()
+            
             if value is not None:
                 value=np.array(value)
                 assert value.shape[0]==value.shape[1],"Exchange matrix must be square"
@@ -268,6 +272,11 @@ class Liouvillian():
                     warnings.warn("Diagonals of exchange matrix should not be positive")
                 elif np.any(np.abs(value.sum(0))>1e-10*np.mean(-np.diag(value))):
                     warnings.warn("Invalid exchange matrix. Columns should sum to 0. Expect unphysical behavior.")
+        
+                self._Lex=None
+                super().__setattr__(name,value)
+                self.clear_cache()
+                return
         
         super().__setattr__(name,value)
     
@@ -1312,7 +1321,6 @@ class Liouvillian():
 class LiouvilleBlock(Liouvillian):
     def __init__(self,L,block):
         self.__dict__=copy(L.__dict__)
-        L._children.append(self)
         self._L=L
         self._block=block
         self._PropCache=PropCache(self)

@@ -45,7 +45,6 @@ class RelaxClass():
         """
         
         
-        self._L=None
         self.L=L
         
         self.methods=[]
@@ -453,28 +452,40 @@ class RelaxClass():
         
         
         L=self.L
-        
 
-        L0=L.Lcoh(step)+L.Lex+L.Lrelax
+        # Lex correction
         
-        # _=L.rho_eq(Hindex=0,step=0)
-        # _=L.Lcoh(step)
+        nH=len(L.H)
+        n=L.shape[0]//nH
+        rho_eq=L.rho_eq(step=step)
+        rho_eq=[rho_eq[k*n:(k+1)*n] for k in range(nH)]
         
-        # a,b=np.linalg.eig(L0)
+        for k in range(len(rho_eq)):
+            rho_eq[k][np.abs(rho_eq[k])<1e-8]=0
+            
+        Lex0=np.zeros(L.Lex.shape,dtype=Defaults['ctype'])
+        for k in range(nH):
+            for j in range(k+1,nH):
+                DelK=np.zeros(n,dtype=Defaults['ctype'])
+                d=rho_eq[k]+rho_eq[j]
+                i=d.astype(bool)
+                DelK[i]=(L.kex[k,j]*rho_eq[j]-L.kex[j,k]*rho_eq[k])[i]\
+                    /(d[i])
+                Lex0[j*n:(j+1)*n][:,k*n:(k+1)*n]+=np.diag(DelK)
+                Lex0[k*n:(k+1)*n][:,j*n:(j+1)*n]-=np.diag(DelK)
+
+        Lex0-=np.diag(np.sum(Lex0,axis=0))
+        # Lex0=0
+        L0=L.Lcoh(step)+L.Lex+L.Lrelax+Lex0
+        
+        
+        # a,b=np.linalg.eig(L.kex)
         # i=np.argmin(np.abs(a))
-        # b[:,i]=0
-        # Del=L0-b@np.diag(a)@np.linalg.pinv(b)
+        # ex_eq=b[:,i]/b[:,i].sum()
         
-    #     # a,b=np.linalg.eig(L0)
-        
-    #     # i=np.argmin(np.abs(a))
-    #     # req=L.rho_eq(step=step)
-    #     # j=np.argmax(req)
-    #     # b[:,i]=req*np.sign(req[j]/b[j,i])
-    #     # #b[:,i]/=np.sqrt((np.abs(b[:,i])**2).sum())
-    #     # a[i]=0
-        
-    #     # out=b@np.diag(a)@np.linalg.pinv(b)-L0
+        # rho_eq=np.sum([L.rho_eq(step=step,Hindex=k)*eq for k,eq in enumerate(ex_eq)],axis=0)
+        # rho_eq=np.tile(rho_eq,len(ex_eq))
+        # recovery=-L0@rho_eq
         
 
         recovery=-L0@L.rho_eq(step=step)
@@ -485,7 +496,7 @@ class RelaxClass():
         out=np.array([one*r for r in recovery])
         
         
-        return out
+        return out+Lex0
             
         
     def plot(self,what:str='L',cmap:str=None,mode:str='log',colorbar:bool=True,

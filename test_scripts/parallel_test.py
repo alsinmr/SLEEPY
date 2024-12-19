@@ -9,6 +9,7 @@ Created on Thu Dec 19 09:50:06 2024
 import SLEEPY as sl
 import numpy as np
 from SLEEPY.Para import ParallelManager
+from time import time
 
 
 ex0=sl.ExpSys(v0H=600,Nucs='15N').set_inter('CSA',i=0,delta=113)
@@ -18,4 +19,6 @@ L=sl.Liouvillian(ex0,ex1,kex=sl.Tools.twoSite_kex(tc=1e-5))
 
 pm=ParallelManager(L,t0=0,Dt=L.taur)
 
+t0=time()
 U=pm()
+print(time()-t0)

@@ -478,6 +478,18 @@ class Sequence():
         
         return out
     
+    def __pow__(self,n:int):
+        """
+        Power of the sequence (valid for integer rotor period sequences)
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        return self.U()**n
+    
     def __repr__(self):
         out='Sequence for the following Liouvillian:\n\t'
         out+=self.L.__repr__().rsplit('\n',maxsplit=2)[0].replace('\n','\n\t')[:-2]

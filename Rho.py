@@ -330,6 +330,8 @@ class Rho():
         
         for x in seq_red:x.L=rho.L
         
+        self.L._children.append(rho.L)
+        
         return (rho,*seq_red)
     
     def copy_reduced(self):
@@ -616,7 +618,7 @@ class Rho():
             step=0 if self.taur is None else self.t//self.L.dt
             rhoeq=[]
             for L in self.L:
-                rhoeq.append(L.rho_eq(step=step))
+                rhoeq.append(L.rho_eq(step=step,sub1=not(self.L.Peq)))
                 # TODO : I'm not sure the next 3 lines should be here
                 # if self.L.Peq:
                 #     eye=np.tile(np.ravel(self.expsys.Op[0].eye),len(self.L.H))[self.block]
@@ -1566,7 +1568,7 @@ class Rho():
             Aout=list()
             
             for R0,A0,f0 in zip(R,A,f):
-                i=np.logical_and(np.abs(f0)<1e-5,np.abs(A0)>1e-2)  #non-oscillating terms
+                i=np.logical_and(np.abs(f0)<1e-5,np.abs(A0)>1e-8)  #non-oscillating terms
                 Aout.append(A0[i])
                 Rout.append(R0[i])
 

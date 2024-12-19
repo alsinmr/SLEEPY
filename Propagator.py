@@ -164,7 +164,7 @@ class Propagator():
                     
                     # n=self.L.H[0].shape[0]
                     # Force the equilibrium value to exist.
-                    i=np.argmax(d.real)
+                    i=np.argmax(np.abs(d))
                     d[i]=1.
                     # i=np.argsort(d.real)[-n:]
                     
