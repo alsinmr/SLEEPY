@@ -523,7 +523,7 @@ def SetupTetraHop(expsys,tc:float,n:int=4):
     """
             
     ex_list,kex=SetupTumbling(expsys, tc,q=1)
-    if n==4:return kex,ex_list
+    if n==4:return ex_list,kex
     return ex_list[4-n:],nSite_sym(n=n, tc=tc)
 
 def Setup3siteSym(expsys,tc:float,phi:float=np.arccos(-1/3)):

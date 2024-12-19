@@ -112,6 +112,7 @@ class Propagator():
             Unew=list()
             for k,U in enumerate(self):
                 d,v=np.linalg.eig(U)
+                vi=np.linalg.pinv(v)
                 # d,v=eigs(U,k=U.shape[0]//2)
                 # We do this because anything above 1 would be producing magnetization
                 # The most we can have is 1, which represents equilibrium
@@ -177,9 +178,9 @@ class Propagator():
                     
                     # i=np.abs(d)<1e-12
                     # d[i]=0
-                self._eig.append((d,v))
+                self._eig.append((d,v,vi))
                 if back_calc:
-                    Unew.append(v@np.diag(d)@np.linalg.pinv(v))
+                    Unew.append(v@np.diag(d)@vi)
             if back_calc:self.U=Unew
         return self
         
@@ -302,6 +303,19 @@ class Propagator():
         None.
 
         """
+        
+        if n==np.inf or (isinstance(n,str) and n.lower()=='inf'):
+            self.eig()
+            Uout=list()
+            for d,v,vi in self._eig:
+                i=d==1.
+                if np.any(i):
+                    Uout.append(v[:,i]@vi[i])
+                else:
+                    Uout.append(np.zeros(v.shape,dtype=v.dtype))
+                
+            out=Propagator(Uout,t0=self.t0,tf=self.t0+self.Dt,taur=self.taur,L=self.L,isotropic=self.isotropic,phase_accum=0)
+            return out        
 
         if not(self.static) and (self.Dt%self.taur>tol or (self.taur-self.Dt)%self.taur>tol):
             warnings.warn('Power of a propagator should only be used if the propagator length is an integer multiple of rotor periods')
@@ -314,10 +328,10 @@ class Propagator():
 
         Uout=list()
         _eig=list()
-        for d,v in self._eig:
+        for d,v,vi in self._eig:
             D=d**n
-            Uout.append(v@np.diag(D)@np.linalg.pinv(v))
-            _eig.append((D,v))
+            Uout.append(v@np.diag(D)@vi)
+            _eig.append((D,v,vi))
         
         # for U in self:
         #     d,v=np.linalg.eig(U)

@@ -90,6 +90,8 @@ class Liouvillian():
         
         self.relax_info=[]  #Keeps a short record of what kind of relaxation is used
     
+        self._children=[]  #Store reduced children of L for clearling the cache
+        
     def getBlock(self,block):
         """
         Returns a reduced version of this Liouvillian defined by a given
@@ -115,6 +117,8 @@ class Liouvillian():
         self._Ln_H=None
         self._PropCache.reset()
         if self._LrelaxOS is not None:self.LrelaxOS.clear_cache()
+        for child in self._children:child.clear_cache()
+            
         return self
     
     @property
@@ -1308,6 +1312,7 @@ class Liouvillian():
 class LiouvilleBlock(Liouvillian):
     def __init__(self,L,block):
         self.__dict__=copy(L.__dict__)
+        L._children.append(self)
         self._L=L
         self._block=block
         self._PropCache=PropCache(self)

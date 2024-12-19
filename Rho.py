@@ -929,8 +929,8 @@ class Rho():
             if n>=100:
                 self()  #This is the initial detection
                 U.eig()
-                for k,((d,v),rho) in enumerate(zip(U._eig,self)):
-                    rho0=np.linalg.pinv(v)@rho
+                for k,((d,v,vi),rho) in enumerate(zip(U._eig,self)):
+                    rho0=vi@rho
                     dp=np.cumprod(np.repeat([d],n,axis=0),axis=0)
                     rho_d=dp*rho0
                     self._rho[k]=v@rho_d[-1]
@@ -997,8 +997,8 @@ class Rho():
                     for m in range(q+1,q+nsteps):U0=U[m%nsteps]*U0 #Calculate propagator for 1 rotor period starting U[q]
                     U0.eig()
                     phase_accum[q::nsteps]+=U0.phase_accum*np.repeat([np.arange(n0)],self.expsys.nspins,axis=0).T
-                    for k,((d,v),rho0) in enumerate(zip(U0._eig,rho00)):  #Sweep over the powder average
-                        rho0=np.linalg.pinv(v)@rho0
+                    for k,((d,v,vi),rho0) in enumerate(zip(U0._eig,rho00)):  #Sweep over the powder average
+                        rho0=vi@rho0
                         dp=np.concatenate([np.ones([1,d.size],dtype=ctype),
                                            np.cumprod(np.repeat([d],n0-1,axis=0),axis=0)],axis=0)
                         rho_d=dp*rho0
@@ -1263,7 +1263,7 @@ class Rho():
         
         for x in self.L.relax_info:
             if x[0]=='DynamicThermal':
-                if self.I.max()>self.expsys.Peq.max():
+                if self.I.max()>self.expsys.Peq.max()*1.01:  #1% tolerance?
                     warnings.warn('Diverging system due to unfavorable scaling')
 
         def det2label(detect):
@@ -1551,9 +1551,9 @@ class Rho():
         A=np.zeros([U.L.pwdavg.N,U.shape[0]],dtype=float)
            
         U.eig()
-        for k,(rho0,(d,v)) in enumerate(zip(self._rho,U._eig)):
+        for k,(rho0,(d,v,vi)) in enumerate(zip(self._rho,U._eig)):
             # d,v=np.linalg.eig(U0)
-            rhod=np.linalg.pinv(v)@rho0
+            rhod=vi@rho0
             det_d=self._detect[det_num]@v
             
             A[k]=(rhod*det_d).real  #Amplitude
