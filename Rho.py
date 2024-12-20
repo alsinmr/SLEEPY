@@ -1620,8 +1620,12 @@ class Rho():
                 
                 if pwdavg:
                     wt=U.L.pwdavg.weight*A
-                    wt/=wt.sum()
-                    Ravg=(R*wt).sum()
+                    if wt.sum()==0:
+                        warnings.warn("Only oscillating terms found in powder average")
+                        Ravg=np.nan
+                    else:
+                        wt/=wt.sum()
+                        Ravg=(R*wt).sum()
                     return Ravg
                     
                 return R,A
