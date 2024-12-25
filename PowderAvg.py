@@ -482,7 +482,7 @@ class RotInter():
         
         cmap=plt.get_cmap('hsv')
         if n:
-            ax.scatter3D(x,y,z,color=cmap(np.arctan2(A.imag,A.real)/(2*np.pi)+0.5))
+            ax.scatter3D(x,y,z,c=cmap(np.arctan2(A.imag,A.real)/(2*np.pi)+0.5))
         else:
             i=(A+avg)>=0
             if np.any(i):
