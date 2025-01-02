@@ -229,6 +229,8 @@ class Sequence():
         t=np.array(t)
         if t.ndim==0:
             t=np.array([0,t])
+            
+        assert np.all(t[1:]>=t[:-1]),'Time axis is not monotonically increasing.'
         self.new_t(t)
         
         

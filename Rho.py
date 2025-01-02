@@ -77,7 +77,6 @@ class Rho():
         self._block=None
         self._phase_accum=None
         self._phase_accum0=None
-        self._downmixed=False
         self.apod_pars={'WDW':'em','LB':None,'SSB':2,'GB':15,'SI':None}
         
         if L is not None:self.L=L
@@ -379,7 +378,7 @@ class Rho():
         return self
         
     
-    def downmix(self,t0:float=None,baseline:bool=False):
+    def downmix(self,DM:bool=True,t0:float=None,baseline:bool=False):
         """
         Takes the stored signals and downmixes them if they were recorded in the
         lab frame (result replaces Ipwd). Only applied to signals detected with
@@ -389,16 +388,18 @@ class Rho():
         
         Parameters
         ----------
+        DM : bool, optional
+            Determines whether we are downmixing or removing downmixing. Set to
+            False to remove downmixing. Default is True
         t0  : float, optional
             Effectively a phase-correction parameter. By default, t0 is None,
             which means we will subtract away self.t_axis[0] from the time
             axis. The parameter to be subtracted may be adjusted by setting t0
-            Default is None
+            Default is None.
             
         baseline : bool, optional
-            Subtracts away a baseline that may be brought about strongly tilted
-            spin systems. 
-            Default is False
+            Subtracts away a baseline that caused by a strongly tilted 
+            eigenbasis. Default is False
 
         Returns
         -------
@@ -408,7 +409,11 @@ class Rho():
         
         # from scipy.signal import butter,filtfilt
         
-        if self._downmixed:
+        if not(DM):
+            self._Ipwd_DM=None
+            return self
+        
+        if self._Ipwd_DM is not None:
             print('Already downmixed')
             return self
         
@@ -416,6 +421,7 @@ class Rho():
         
         #A new, more general attempt
         co=[np.tile(o.coherence_order,len(self.L.H)).T[self.block] for o in self.expsys.Op]
+        Idm=np.zeros((self.Ipwd.shape[1],self.Ipwd.shape[0],self.Ipwd.shape[2]),dtype=self.Ipwd.dtype)
         for k,detect in enumerate(self._detect):
             detect=detect.astype(bool)
             q=np.ones(len(self.t_axis),dtype=ctype)
@@ -433,11 +439,11 @@ class Rho():
             Ipwd=self.Ipwd[:,k]
             if baseline:
                 Ipwd=(Ipwd.T-Ipwd.mean(-1)).T
-            Idm=Ipwd*q
-            for m in range(self.pwdavg.N):
-                self._Ipwd[m][k]=Idm[m].tolist()
+            Idm[k]=Ipwd*q
+            # for m in range(self.pwdavg.N):
+            #     self._Ipwd[m][k]=Idm[m].tolist()
+        self._Ipwd_DM=np.swapaxes(Idm,0,1)
         
-        self._downmixed=True
                 
         return self
             
@@ -479,6 +485,8 @@ class Rho():
 
         """
         if len(self.t_axis):
+            if self._Ipwd_DM is not None:
+                return self._Ipwd_DM
             if self._tstatus:
                 i=np.argsort(self._taxis)
                 return np.array(self._Ipwd).T[i].T
@@ -608,6 +616,7 @@ class Rho():
         """
         
         self._Ipwd=[[list() for _ in range(self.n_det)] for _ in range(self.pwdavg.N)]
+        self._Ipwd_DM=None #Downmixed signal
         self._FTpwd=None
         self._taxis=list()
         self._phase_accum=list()
@@ -707,7 +716,7 @@ class Rho():
         self._rho=list() #Storage for numerical rho
         self._L=None
         self._BDP=False
-        self._downmixed=False
+        self._Ipwd_DM=None
         
         return self
         # if self._L is not None:
@@ -840,6 +849,7 @@ class Rho():
         None.
 
         """
+        self._Ipwd_DM=None
         if self.L is None:
             if self._awaiting_detection:
                 warnings.warn('Detection called twice before applying propagator. Second call ignored')
@@ -978,33 +988,35 @@ class Rho():
         else:
             # TODO set n_per_seq functionality here
             if self.static:
-                return self.DetProp(U=seq.U(),n=n)
-            
-            if (seq.Dt%seq.taur<tol or -seq.Dt%seq.taur<tol) and n_per_seq==1:
-                U=seq.U(t0=self.t,Dt=seq.Dt)  #Just generate the propagator and call with U
-                self.DetProp(U=U,n=n)
-                return self
-            
-            if seq.Dt<seq.taur:
-                for k in range(1,n):
-                    nsteps=np.round(k*seq.taur/seq.Dt,0).astype(int)
-                    if nsteps*seq.Dt%seq.taur < tol:break
-                    if seq.taur-(nsteps*seq.Dt%seq.taur) < tol:break
-                else:
-                    nsteps=n
-                                    
+                nsteps=n_per_seq
+                
             else:
-                for k in range(1,n):
-                    nsteps=np.round(k*seq.Dt/seq.taur,0).astype(int)
-                    if nsteps*seq.Dt%seq.taur < tol:break
-                    if seq.taur-(nsteps*seq.Dt%seq.taur) < tol:break
-                else:
-                    nsteps=n
-                k,nsteps=nsteps,k
-            nsteps*=n_per_seq if nsteps<n else n
             
-            if Defaults['verbose']:
-                print(f'Prop: {nsteps} step{"" if nsteps==1 else "s"} per every {k} rotor period{"" if k==1 else "s"}')
+                if (seq.Dt%seq.taur<tol or -seq.Dt%seq.taur<tol) and n_per_seq==1:
+                    U=seq.U(t0=self.t,Dt=seq.Dt)  #Just generate the propagator and call with U
+                    self.DetProp(U=U,n=n)
+                    return self
+                
+                if seq.Dt<seq.taur:
+                    for k in range(1,n):
+                        nsteps=np.round(k*seq.taur/seq.Dt,0).astype(int)
+                        if nsteps*seq.Dt%seq.taur < tol:break
+                        if seq.taur-(nsteps*seq.Dt%seq.taur) < tol:break
+                    else:
+                        nsteps=n
+                                        
+                else:
+                    for k in range(1,n):
+                        nsteps=np.round(k*seq.Dt/seq.taur,0).astype(int)
+                        if nsteps*seq.Dt%seq.taur < tol:break
+                        if seq.taur-(nsteps*seq.Dt%seq.taur) < tol:break
+                    else:
+                        nsteps=n
+                    k,nsteps=nsteps,k
+                nsteps*=n_per_seq if nsteps<n else n
+                
+                if Defaults['verbose']:
+                    print(f'Prop: {nsteps} step{"" if nsteps==1 else "s"} per every {k} rotor period{"" if k==1 else "s"}')
             
             
             seq.reset_prop_time(self.t)
@@ -1292,7 +1304,7 @@ class Rho():
         
         for x in self.L.relax_info:
             if x[0]=='DynamicThermal':
-                if self.I.max()>self.expsys.Peq.max()*1.01:  #1% tolerance?
+                if np.abs(self.I).max()>np.abs(self.expsys.Peq).max()*1.01:  #1% tolerance?
                     warnings.warn('Diverging system due to unfavorable scaling')
 
         def det2label(detect):

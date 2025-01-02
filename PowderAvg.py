@@ -32,6 +32,11 @@ class PowderAvg():
         type (see set_powder_type)
         """
         
+        if isinstance(PwdType,int):
+            kwargs['q']=PwdType
+            PwdType='JCP59'
+            
+        
         self._alpha=None
         self._beta=None
         self._gamma=None
