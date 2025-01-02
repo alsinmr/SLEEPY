@@ -986,7 +986,6 @@ class Rho():
                 for _ in range(n):
                     U*self()
         else:
-            # TODO set n_per_seq functionality here
             if self.static:
                 nsteps=n_per_seq
                 
@@ -1023,7 +1022,7 @@ class Rho():
             
             
             Dt=seq.Dt/n_per_seq
-            
+            # TODO should we really define t0_seq here?
             U=[seq.U(Dt=Dt,t0_seq=k*Dt) for k in range(nsteps)]
             
             if n//nsteps>100:
