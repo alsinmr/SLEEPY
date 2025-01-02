@@ -391,7 +391,7 @@ class RelaxClass():
         
         # TODO why does this change behavior?
         M=Lx@Lx+Ly@Ly+Lz@Lz #This is isotropic (will not transform for 1 spin)
-        M=Lz@Lz
+        # M=Lz@Lz
         
         N=len(L.H)      #Number of Hamiltonians
         n=L.H[0].shape[0]  #Dimension of Hamiltonians
