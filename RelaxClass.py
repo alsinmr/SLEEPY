@@ -202,6 +202,8 @@ class RelaxClass():
             # out[i0,i0]+=-Del
             
             
+            # TODO I don't see why out[i0,i0] should always be reduced
+            # Shouldn't it depend on which has higher energy?
             Del=M[i0,i1]*(1-rat)/(1+rat)
             
             out[i0,i0]-=np.abs(Del)
