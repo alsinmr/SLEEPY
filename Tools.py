@@ -13,6 +13,7 @@ import re
 from .Info import Info
 from .vft import Spher2pars
 from . import Defaults
+from . import Constants
 import warnings
 import matplotlib.pyplot as plt
 
@@ -29,8 +30,8 @@ class NucInfo(Info):
     'abund')
     """
     def __init__(self):
-        h=6.6260693e-34
-        muen=5.05078369931e-27
+        h=Constants['h']
+        muen=Constants['muen']
         super().__init__()
         dir_path = os.path.dirname(os.path.realpath(__file__))    
         with open(dir_path+'/GyroRatio.txt','r') as f:
@@ -38,6 +39,7 @@ class NucInfo(Info):
                 line=line.strip().split()
                 self.new_exper(Nuc=line[3],mass=float(line[1]),spin=float(line[5]),\
                                gyro=float(line[6])*muen/h,abundance=float(line[7])/100)
+        self.new_exper(Nuc='e-',mass=0,spin=1/2,gyro=Constants['ge']*Constants['mub'],abundance=1)
     
     def __call__(self,Nuc=None,info='gyro'):
         if Nuc is None:
@@ -81,6 +83,7 @@ class NucInfo(Info):
             return ftd[info]
     
     def __repr__(self):
+        self['gyro',-1]=Constants['ge']*Constants['mub']
         out=''
         for k in self.keys:out+='{:7s}'.format(k)+'\t'
         out=out[:-1]
@@ -96,6 +99,7 @@ class NucInfo(Info):
             if index=='D':   #Deuterium
                 return self[1]
             if index in ['e','e-']: #Electron
+                self['gyro',-1]=Constants['ge']*Constants['mub']
                 return self[-1]
             mass=re.findall(r'\d+',index)
             Nuc=re.findall(r'[A-Z]',index.upper())
@@ -107,8 +111,9 @@ class NucInfo(Info):
         return super().__getitem__(index)
         
         
+        
 NucInfo=NucInfo()
-NucInfo.new_exper(Nuc='e-',mass=0,spin=1/2,gyro=-1.76085963023e11/2/np.pi,abundance=1)
+
 
 def dipole_coupling(r,Nuc1,Nuc2):
     """ Returns the dipole coupling between two nuclei ('Nuc1','Nuc2') 

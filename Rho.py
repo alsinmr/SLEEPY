@@ -147,6 +147,10 @@ class Rho():
         """
         return self._t if self._t is not None else 0
     
+    @t.setter
+    def t(self,t):
+        self._t=t
+    
     @property
     def t_axis(self):
         """
@@ -1022,8 +1026,11 @@ class Rho():
             
             
             Dt=seq.Dt/n_per_seq
-            # TODO should we really define t0_seq here?
-            U=[seq.U(Dt=Dt,t0_seq=k*Dt) for k in range(nsteps)]
+            # U=[seq.U(Dt=Dt,t0_seq=k*Dt) for k in range(nsteps)]
+            # Eliminating the second argument should let us set t0_seq to change the starting time on the sequence
+            # This would be special usage, but maybe useful occasionally
+            # seq should keep track itself of the current time
+            U=[seq.U(Dt=Dt) for k in range(nsteps)]
             
             if n//nsteps>100:
                 U0=[]

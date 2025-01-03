@@ -33,7 +33,8 @@ class ExpSys():
     _iso_powder=PowderAvg('alpha0beta0')
     inter_types=inter_types
     
-    def __init__(self,v0H=None,B0=None,Nucs=[],vr=10000,T_K=298,rotor_angle:float=None,n_gamma=100,pwdavg=PowderAvg(),LF:list=None):
+    def __init__(self,v0H=None,B0=None,Nucs=[],vr=10000,T_K=298,rotor_angle:float=None,
+                 n_gamma=100,pwdavg=PowderAvg(),LF:list=None,gamma_encoded:bool=None):
         
         if rotor_angle is None:
             rotor_angle=0 if vr==0 else np.arccos(np.sqrt(1/3))
@@ -41,7 +42,6 @@ class ExpSys():
         
         assert B0 is not None or v0H is not None,"B0 or v0H must be specified"
         self.B0=B0 if B0 is not None else v0H*1e6/NucInfo('1H')
-        self._v0=None
         
         self.Nucs=np.atleast_1d(Nucs).astype('<U5')
         Nucs=np.atleast_1d(Nucs)
@@ -63,9 +63,9 @@ class ExpSys():
         self.rotor_angle=rotor_angle
         
         if isinstance(pwdavg,str):
-            pwdavg=PowderAvg(pwdavg)
+            pwdavg=PowderAvg(pwdavg,gamma_encoded=gamma_encoded)
         elif isinstance(pwdavg,int):
-            pwdavg=PowderAvg(q=pwdavg)
+            pwdavg=PowderAvg(q=pwdavg,gamma_encoded=gamma_encoded)
         self.pwdavg=pwdavg
         self.n_gamma=n_gamma
         self.inter=[]
@@ -96,9 +96,8 @@ class ExpSys():
     
     @property
     def v0(self):
-        if self._v0 is None:
-            self._v0=self.B0*self.gamma
-        return self._v0
+        return self.B0*self.gamma
+
     
     @property
     def S(self):

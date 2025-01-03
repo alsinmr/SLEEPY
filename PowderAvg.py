@@ -26,7 +26,7 @@ Pwd.sort()
 
 class PowderAvg():
     list_pwd_types=copy(Pwd)
-    def __init__(self,PwdType:str='JCP59',n_gamma:int=100,gamma_encoded:bool=False,**kwargs):
+    def __init__(self,PwdType:str='JCP59',n_gamma:int=100,gamma_encoded:bool=None,**kwargs):
         """
         Initializes the powder average. May be initialized with a powder average
         type (see set_powder_type)
@@ -35,6 +35,12 @@ class PowderAvg():
         if isinstance(PwdType,int):
             kwargs['q']=PwdType
             PwdType='JCP59'
+
+        if gamma_encoded is None:
+            if isinstance(PwdType,str) and len(PwdType)>=5 and PwdType[:5]=='alpha':
+                gamma_encoded=True
+            else:
+                gamma_encoded=False
             
         
         self._alpha=None
@@ -155,6 +161,7 @@ class PowderAvg():
                     fun=getattr(PwdAvgFuns,fname)
                     print(fname[4:]+' with args: '+','.join(fun.__code__.co_varnames[:fun.__code__.co_argcount]))
         # self.n_alpha=len(self._alpha)
+        return self
     
     def plot(self,ax=None,beta_gamma:bool=False,color='darkcyan',s=3):
         """
@@ -237,7 +244,8 @@ class PowderAvg():
         j=i+1
         i%=len(self)
         j%=len(self)
-        if j<i:j+=len(self)
+        if j<=i:j+=len(self)
+        print(j)
         out.alpha=self.alpha[i:j]
         out.beta=self.beta[i:j]
         out.gamma=self.gamma[i:j]
