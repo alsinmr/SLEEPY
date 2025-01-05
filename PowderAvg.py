@@ -499,10 +499,10 @@ class RotInter():
         else:
             i=(A+avg)>=0
             if np.any(i):
-                ax.scatter3D(x[i],y[i],z[i],linewidth=0.2,antialiased=True,color='red')
+                ax.scatter3D(x[i],y[i],z[i],linewidth=0.2,antialiased=True,color=cmap(0))
             i=(A+avg)<=0
             if np.any(i):
-                ax.scatter3D(x[i],y[i],z[i],linewidth=0.2,antialiased=True,color='blue')
+                ax.scatter3D(x[i],y[i],z[i],linewidth=0.2,antialiased=True,color=cmap(0.5))
         
         lim=max([ax.get_xlim()[1],ax.get_ylim()[1],ax.get_zlim()[1]])
         ax.set_xlim([-lim,lim])

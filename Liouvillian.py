@@ -1064,7 +1064,7 @@ class Liouvillian():
         return Energy
 
     
-    def plot(self,what:str='L',seq=None,cmap:str=None,mode:str='log',colorbar:bool=True,
+    def plot(self,what:str='L',seq=None,rho=None,cmap:str=None,mode:str='log',colorbar:bool=True,
              step:int=0,block:int=None,ax=None) -> plt.axes:
         """
         Visualizes the Liouvillian matrix. Options are what to view (what) and 
@@ -1101,6 +1101,9 @@ class Liouvillian():
             Include a sequence, which is used to determine what channels will
             have rf turn on at some point. Uses the max v1 setting for each
             channel in the sequence for plotting.
+        rho : Rho, optional
+            Providing rho will cause the plot to only include terms in the 
+            Liouvillian required for propagating and detecting rho.
         cmap : str, optional
             Colormap used for plotting. The default is 'YOrRd'.
         mode : str, optional
@@ -1119,6 +1122,15 @@ class Liouvillian():
 
         """
     
+        if seq is not None:
+            assert seq.L is self,"Sequence was not generated from this Liouvillian"
+    
+        if rho is not None:
+            if seq is None:seq=self.Sequence()
+            _,seq=rho.ReducedSetup(seq)
+            return seq.L.plot(what=what,seq=seq,rho=None,cmap=cmap,mode=mode,
+                       colorbar=colorbar,step=step,ax=ax)
+    
         mode=mode.lower()
         
         if what=='Lrelax' and np.max(np.abs(self.Lrelax))==0 and self.LrelaxOS.active:
@@ -1131,9 +1143,10 @@ class Liouvillian():
             
         if seq is not None:
             fields=copy(self.rf.fields)
-            for k,v1 in enumerate(seq.v1):
+            for k,(v1,phase,voff) in enumerate(zip(seq.v1,seq.phase,seq.voff)):
                 if np.any(v1):
-                    self.rf.add_field(k,v1=v1.max())
+                    i=np.argmax(v1)
+                    self.rf.add_field(k,v1=v1[i],phase=phase[i],voff=voff[i])
                     
         
         if cmap is None:
