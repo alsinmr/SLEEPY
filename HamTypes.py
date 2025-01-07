@@ -57,7 +57,7 @@ class Ham1inter():
         if not(self.isotropic):
             assert self.pwdavg is not None,'pwdavg must be assigned before extracting components of anisotropic Hamiltonians'
             if self.rotInter is None:
-                self.rotInter=RotInter(self.pwdavg,delta=self.delta,eta=self.eta,euler=self.euler,rotor_angle=self.rotor_angle)
+                self.rotInter=RotInter(self.expsys,delta=self.delta,eta=self.eta,euler=self.euler,rotor_angle=self.rotor_angle)
             out=copy(self)
             if self.T is None:
                 out.A=self.rotInter.Azz[i]

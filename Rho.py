@@ -286,7 +286,8 @@ class Rho():
         """
         
         rho=copy(self)
-        rho._L=self.L.getBlock(block)
+        if not(self.L.reduced):
+            rho._L=self.L.getBlock(block)
         rho._rho0=[rho0[block] for rho0 in self._rho0] if isinstance(self._rho0,list) else self._rho0[block]
         # rho._rho0=self._rho0[block]
         rho._detect=[d[block] for d in self._detect]
@@ -696,21 +697,27 @@ class Rho():
         
         return self
     
-    def clear(self):
+    def clear(self,data_only:bool=False):
         """
         Clears variables in order to start over propagation. 
         
         Note that if you want to set the system back to the initial rho0 value,
         but want to retain the amplitudes and times recorded, run rho.reset()
-        instead of rho.clear()
+        instead of rho.clear() 
 
-
+        Parameters
+        ----------
+        data_only : bool, optional
+            Only clear the data, but retain the Liouvillian. Useful if the
+            density matrix has been reduced. The default is False.
 
         Returns
         -------
-        None.
+        self
 
         """
+        
+        L=self.L
         
         self._t=None
         
@@ -718,9 +725,17 @@ class Rho():
         self._FTpwd=None
         self._taxis=list()
         self._rho=list() #Storage for numerical rho
+        self._Ipwd_DM=None
+        
         self._L=None
         self._BDP=False
-        self._Ipwd_DM=None
+
+        if data_only:
+            warnings.filterwarnings("ignore", 
+                message="Reduced Liouvillian applied to uninitialized propagator. Make sure reduction was perfomed with same Rho")
+            self.L=L
+            warnings.filterwarnings("default", 
+                message="Reduced Liouvillian applied to uninitialized propagator. Make sure reduction was perfomed with same Rho")
         
         return self
         # if self._L is not None:
@@ -1545,7 +1560,7 @@ class Rho():
                 returns rates (list of arrays of floats), weights (list of arrays of floats)
                     
         'all'    :  No terms eliminated. Returns an array of rates, frequencies,
-                    and decay rates. The first dimension of the array runs down
+                    and amplitudes. The first dimension of the array runs down
                     the powder average, and the second across the propagator
                     dimension. In case reduced bases are used, this is usually
                     less than the full propagator dimension. The missing terms,

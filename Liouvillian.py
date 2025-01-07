@@ -124,6 +124,13 @@ class Liouvillian():
             child._PropCache=PropCache(child)
             child._LrelaxOS=RelaxClass(child)
             
+        # for p in range(len(self.H)):  #Useful if the powder average is changed
+        #     for q in range(len(self.H[0].Hinter)):
+        #         if self.H[p].Hinter[q].rotInter is not None:
+        #             self.H[p].Hinter[q].rotInter._Azz=None
+        #             self.H[p].Hinter[q].rotInter._A=None
+        #             self.H[p].Hinter[q].rotInter._Afull=None
+            
         return self
     
     @property

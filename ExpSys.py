@@ -36,6 +36,8 @@ class ExpSys():
     def __init__(self,v0H=None,B0=None,Nucs=[],vr=10000,T_K=298,rotor_angle:float=None,
                  n_gamma=100,pwdavg=PowderAvg(),LF:list=None,gamma_encoded:bool=None):
         
+        self._ex0=None
+        
         if rotor_angle is None:
             rotor_angle=0 if vr==0 else np.arccos(np.sqrt(1/3))
         if vr==0:n_gamma=1
@@ -72,6 +74,7 @@ class ExpSys():
         self._rf=RF(expsys=self)
         self._tprop=0
         
+        
         # self.inter_types=dict()
                     
         # for k in dir(HamTypes):
@@ -79,6 +82,16 @@ class ExpSys():
         #     if hasattr(fun,'__code__') and fun.__code__.co_varnames[0]=='es':
         #         self.inter_types[k]=fun.__code__.co_varnames[1:fun.__code__.co_argcount]
                 # setattr(self,k,[])
+    
+    @property
+    def pwdavg(self):
+        if self._ex0 is not None:
+            return self._ex0.pwdavg
+        return self._pwdavg
+    
+    @pwdavg.setter
+    def pwdavg(self,pwdavg):
+        self._pwdavg=pwdavg
     
     @property
     def n_gamma(self):
@@ -179,6 +192,7 @@ class ExpSys():
         out = cls.__new__(cls)
         out.__dict__.update(self.__dict__)
         out.inter=[copy(i) for i in self.inter]
+        out._ex0=self
         return out
     
     def Hamiltonian(self):

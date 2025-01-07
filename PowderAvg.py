@@ -122,6 +122,10 @@ class PowderAvg():
         include .txt or pwd_ in PwdType). If duplicate names are found in
         the powder files and the functions, then the files will be used
         """
+        if isinstance(PwdType,self.__class__):
+            self.__dict__=PwdType.__dict__
+            return self
+        
         self._gamma=None
         if gamma_encoded is not None:self._gamma_encoded=gamma_encoded
         self._gamma_incl=self.gamma_encoded
@@ -245,7 +249,6 @@ class PowderAvg():
         i%=len(self)
         j%=len(self)
         if j<=i:j+=len(self)
-        print(j)
         out.alpha=self.alpha[i:j]
         out.beta=self.beta[i:j]
         out.gamma=self.gamma[i:j]
@@ -279,7 +282,7 @@ class RotInter():
         PAS: Principle axis system, without any rotations. Diagonal in the Cartesian system
         
     """
-    def __init__(self,pwdavg,delta=0,eta=0,euler=[0,0,0],rotor_angle=np.arccos(np.sqrt(1/3))):
+    def __init__(self,ex,delta=0,eta=0,euler=[0,0,0],rotor_angle=np.arccos(np.sqrt(1/3))):
         """
         Initialize the interaction with its isotropic value, delta, eta, and euler
         angles. Note, euler angles should be of the form [alpha,beta,gamma], 
@@ -292,7 +295,7 @@ class RotInter():
         self.euler=euler
         self.setPAS()
         self.PAS2MOL()
-        self.pwdavg=pwdavg
+        self.expsys=ex
         self.rotor_angle=rotor_angle
         
         self._Azz=None
@@ -300,6 +303,9 @@ class RotInter():
         self._Afull=None
         
 
+    @property
+    def pwdavg(self):
+        return self.expsys.pwdavg
         
     def setPAS(self):
         """
@@ -364,7 +370,7 @@ class RotInter():
     
     @property
     def Azz(self):
-        if self._Azz is None:self.MOL2LAB_Azz()
+        if self._Azz is None or len(self._Azz)!=self.pwdavg.N:self.MOL2LAB_Azz()
         return self._Azz.copy()
     
     def MOL2LAB_A(self):
@@ -401,7 +407,7 @@ class RotInter():
     
     @property
     def A(self):
-        if self._A is None:self.MOL2LAB_A()
+        if self._A is None or len(self._A)!=self.pwdavg.N:self.MOL2LAB_A()
         return self._A.copy()
     
     def MOL2LAB_Afull(self,pwdavg=None,rotor_angle=np.arccos(np.sqrt(1/3))):
@@ -445,7 +451,7 @@ class RotInter():
     
     @property
     def Afull(self):
-        if self._Afull is None:self.MOL2LAB_Afull()
+        if self._Afull is None or len(self._Afull)!=self.pwdavg.N:self.MOL2LAB_Afull()
         return self._Afull.copy()
     
     
