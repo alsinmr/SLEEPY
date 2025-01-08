@@ -41,7 +41,7 @@ class LFrf():
         
         self.seq0=seq
         
-        assert self.v_index.sum()<2,"Currently, only one Lab Frame rf field supported"
+        assert len(np.unique(self.expsys.Nucs[self.v_index]))==1,"Currently, only one Lab Frame rf field supported"
         if not(self.L.static):
             assert self.Dt==self.taur,"Currently, only implemented for one rotor period (seq.Dt should equal taur)"
         
