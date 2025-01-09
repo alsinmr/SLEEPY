@@ -1529,7 +1529,8 @@ class Rho():
         This will calculate frequencies (f) and decay rates (R) from the 
         imaginary and real part of the eigenvalues of the propagator. 
         Weightings (A) will be determined from the eigenvectors and from the 
-        density matrix.
+        density matrix. Note that the weights do no include weighting from
+        the powder average.
         
         Depending on the program mode, some averaging will be performed.
         
@@ -1542,7 +1543,7 @@ class Rho():
                 returns: rate (float)
                     
         'avg'    :  Oscillating terms eliminated. Averaging performed over all
-                    non-oscillating terms separating for each element of the
+                    non-oscillating terms separated for each element of the
                     powder average. Returns a list of rates and weights the
                     same length as the powder average. The weight is the 
                     downscaling resulting from elimination of the oscillation
@@ -1558,6 +1559,12 @@ class Rho():
                     rates
                     
                 returns rates (list of arrays of floats), weights (list of arrays of floats)
+                
+        'wt_rates': Takes the weights and rates returned by rates and the 'rates'
+                    options, and multiplies the weights by the powder average
+                    weighting. Two 1D arrays are returns corresponding to the
+                    rates and weights. Rates are sorted
+                returns rates (1d array), weights (1d array)
                     
         'all'    :  No terms eliminated. Returns an array of rates, frequencies,
                     and amplitudes. The first dimension of the array runs down
@@ -1590,7 +1597,7 @@ class Rho():
             pwdavg,avg,decay_only=True,True,True
         elif mode.lower()=='avg':
             pwdavg,avg,decay_only=False,True,True
-        elif mode.lower()=='rates':
+        elif mode.lower()=='rates' or mode.lower()=='wt_rates':
             pwdavg,avg,decay_only=False,False,True
         else:
             pwdavg,avg,decay_only=False,False,False
@@ -1623,49 +1630,67 @@ class Rho():
             f[k]=np.log(d).imag/U.Dt #Frequency
             
 
-        if decay_only:
-            Rout=list()
-            Aout=list()
-            
-            for R0,A0,f0 in zip(R,A,f):
-                i=np.logical_and(np.abs(f0)<1e-5,np.abs(A0)>1e-8)  #non-oscillating terms
-                Aout.append(A0[i])
-                Rout.append(R0[i])
+        if not(decay_only):
+            return R,f,A
 
-            if avg:
-                # Rout=list()
-                # Aout=list()
-                # for R0,A0,f0 in zip(R,A,f):
-                Aavg=list()
-                Ravg=list()
-                for R0,A0 in zip(Rout,Aout):
-                    # i=np.logical_and(np.abs(f0)<1e-5,np.abs(A0)>1e-2)  #non-oscillating terms (??)
-                    # Aout.append(A0[i].sum())
-                    # Rout.append((R0[i]*A0[i]).sum()/Aout[-1])
-                    Aavg.append(A0.sum())
-                    Ravg.append((R0*A0).sum()/Aavg[-1] if Aavg[-1] else 0)
-                    
-                # R=np.array(Rout)
-                # A=np.array(Aout)
-                    
-                R=np.array(Ravg)
-                A=np.array(Aavg)
-                
-                if pwdavg:
-                    wt=U.L.pwdavg.weight*A
-                    if wt.sum()==0:
-                        warnings.warn("Only oscillating terms found in powder average")
-                        Ravg=np.nan
-                    else:
-                        wt/=wt.sum()
-                        Ravg=(R*wt).sum()
-                    return Ravg
-                    
-                return R,A
-            
-            return Rout,Aout
+        Rout=list()
+        Aout=list()
         
-        return R,f,A
+        for R0,A0,f0 in zip(R,A,f):
+            i=np.logical_and(np.abs(f0)<1e-5,np.abs(A0)>1e-8)  #non-oscillating terms
+            Aout.append(A0[i])
+            Rout.append(R0[i])
+
+        if not(avg):
+            if not(mode.lower()=='wt_rates'):
+                return Rout,Aout
+            
+            R=[]
+            A=[]
+            for R0,A0,wt in zip(Rout,Aout,self.L.pwdavg.weight):
+                i=np.argmin(np.abs(R0)) #Find the equilibrium rate
+                i=np.arange(len(R0))!=i
+                R.extend(R0[i])
+                A.extend(A0[i]*wt)
+                
+            return np.array(R),np.array(A)
+            
+            
+            
+        #avg = True   
+        Aavg=list()
+        Ravg=list()
+        for R0,A0 in zip(Rout,Aout):
+            # i=np.logical_and(np.abs(f0)<1e-5,np.abs(A0)>1e-2)  #non-oscillating terms (??)
+            # Aout.append(A0[i].sum())
+            # Rout.append((R0[i]*A0[i]).sum()/Aout[-1])
+            Aavg.append(A0.sum())
+            Ravg.append((R0*A0).sum()/Aavg[-1] if Aavg[-1] else 0)
+            
+        # R=np.array(Rout)
+        # A=np.array(Aout)
+            
+        R=np.array(Ravg)
+        A=np.array(Aavg)
+        
+        if not(pwdavg):
+            return R,A
+
+        # pwdavg=True
+        wt=U.L.pwdavg.weight*A
+        if wt.sum()==0:
+            warnings.warn("Only oscillating terms found in powder average")
+            Ravg=np.nan
+        else:
+            wt/=wt.sum()
+            Ravg=(R*wt).sum()
+        return Ravg
+            
+        
+        
+
+        
+        
     
     def R_dist(self,U,det_num:int=0,nbins=None):
         """
