@@ -34,7 +34,7 @@ from matplotlib.ticker import MaxNLocator
 # if numba:
 #     from .Parallel import prop
 
-from .Parallel import prop,prop_static
+# from .Parallel import prop,prop_static
 
 class Liouvillian():
     def __init__(self,*ex,kex=None):
