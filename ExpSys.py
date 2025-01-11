@@ -227,6 +227,14 @@ class ExpSys():
         
         assert 'i' in kwargs or ('i0' in kwargs and 'i1' in kwargs),"Either i must be provided or both i0 and i1 must be provided"
         
+        if 'euler_d' in kwargs:
+            def d2r(euler_d):
+                if hasattr(euler_d[0],'__len__'):
+                    return [d2r(ed0) for ed0 in euler_d]
+                return [ed0*np.pi/180 for ed0 in euler_d]
+            kwargs['euler']=d2r(kwargs.pop('euler_d'))
+                
+        
         if 'i0' in kwargs and 'i1' in kwargs:
             i0,i1=kwargs['i0'],kwargs['i1']
             if i0>i1:kwargs['i0'],kwargs['i1']=i1,i0
