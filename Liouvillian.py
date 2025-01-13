@@ -109,8 +109,8 @@ class Liouvillian():
             warnings.warn("Invalid exchange matrix. Columns should sum to 0. Expect unphysical behavior.")
 
         self._Lex=None
-        self.clear_cache()
         self._kex=kex
+        self.clear_cache()
     
     def getBlock(self,block):
         """

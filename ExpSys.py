@@ -91,6 +91,10 @@ class ExpSys():
     
     @pwdavg.setter
     def pwdavg(self,pwdavg):
+        if isinstance(pwdavg,str):
+            pwdavg=PowderAvg(pwdavg)
+        elif isinstance(pwdavg,int):
+            pwdavg=PowderAvg(q=pwdavg)
         self._pwdavg=pwdavg
     
     @property

@@ -1625,9 +1625,15 @@ class Rho():
             rhod=vi@rho0
             det_d=self._detect[det_num]@v
             
+            R[k]=np.zeros(det_d.shape)
+            f[k]=np.zeros(det_d.shape)
+            
+            i=d!=0
+            
             A[k]=(rhod*det_d).real  #Amplitude
-            R[k]=-np.log(d).real/U.Dt #Decay rate
-            f[k]=np.log(d).imag/U.Dt #Frequency
+            R[k][i]=-np.log(d[i]).real/U.Dt #Decay rate
+            R[k][np.logical_not(i)]=np.inf #I guess these decay infinitely fast??
+            f[k][i]=np.log(d[i]).imag/U.Dt #Frequency
             
 
         if not(decay_only):
@@ -1648,8 +1654,9 @@ class Rho():
             R=[]
             A=[]
             for R0,A0,wt in zip(Rout,Aout,self.L.pwdavg.weight):
-                R.extend(R0)
-                A.extend(A0*wt)
+                i=np.abs(R0)>1e-10
+                R.extend(R0[i])
+                A.extend(A0[i]*wt)
                 
             return np.array(R),np.array(A)
             
