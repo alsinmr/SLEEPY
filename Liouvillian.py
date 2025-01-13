@@ -92,8 +92,26 @@ class Liouvillian():
         
         self.relax_info=[]  #Keeps a short record of what kind of relaxation is used
     
+    @property
+    def kex(self):
+        return self._kex
         
+    @kex.setter
+    def kex(self,kex):
+        if kex is None:return
         
+        kex=np.array(kex)
+        assert kex.shape[0]==kex.shape[1],"Exchange matrix must be square"
+        assert kex.shape[0]==len(self.H),f"For {len(self.H)} Hamiltonians, exchange matrix must be {len(self.H)}x{len(self.H)}"
+        assert np.all(np.diag(kex)<=0),"Diagonals of the exchange matrix cannot be positive"
+
+        if np.any(np.abs(kex.sum(0))>1e-10*np.mean(-np.diag(kex))):
+            warnings.warn("Invalid exchange matrix. Columns should sum to 0. Expect unphysical behavior.")
+
+        self._Lex=None
+        self.clear_cache()
+        self._kex=kex
+    
     def getBlock(self,block):
         """
         Returns a reduced version of this Liouvillian defined by a given
@@ -252,40 +270,40 @@ class Liouvillian():
     def fields(self):
         return self.rf.fields
     
-    def __setattr__(self,name,value):
-        """
-        Resets certain parameters if edits occur
+    # def __setattr__(self,name,value):
+    #     """
+    #     Resets certain parameters if edits occur
 
-        Parameters
-        ----------
-        name : str
-            Parameter name.
-        value : TYPE
-            Parameter value.
+    #     Parameters
+    #     ----------
+    #     name : str
+    #         Parameter name.
+    #     value : TYPE
+    #         Parameter value.
 
-        Returns
-        -------
-        None.
+    #     Returns
+    #     -------
+    #     None.
 
-        """
+    #     """
         
-        if name=='kex':
+    #     if name=='kex':
             
-            if value is not None:
-                value=np.array(value)
-                assert value.shape[0]==value.shape[1],"Exchange matrix must be square"
-                assert value.shape[0]==len(self.H),f"For {len(self.H)} Hamiltonians, exchange matrix must be {len(self.H)}x{len(self.H)}"
-                if np.any(np.diag(value)>0):
-                    warnings.warn("Diagonals of exchange matrix should not be positive")
-                elif np.any(np.abs(value.sum(0))>1e-10*np.mean(-np.diag(value))):
-                    warnings.warn("Invalid exchange matrix. Columns should sum to 0. Expect unphysical behavior.")
+    #         if value is not None:
+    #             value=np.array(value)
+    #             assert value.shape[0]==value.shape[1],"Exchange matrix must be square"
+    #             assert value.shape[0]==len(self.H),f"For {len(self.H)} Hamiltonians, exchange matrix must be {len(self.H)}x{len(self.H)}"
+    #             if np.any(np.diag(value)>0):
+    #                 warnings.warn("Diagonals of exchange matrix should not be positive")
+    #             elif np.any(np.abs(value.sum(0))>1e-10*np.mean(-np.diag(value))):
+    #                 warnings.warn("Invalid exchange matrix. Columns should sum to 0. Expect unphysical behavior.")
         
-                self._Lex=None
-                super().__setattr__(name,value)
-                self.clear_cache()
-                return
+    #             self._Lex=None
+    #             super().__setattr__(name,value)
+    #             self.clear_cache()
+    #             return
         
-        super().__setattr__(name,value)
+    #     super().__setattr__(name,value)
     
     def __getitem__(self,i:int):
         """
