@@ -1648,10 +1648,8 @@ class Rho():
             R=[]
             A=[]
             for R0,A0,wt in zip(Rout,Aout,self.L.pwdavg.weight):
-                i=np.argmin(np.abs(R0)) #Find the equilibrium rate
-                i=np.arange(len(R0))!=i
-                R.extend(R0[i])
-                A.extend(A0[i]*wt)
+                R.extend(R0)
+                A.extend(A0*wt)
                 
             return np.array(R),np.array(A)
             

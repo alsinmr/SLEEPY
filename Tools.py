@@ -47,6 +47,9 @@ class NucInfo(Info):
         
         if Nuc=='D':Nuc='2H'
         if Nuc=='e':Nuc='e-'
+        
+        if Nuc=='e-':
+            self['e-']
  
         #Separate the mass number from the nucleus type       
         mass=re.findall(r'\d+',Nuc)
