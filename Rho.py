@@ -733,7 +733,7 @@ class Rho():
         if data_only:
             warnings.filterwarnings("ignore", 
                 message="Reduced Liouvillian applied to uninitialized propagator. Make sure reduction was perfomed with same Rho")
-            self.L=L
+            if L is not None:self.L=L
             warnings.filterwarnings("default", 
                 message="Reduced Liouvillian applied to uninitialized propagator. Make sure reduction was perfomed with same Rho")
         

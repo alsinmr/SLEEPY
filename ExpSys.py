@@ -36,6 +36,8 @@ class ExpSys():
     def __init__(self,v0H=None,B0=None,Nucs=[],vr=10000,T_K=298,rotor_angle:float=None,
                  n_gamma=100,pwdavg=PowderAvg(),LF:list=None,gamma_encoded:bool=None):
         
+        
+        super().__setattr__('_children',[])
         self._ex0=None
         
         if rotor_angle is None:
@@ -43,7 +45,7 @@ class ExpSys():
         if vr==0:n_gamma=1
         
         assert B0 is not None or v0H is not None,"B0 or v0H must be specified"
-        self.B0=B0 if B0 is not None else v0H*1e6/NucInfo('1H')
+        self._B0=B0 if B0 is not None else v0H*1e6/NucInfo('1H')
         
         self.Nucs=np.atleast_1d(Nucs).astype('<U5')
         Nucs=np.atleast_1d(Nucs)
@@ -60,9 +62,9 @@ class ExpSys():
             assert LF is True or LF is False,'LF must be a list of logicals or a single boolean'
             self.LF=[LF for _ in range(len(self.Op))]
         self._index=-1
-        self.vr=vr
-        self.T_K=T_K
-        self.rotor_angle=rotor_angle
+        self._vr=vr
+        self._T_K=T_K
+        self._rotor_angle=rotor_angle
         
         if isinstance(pwdavg,str):
             pwdavg=PowderAvg(pwdavg,gamma_encoded=gamma_encoded)
@@ -74,14 +76,37 @@ class ExpSys():
         self._rf=RF(expsys=self)
         self._tprop=0
         
+    
+    
+    # The following variables should result in cache-clearing
+    #'pwdavg','n_gamma','B0','vr','T_K','v0H'
+    # rotor_angle is fixed
+    
+    def clear_caches(self):
+        for L in self._children:
+            L.clear_cache()
+        return self
         
-        # self.inter_types=dict()
-                    
-        # for k in dir(HamTypes):
-        #     fun=getattr(HamTypes,k)
-        #     if hasattr(fun,'__code__') and fun.__code__.co_varnames[0]=='es':
-        #         self.inter_types[k]=fun.__code__.co_varnames[1:fun.__code__.co_argcount]
-                # setattr(self,k,[])
+    @property
+    def rotor_angle(self):
+        return self._rotor_angle
+    
+    
+    @property
+    def T_K(self):
+        if self._ex0 is not None:
+            return self._ex0.T_K
+        return self._T_K
+    
+    @T_K.setter
+    def T_K(self,T_K):
+        self.clear_caches()
+        
+        if self._ex0 is not None:
+            self._ex0.T_K=T_K
+            return
+        self._T_K=T_K
+        for L in self._children:L.update_T_K_B0()
     
     @property
     def pwdavg(self):
@@ -91,31 +116,74 @@ class ExpSys():
     
     @pwdavg.setter
     def pwdavg(self,pwdavg):
+        self.clear_caches()
+        if self._ex0 is not None:
+            self._ex0.pwdavg=pwdavg
+            return
         if isinstance(pwdavg,str):
             pwdavg=PowderAvg(pwdavg)
         elif isinstance(pwdavg,int):
             pwdavg=PowderAvg(q=pwdavg)
         self._pwdavg=pwdavg
+        
     
     @property
     def n_gamma(self):
+        if self._ex0 is not None:return self._ex0.n_gamma
         return self._n_gamma
     
     @n_gamma.setter
     def n_gamma(self,n_gamma):
+        self.clear_caches()
+        if self._ex0 is not None:
+            self._ex0.n_gamma=n_gamma
+            return
         self._n_gamma=n_gamma
-        
         self.pwdavg.n_gamma=n_gamma
+        
+    
+    @property
+    def B0(self):
+        if self._ex0 is not None:
+            return self._ex0.B0
+        return self._B0
+    
+    @B0.setter
+    def B0(self,B0):
+        self.clear_caches()
+        if self._ex0 is not None:
+            self._ex0.B0=B0
+            return
+        self._B0=B0
+        for L in self._children:L.update_T_K_B0()
+        
     
     @property
     def v0H(self):
         return self.B0*NucInfo('1H')
     
+    @v0H.setter
+    def v0H(self,v0H):
+        self.B0=v0H*1e6/NucInfo('1H')
+    
     @property
     def v0(self):
         return self.B0*self.gamma
 
+    @property
+    def vr(self):
+        if self._ex0 is not None:
+            return self._ex0.vr
+        return self._vr
     
+    @vr.setter
+    def vr(self,vr):
+        self.clear_cache()
+        if self._ex0 is not None:
+            self._ex0.vr=vr
+            return
+        self._vr=vr
+
     @property
     def S(self):
         return self.Op.S
@@ -197,6 +265,7 @@ class ExpSys():
         out.__dict__.update(self.__dict__)
         out.inter=[copy(i) for i in self.inter]
         out._ex0=self
+        out._children=[]
         return out
     
     def Hamiltonian(self):
@@ -253,6 +322,7 @@ class ExpSys():
         
         # getattr(self,Type).append(kwargs)
         self.inter.append({'Type':Type,**kwargs})
+        self.clear_caches()
         
         return self
     

@@ -91,6 +91,8 @@ class Liouvillian():
         self.kex=kex
         
         self.relax_info=[]  #Keeps a short record of what kind of relaxation is used
+        
+        for H in self.H:H.expsys._children.append(self)
     
     @property
     def kex(self):
@@ -148,6 +150,8 @@ class Liouvillian():
                     self.H[p].Hinter[q].rotInter._Azz=None
                     self.H[p].Hinter[q].rotInter._A=None
                     self.H[p].Hinter[q].rotInter._Afull=None
+            
+        
             
         return self
     
@@ -493,11 +497,27 @@ class Liouvillian():
             delattr(self,'recovery')
         self.clear_cache()
         return self
+    
+    def update_T_K_B0(self):
+        for relax in self.relax_info:
+            if relax[0]=='recovery' and not('OS' in relax[1] and relax[1]['OS']):
+                break
+            if relax[0]=='DynamicThermal':
+                break
+        else:
+            return  #No recovery with OS=False or DynamicThermal, no reset required
+        
+        info=self.relax_info
+        self.clear_relax()
+        for relax in info:
+            self.add_relax(relax[0],**relax[1])
+        
+        
+                
         
     def validate_relax(self):
         """
-        Checks if systems with T1 relaxation have T2 relaxation. Also returns
-        True if the system relaxes to an equilibrium value
+        Checks if systems with T1 relaxation have T2 relaxation.
 
         Returns
         -------
