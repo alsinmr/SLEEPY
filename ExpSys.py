@@ -53,14 +53,7 @@ class ExpSys():
         S=np.array([ElectronSpin(nuc) if nuc[0]=='e' else NucInfo(nuc,'spin') for nuc in Nucs])
         self.gamma=np.array([NucInfo(nuc,'gyro') for nuc in self.Nucs])
         self.Op=SpinOp(S)
-        if LF is None or LF is False:
-            self.LF=[False for _ in range(len(self.Op))]  #Calculate Hamiltonians in the lab frame
-        elif hasattr(LF,'__len__'):
-            assert len(LF)==len(self.Op),'LF (Lab frame) must be a list of logicals with same length as number of spins'
-            self.LF=LF
-        else:
-            assert LF is True or LF is False,'LF must be a list of logicals or a single boolean'
-            self.LF=[LF for _ in range(len(self.Op))]
+        self.LF=LF
         self._index=-1
         self._vr=vr
         self._T_K=T_K
@@ -91,6 +84,28 @@ class ExpSys():
     def rotor_angle(self):
         return self._rotor_angle
     
+    
+    @property
+    def LF(self):
+        if self._ex0 is not None:
+            return self._ex0.LF
+        return self._LF
+    
+    @LF.setter
+    def LF(self,LF):
+        self.clear_caches()
+        if self._ex0 is not None:
+            self._ex0.LF=LF
+            return
+        if LF is None:
+            self._LF=[False for _ in range(len(self.Op))]  #Calculate Hamiltonians in the rotating frame
+        elif hasattr(LF,'__len__'):
+            assert len(LF)==len(self.Op),'LF (Lab frame) must be a list of logicals with same length as number of spins'
+            self._LF=LF
+        else:
+            assert LF is True or LF is False,'LF must be a list of logicals or a single boolean'
+            self._LF=[LF for _ in range(len(self.Op))]
+        
     
     @property
     def T_K(self):
