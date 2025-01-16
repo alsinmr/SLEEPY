@@ -202,7 +202,7 @@ class ExpSys():
     
     @vr.setter
     def vr(self,vr):
-        self.clear_cache()
+        self.clear_caches()
         if self._ex0 is not None:
             self._ex0.vr=vr
             return
