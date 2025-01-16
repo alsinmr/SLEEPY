@@ -53,7 +53,16 @@ class ExpSys():
         S=np.array([ElectronSpin(nuc) if nuc[0]=='e' else NucInfo(nuc,'spin') for nuc in Nucs])
         self.gamma=np.array([NucInfo(nuc,'gyro') for nuc in self.Nucs])
         self.Op=SpinOp(S)
-        self.LF=LF
+
+        if LF is None:
+            self._LF=[False for _ in range(len(self.Op))]  #Calculate Hamiltonians in the rotating frame
+        elif hasattr(LF,'__len__'):
+            assert len(LF)==len(self.Op),'LF (Lab frame) must be a list of logicals with same length as number of spins'
+            self._LF=LF
+        else:
+            assert LF is True or LF is False,'LF must be a list of logicals or a single boolean'
+            self._LF=[LF for _ in range(len(self.Op))]
+            
         self._index=-1
         self._vr=vr
         self._T_K=T_K
@@ -91,20 +100,20 @@ class ExpSys():
             return self._ex0.LF
         return self._LF
     
-    @LF.setter
-    def LF(self,LF):
-        self.clear_caches()
-        if self._ex0 is not None:
-            self._ex0.LF=LF
-            return
-        if LF is None:
-            self._LF=[False for _ in range(len(self.Op))]  #Calculate Hamiltonians in the rotating frame
-        elif hasattr(LF,'__len__'):
-            assert len(LF)==len(self.Op),'LF (Lab frame) must be a list of logicals with same length as number of spins'
-            self._LF=LF
-        else:
-            assert LF is True or LF is False,'LF must be a list of logicals or a single boolean'
-            self._LF=[LF for _ in range(len(self.Op))]
+    # @LF.setter
+    # def LF(self,LF):
+    #     self.clear_caches()
+    #     if self._ex0 is not None:
+    #         self._ex0.LF=LF
+    #         return
+    #     if LF is None:
+    #         self._LF=[False for _ in range(len(self.Op))]  #Calculate Hamiltonians in the rotating frame
+    #     elif hasattr(LF,'__len__'):
+    #         assert len(LF)==len(self.Op),'LF (Lab frame) must be a list of logicals with same length as number of spins'
+    #         self._LF=LF
+    #     else:
+    #         assert LF is True or LF is False,'LF must be a list of logicals or a single boolean'
+    #         self._LF=[LF for _ in range(len(self.Op))]
         
     
     @property
@@ -163,23 +172,23 @@ class ExpSys():
             return self._ex0.B0
         return self._B0
     
-    @B0.setter
-    def B0(self,B0):
-        self.clear_caches()
-        if self._ex0 is not None:
-            self._ex0.B0=B0
-            return
-        self._B0=B0
-        for L in self._children:L.update_T_K_B0()
+    # @B0.setter
+    # def B0(self,B0):
+    #     self.clear_caches()
+    #     if self._ex0 is not None:
+    #         self._ex0.B0=B0
+    #         return
+    #     self._B0=B0
+    #     for L in self._children:L.update_T_K_B0()
         
     
     @property
     def v0H(self):
         return self.B0*NucInfo('1H')
     
-    @v0H.setter
-    def v0H(self,v0H):
-        self.B0=v0H*1e6/NucInfo('1H')
+    # @v0H.setter
+    # def v0H(self,v0H):
+    #     self.B0=v0H*1e6/NucInfo('1H')
     
     @property
     def v0(self):
