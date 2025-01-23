@@ -365,11 +365,11 @@ class Hamiltonian():
     def plot(self,what:str='H',cmap:str=None,mode:str='log',colorbar:bool=True,
              step:int=0,ax=None):
         """
-        Visualizes the Liouvillian matrix. Options are what to view (what) and 
+        Visualizes the Hamiltonian matrix. Options are what to view (what) and 
         how to display it (mode), as well as colormaps and one may optionally
         provide the axis.
         
-        Note, one should index the Liouvillian before running. If this is not
+        Note, one should index the Hamiltonian before running. If this is not
         done, then we jump to the halfway point of the powder average
         
         what:
@@ -385,28 +385,29 @@ class Hamiltonian():
         'im' : Imaginary part of the Hamiltonian, where we indicate both
                     negative and positive values (real part will be omitted)
         'spy' : Black/white for nonzero/zero (threshold applied at 1/1e6 of the max)
-
-
-
+    
+    
+    
         Parameters
         ----------
         what : str, optional
-            DESCRIPTION. The default is 'L'.
+            what to plot. The default is 'H'.
         cmap : str, optional
-            DESCRIPTION. The default is 'YOrRd'.
+            Colormap for plotting. Defaults to 'YlOrRd' in 'abs' or 'log' mode, 
+            and 'BrGr' in 're' or 'im' mode
         mode : str, optional
-            DESCRIPTION. The default is 'abs'.
+            How to show complex data. The default is 'abs'.
         colorbar : bool, optional
-            DESCRIPTION. The default is True.
+            Includes a colorbar. The default is True.
         step : int, optional
-            DESCRIPTION. The default is 0.
+            Show a specific step in the rotor period. The default is 0.
         ax : TYPE, optional
-            DESCRIPTION. The default is None.
-
+            Provide an axis to plot into. The default is None.
+    
         Returns
         -------
-        None.
-
+        axis
+    
         """
 
         return HamTypes.HamPlot(self,what=what,cmap=cmap,mode=mode,colorbar=colorbar,

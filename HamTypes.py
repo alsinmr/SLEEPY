@@ -128,14 +128,14 @@ class Ham1inter():
 
         return out
     
-    def plot(self,what:str='H',cmap:str=None,mode:str='log',colorbar:bool=True,
+    def plot(self,what:str='H',cmap:str=None,mode:str='abs',colorbar:bool=True,
              step:int=0,ax=None):
         """
-        Visualizes the Liouvillian matrix. Options are what to view (what) and 
+        Visualizes the Hamiltonian matrix. Options are what to view (what) and 
         how to display it (mode), as well as colormaps and one may optionally
         provide the axis.
         
-        Note, one should index the Liouvillian before running. If this is not
+        Note, one should index the Hamiltonian before running. If this is not
         done, then we jump to the halfway point of the powder average
         
         what:
@@ -151,28 +151,29 @@ class Ham1inter():
         'im' : Imaginary part of the Hamiltonian, where we indicate both
                     negative and positive values (real part will be omitted)
         'spy' : Black/white for nonzero/zero (threshold applied at 1/1e6 of the max)
-
-
-
+    
+    
+    
         Parameters
         ----------
         what : str, optional
-            DESCRIPTION. The default is 'L'.
+            what to plot. The default is 'H'.
         cmap : str, optional
-            DESCRIPTION. The default is 'YOrRd'.
+            Colormap for plotting. Defaults to 'YlOrRd' in 'abs' or 'log' mode, 
+            and 'BrGr' in 're' or 'im' mode
         mode : str, optional
-            DESCRIPTION. The default is 'abs'.
+            How to show complex data. The default is 'abs'.
         colorbar : bool, optional
-            DESCRIPTION. The default is True.
+            Includes a colorbar. The default is True.
         step : int, optional
-            DESCRIPTION. The default is 0.
+            Show a specific step in the rotor period. The default is 0.
         ax : TYPE, optional
-            DESCRIPTION. The default is None.
-
+            Provide an axis to plot into. The default is None.
+    
         Returns
         -------
-        None.
-
+        axis
+    
         """
 
         return HamPlot(self,what=what,cmap=cmap,mode=mode,colorbar=colorbar,
@@ -652,11 +653,11 @@ def ZeroField(es,i:int,D:float,E:float=0,euler=[0,0,0]):
 def HamPlot(H,what:str='H',cmap:str=None,mode:str='log',colorbar:bool=True,
              step:int=0,ax=None):
     """
-    Visualizes the Liouvillian matrix. Options are what to view (what) and 
+    Visualizes the Hamiltonian matrix. Options are what to view (what) and 
     how to display it (mode), as well as colormaps and one may optionally
     provide the axis.
     
-    Note, one should index the Liouvillian before running. If this is not
+    Note, one should index the Hamiltonian before running. If this is not
     done, then we jump to the halfway point of the powder average
     
     what:
@@ -678,17 +679,18 @@ def HamPlot(H,what:str='H',cmap:str=None,mode:str='log',colorbar:bool=True,
     Parameters
     ----------
     what : str, optional
-        DESCRIPTION. The default is 'L'.
+        what to plot. The default is 'H'.
     cmap : str, optional
-        DESCRIPTION. The default is 'YOrRd'.
+        Colormap for plotting. Defaults to 'YlOrRd' in 'abs' or 'log' mode, 
+        and 'BrGr' in 're' or 'im' mode
     mode : str, optional
-        DESCRIPTION. The default is 'abs'.
+        How to show complex data. The default is 'abs'.
     colorbar : bool, optional
-        DESCRIPTION. The default is True.
+        Includes a colorbar. The default is True.
     step : int, optional
-        DESCRIPTION. The default is 0.
+        Show a specific step in the rotor period. The default is 0.
     ax : TYPE, optional
-        DESCRIPTION. The default is None.
+        Provide an axis to plot into. The default is None.
 
     Returns
     -------
@@ -706,10 +708,10 @@ def HamPlot(H,what:str='H',cmap:str=None,mode:str='log',colorbar:bool=True,
     if cmap is None:
         if mode == 'abs' or mode=='log':
             cmap='YlOrRd'
-        elif mode == 'signed':
+        elif mode=='spy':
+            cmap='binary'
+        else:
             cmap='BrBG'
-        elif mode == 'spy':
-            cmap= 'binary'
     
 
     H=H[len(H)//2] if (hasattr(H,'_index') and H._index==-1) or (hasattr(H,'A') and H.A is None ) else H
