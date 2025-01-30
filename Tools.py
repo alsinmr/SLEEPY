@@ -906,16 +906,63 @@ class TwoD_Builder():
         
         return self
         
-    def plot(self,ax=None):
+    def plot(self,mode:str='3D',n_contours:int=12,min_contour:float=0.01,cmap=None,ax=None):
+        """
+        Plots the 2D spectrum as a contour plot or 3D surface plot (default)
+
+        Parameters
+        ----------
+        m
+        
+
+
+        Parameters
+        ----------
+        mode : str, optional
+            '2D' (contour) or '3D' (surface) plot. The default is '3D'.
+        n_contours : int, optional
+            Number of positive log-spaced contours in 2D plot. Negative contours
+            will be the same as positive contours. The default is 12.
+        min_contour : float, optional
+            Minimum positive contour in 2D plot relative to spectrum maximum
+            (provide positive value). The default is 0.01.
+        cmap : Type,optional
+            Matplotlib colormap. The default is None.
+        ax : TYPE, optional
+            Optionally provide an axis for plotting. Note that the axis needs
+            to have the option projection='3D' if working in '3D' mode'.
+            The default is None.
+
+        Returns
+        -------
+        ax : TYPE
+            DESCRIPTION.
+
+        """
         if self.Ireal is None:
             warnings.warn('Run TwoD_Builder before plotting')
             return
         if self.Sreal is None and self.Ireal is not None:self.proc()
-        if ax is None:ax=plt.figure().add_subplot(1,1,1,projection='3d')
         
-        x,y=np.meshgrid(self.v_in,self.v_dir)
         
-        ax.plot_surface(x/1e3,y/1e3,self.Sreal.real,cmap='coolwarm',linewidth=0)
+        min_contour=np.abs(min_contour)
+        
+        if mode.lower()=='3d':
+            if cmap is None:cmap='coolwarm'
+            if ax is None:ax=plt.figure().add_subplot(1,1,1,projection='3d')
+            
+            x,y=np.meshgrid(self.v_in,self.v_dir)
+            
+            ax.plot_surface(x/1e3,y/1e3,self.Sreal.real,cmap=cmap,linewidth=0)
+        else:
+            if cmap is None:cmap='seismic'
+            if ax is None:ax=plt.figure().add_subplot()
+            m=np.log10(np.abs(self.Sreal.real).max())
+            contours=np.logspace(m+np.log10(min_contour),m,n_contours)
+            contours=np.concatenate((-contours[::-1],contours))
+            cmap=plt.get_cmap(cmap).resampled(len(contours))
+            colors=[cmap(k) for k in range(len(contours))]
+            ax.contour(self.v_in,self.v_dir,self.Sreal.real,levels=contours,colors=colors)
         
         ax.set_xlabel(r'$\delta$ / kHz')
         ax.set_ylabel(r'$\delta$ / kHz')

@@ -1294,7 +1294,7 @@ class Rho():
             return out
         
         
-    def plot(self,det_num:int=None,pwd_index:int=None,ax=None,FT:bool=False,mode:str='Real',apodize=False,axis='kHz/ms',**kwargs):
+    def plot(self,det_num:int=None,pwd_index:int=None,ax=None,FT:bool=False,mode:str='Real',apodize=False,axis=None,**kwargs):
         """
         Plots the amplitudes as a function of time or frequency
 
@@ -1313,8 +1313,14 @@ class Rho():
             Apodize the signal with decaying exponential, with time constant 1/5
             of the time axis (FT signal only)
         axis : str, optional
-            Specify the type of axis. Currently, 'Hz', 'kHz', 'MHz', and 'ppm'
-            are implemented. 'ppm' is only valid if the detector 
+            Specify the type of axis. Currently, 'Hz', 'kHz', 'MHz','GHz', and 
+            'ppm' are implemented for frequency axes. 'ppm' is only valid if 
+            the detector is for a specific type of nucleus ('13C','1H','15N'...)
+            For time, 's','ms','microseconds', 'ns', and 'ps' are implemented.
+            One may also use 'points', which will just number the axis with 
+            integers from 0 up to the number of points-1. If multiple data points
+            with the same time value are recorded, plotting will be done just
+            with "acquisition number"
 
         Returns
         -------
@@ -1327,6 +1333,28 @@ class Rho():
             if x[0]=='DynamicThermal':
                 if np.abs(self.I).max()>np.abs(self.expsys.Peq).max()*1.01:  #1% tolerance?
                     warnings.warn('Diverging system due to unfavorable scaling')
+                    
+        if axis is None:
+            if FT:
+                if self.v_axis.max()>1e9:
+                    axis='GHz'
+                elif self.v_axis.max()>1e6:
+                    axis='MHz'
+                elif self.v_axis.max()>1e3:
+                    axis='kHz'
+                else:
+                    axis='Hz'
+            else:
+                if self.t_axis.max()>1:
+                    axis='s'
+                elif self.t_axis.max()>1e-3:
+                    axis='ms'
+                elif self.t_axis.max()>1e-6:
+                    axis='us'
+                elif self.t_axis.max()>1e-9:
+                    axis='ns'
+                else:
+                    axis='ps'
 
         def det2label(detect):
             if isinstance(detect,str):
@@ -1388,6 +1416,9 @@ class Rho():
                 v_axis=self.v_axis/v0*1e6
                 mass,name=''.join(re.findall(r'\d',Nuc)),''.join(re.findall('[A-Z]',Nuc.upper()))
                 label=r"$\delta$($^{"+mass+r"}$"+name+") / ppm"
+            elif axis.lower()=='ghz':
+                v_axis=self.v_axis/1e9
+                label=r'$\nu$ / GHz'
             elif axis.lower()=='mhz':
                 v_axis=self.v_axis/1e6
                 label=r'$\nu$ / MHz'
@@ -1436,6 +1467,9 @@ class Rho():
                 elif axis.lower()=='ns':
                     x*=1e9
                     xlabel='t / ns'
+                elif axis.lower()=='ps':
+                    x*=1e12
+                    xlabel='t / ps'
                 elif axis.lower()=='points':
                     x=np.arange(len(self.t_axis))
                     xlabel='points'
