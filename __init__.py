@@ -39,8 +39,9 @@ if hasattr(_SubplotSpec,'is_first_col'):
 
 import sys as _sys
 if 'google.colab' in _sys.modules:
-    from google.colab import output
-    is_dark = output.eval_js('document.documentElement.matches("[theme=dark]")')
+    # from google.colab import output
+    # is_dark = output.eval_js('document.documentElement.matches("[theme=dark]")')
+    is_dark=True
     if is_dark:
         import matplotlib.pyplot as plt
         x=56
