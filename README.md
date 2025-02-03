@@ -1,4 +1,4 @@
-<img src="https://github.com/alsinmr/SLEEPY_tutorial/blob/main/JupyterBook/logo_dark.png" alt="drawing" width="600"/>
+<img src="https://raw.githubusercontent.com/alsinmr/SLEEPY_tutorial/refs/heads/main/JupyterBook/logo_dark.png" alt="drawing" width="600"/>
 
 # SLEEPY
 Spins in Liouville space for rElaxation and Exchange in PYthon
