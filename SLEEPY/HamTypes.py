@@ -200,7 +200,7 @@ def _larmor(es,i:int):
     S=es.Op[i]
     return Ham1inter(H=es.v0[i]*S.z,isotropic=True,info=info,es=es)
 
-def dipole(es,i0:int,i1:int,delta:float,eta:float=0,euler=[0,0,0]):
+def dipole(es,i0:int,i1:int,D:float=None,delta:float=None,eta:float=0,euler=[0,0,0]):
     """
     Dipole Hamiltonian
 
@@ -212,8 +212,10 @@ def dipole(es,i0:int,i1:int,delta:float,eta:float=0,euler=[0,0,0]):
         index of the first spin.
     i1 : int
         index of the second spin.
+    D : float
+        size of the dipole coupling (half of the anisotropy, delta), optional
     delta : float
-        anisotropy of the dipole coupling
+        anisotropy of the dipole coupling, optional
     eta   : float
         asymmetry of the dipole coupling (usually 0). Default is 0
     euler : list
@@ -224,7 +226,12 @@ def dipole(es,i0:int,i1:int,delta:float,eta:float=0,euler=[0,0,0]):
     -------
     Ham1inter
 
-    """    
+    """   
+    
+    assert D is not None or delta is not None,"D or delta must be defined"
+    
+    if delta is None:delta=2*D
+    
     info={'Type':'dipole','i0':i0,'i1':i1,'delta':delta,'eta':eta,'euler':euler}
     
     if es.LF[i0] or es.LF[i1]:  #Lab frame calculation
