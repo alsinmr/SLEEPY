@@ -1,4 +1,3 @@
 include SLEEPY/GyroRatio.txt
 include logo.png
-include *.py
 recursive-include SLEEPY/PowderFiles *.txt
