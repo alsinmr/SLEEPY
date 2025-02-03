@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sleepy-nmr"
+version = "0.0.3"
+authors = [
+    {name = "Kai Zumpfe"},
+    {name = "Albert Smith-Penzel"},
+    {name = "Albert Smith-Penzel", email = "albert.smith-penzel@medizin.uni-leipzig.de"}
+]
+description = """Spins in Liouville-space for rElaxation and Exchange in PYthon"""
+readme = "README.md"
+requires-python = ">=3.7"
+license = {text = "GPL-3.0-or-later"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"
+]
+
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib"
+]
+
+[tool.setuptools]
+include-package-data = true  # Ensures non-Python files are included in wheels
+packages = ["SLEEPY"]
+
+[tool.setuptools.package-data]
+"sleepy_nmr" = ["SLEEPY/GyroRatio.txt", "SLEEPY/PowderFiles/*.txt","logo.png",'*.png']
+
+
+[project.urls]
+Homepage = "https://alsinmr.github.io/SLEEPY"
+Repository = "https://github.com/alsinmr/SLEEPY.git"
+Issues = "https://github.com/alsinmr/SLEEPY/issues"
