@@ -30,15 +30,14 @@ class NucInfo(Info):
     'abund')
     """
     def __init__(self):
-        h=Constants['h']
-        muen=Constants['muen']
+        muen=Constants['mun']
         super().__init__()
         dir_path = os.path.dirname(os.path.realpath(__file__))    
         with open(dir_path+'/GyroRatio.txt','r') as f:
             for line in f:
                 line=line.strip().split()
                 self.new_exper(Nuc=line[3],mass=float(line[1]),spin=float(line[5]),\
-                               gyro=float(line[6])*muen/h,abundance=float(line[7])/100)
+                               gyro=float(line[6])*muen,abundance=float(line[7])/100)
         self.new_exper(Nuc='e-',mass=0,spin=1/2,gyro=Constants['ge']*Constants['mub'],abundance=1)
     
     def __call__(self,Nuc=None,info='gyro'):
@@ -124,11 +123,11 @@ def dipole_coupling(r,Nuc1,Nuc2):
     not b12, that is 2x larger than b12)
     """
     
-    gamma1=NucInfo(Nuc1)
-    gamma2=NucInfo(Nuc2)
+    gamma1=NucInfo(Nuc1)  #Hz/T
+    gamma2=NucInfo(Nuc2)  #Hz/T
     
-    h=6.6260693e-34 #Plancks constant in J s
-    mue0 = 12.56637e-7  #Permeability of vacuum [T^2m^3/J]
+    h=Constants['h'] #Plancks constant in J s
+    mue0 = Constants['mu0'] #Permeability of vacuum [T^2m^3/J]
     
     return h*2*mue0/(4*np.pi*(r/1e9)**3)*gamma1*gamma2
 

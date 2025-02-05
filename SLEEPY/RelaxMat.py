@@ -7,7 +7,7 @@ Created on Tue Jan 24 13:55:04 2023
 """
 
 import numpy as np
-from scipy.linalg import expm
+# from scipy.linalg import expm
 from . import Defaults
 from .Tools import Ham2Super
 from copy import copy

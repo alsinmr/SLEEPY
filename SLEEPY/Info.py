@@ -163,7 +163,10 @@ class Info():
                     out.new_exper(**self[x0])
                 return out                   
             elif np.isin(x,self.keys):
-                return self.__values[self.keys.index(x)]                    
+                return self.__values[self.keys.index(x)]
+            elif isinstance(x,str) and np.isin(x,self.values[0]):
+                i=np.argwhere(x==self.values[0])[:,0]
+                return self[i.tolist()]
             else:
                 assert 0,"Unknown parameter"
     

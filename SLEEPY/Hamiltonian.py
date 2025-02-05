@@ -18,6 +18,7 @@ Created on Tue Jan 17 11:49:00 2023
 from . import HamTypes
 from copy import copy
 from .Tools import Ham2Super,LeftSuper,RightSuper
+from . import Constants
 import numpy as np
 from . import Defaults
 from scipy.linalg import expm
@@ -253,7 +254,7 @@ class Hamiltonian():
         # using this approach anyway
         # energy=(Hdiag+Hdiag.T)/2+(H-np.diag(np.diag(H)))
         
-        return energy.reshape(energy.size).real*6.62607015e-34
+        return energy.reshape(energy.size).real*Constants['h']
     
     def Energy2(self,step:int):
         i=0 if self._index is None else self._index
@@ -265,7 +266,7 @@ class Hamiltonian():
                 H+=v0*Op.z
         Hdiag=np.tile(np.atleast_2d(np.diag(H)).T,H.shape[0])
         energy=(Hdiag+Hdiag.T)/2+(H-np.diag(np.diag(H)))
-        return energy.reshape(energy.size).real*6.62607015e-34
+        return energy.reshape(energy.size).real*Constants['h']
     
     @property
     def shape(self):
@@ -352,7 +353,7 @@ class Hamiltonian():
             if not(LF):
                 H+=self.expsys.v0[k]*self.expsys.Op[k].z
             
-        rho_eq=expm(6.62607015e-34*H/(1.380649e-23*self.expsys.T_K))
+        rho_eq=expm(Constants['h']*H/(Constants['kB']*self.expsys.T_K))
         # rho_eq/=np.trace(rho_eq)
         rho_eq/=np.sum(np.abs(rho_eq))
         if sub1:
