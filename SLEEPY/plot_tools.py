@@ -14,7 +14,7 @@ from . import Defaults
 
 def set_dark(dark=True):
     if dark:
-        x=56
+        x=56 if Defaults['Colab'] else 17
         plt.rcParams["figure.facecolor"]=(x/256,x/256,x/256)
         plt.rcParams["axes.facecolor"]=(x/256,x/256,x/256)
         plt.rcParams["axes.edgecolor"]=(1,1,1)
