@@ -43,12 +43,15 @@ def zoom(ax):
     yc0=sum(ylim)/2
     xr0=abs(xlim[1]-xlim[0])
     yr0=abs(ylim[1]-ylim[0])
+    xd=1 if xlim[1]>xlim[0] else -1
+    yd=1 if ylim[1]>ylim[0] else -1
     zc0=0
     zr0=10
     if threeD:
         zlim=ax.get_zlim()
         zc0=sum(zlim)/2
         zr0=zlim[1]-zlim[0]
+        zd=1 if zlim[1]>zlim[0] else -1
     
     
     
@@ -60,9 +63,9 @@ def zoom(ax):
         xr=xr0/xz
         yr=yr0/yz
         zr=zr0/zz
-        ax.set_xlim((xc-xr/2,xc+xr/2))
-        ax.set_ylim((yc-yr/2,yc+yr/2))
-        if threeD:ax.set_zlim((zc-zr/2,zc+zr/2))
+        ax.set_xlim((xc-xr/2,xc+xr/2)[::xd])
+        ax.set_ylim((yc-yr/2,yc+yr/2)[::yd])
+        if threeD:ax.set_zlim((zc-zr/2,zc+zr/2)[::zd])
         hdisplay.update(ax.figure)
         
     x_center = widgets.FloatSlider(min=min(xlim), max=max(xlim), step=xr0/100, value=xc0, description='x center')
