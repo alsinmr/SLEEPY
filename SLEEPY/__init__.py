@@ -62,7 +62,7 @@ if 'google.colab' in _sys.modules:
         plt.rcParams["text.color"]=(1,1,1)
         
 import os as _os
-if 'USER' in os.environ and os.environ['USER']='jovyan':
+if 'USER' in _os.environ and _os.environ['USER']=='jovyan':
     Defaults['Binder']=True
     Defaults['zoom']=True
     
