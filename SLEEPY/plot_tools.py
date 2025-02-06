@@ -110,7 +110,8 @@ def ColabZoom(ax):
         ax0.set_ylim((yc-yr/2,yc+yr/2))
         ax0.set_xlabel(ax.get_xlabel())
         ax0.set_ylabel(ax.get_ylabel())
-        ax0.legend(*ax.get_legend_handles_labels())
+        if ax.get_legend() is not None:
+            ax0.legend(*ax.get_legend_handles_labels())
         plt.show()
         
     x_center = widgets.FloatSlider(min=min(xlim), max=max(xlim), step=xr0/100, value=xc0, description='x center')
