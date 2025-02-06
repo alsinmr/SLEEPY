@@ -145,9 +145,8 @@ def ColabZoom(ax):
     
 
 def use_zoom(plot):
-    if Defaults['Dark']:set_dark()
-    
     def setup(*args,**kwargs):
+        if Defaults['Dark']:set_dark()
         ax=plot(*args,**kwargs)
         
         # Instances where we don't use zoom
