@@ -4,7 +4,8 @@
 Defaults={}
 from numpy import float64 as _rtype       #Not much gain if we reduced precision.
 from numpy import complex128 as _ctype    #Also, overflow errors become common at lower precision
-Defaults.update({'rtype':_rtype,'ctype':_ctype,'parallel':False,'cache':True,'ncores':None,'verbose':True})
+Defaults.update({'rtype':_rtype,'ctype':_ctype,'parallel':False,'cache':True,
+                 'ncores':None,'verbose':True,'zoom':False})
 
 _h=6.62607015e-34
 Constants={'h':_h,  #Planck constant, Js
@@ -45,6 +46,7 @@ if hasattr(_SubplotSpec,'is_first_col'):
 
 import sys as _sys
 if 'google.colab' in _sys.modules:
+    Defaults['zoom']=True
     from google.colab import output
     is_dark = output.eval_js('document.documentElement.matches("[theme=dark]")')
     if is_dark:

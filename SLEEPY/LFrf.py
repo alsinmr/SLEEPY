@@ -3,6 +3,7 @@
 import numpy as np
 import warnings
 import matplotlib.pyplot as plt
+from .plot_tools import use_zoom
 
 class LFrf():
     def __init__(self,seq,min_steps:int=2):
@@ -213,7 +214,7 @@ class LFrf():
         
         return f,S
         
-    
+    @use_zoom
     def plot(self,ax=None,nreps=100):
         """
         Plots the spectrum of the applied field. Field is repeated nreps time

@@ -9,6 +9,7 @@ Created on Thu Jan 19 14:34:23 2023
 import numpy as np
 import matplotlib.pyplot as plt
 from copy import copy
+from .plot_tools import use_zoom
 from .Propagator import Propagator
 
 class Sequence():
@@ -288,6 +289,7 @@ class Sequence():
                 
             setattr(self,name,new)
             
+    @use_zoom        
     def plot(self,fig=None,ax=None,show_ph_off=True):
         """
         Plots the pulse sequence

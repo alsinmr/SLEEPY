@@ -16,6 +16,7 @@ from copy import deepcopy as DC
 from copy import copy
 from .Hamiltonian import RF,Hamiltonian
 from .Liouvillian import Liouvillian
+from .plot_tools import use_zoom
 import matplotlib.pyplot as plt
 
 
@@ -350,6 +351,7 @@ class ExpSys():
         
         return self
     
+    @use_zoom
     def plot_inter(self,i:int,n:int=0,ax=None):
         """
         Creates 3D scatter plots representing the size of the z-component of the

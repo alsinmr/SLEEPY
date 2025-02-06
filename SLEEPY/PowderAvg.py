@@ -10,6 +10,7 @@ import numpy as np
 import os
 from copy import copy
 import matplotlib.pyplot as plt
+from .plot_tools import use_zoom
 from .Tools import D2,d2
 from . import PwdAvgFuns
 
@@ -167,6 +168,7 @@ class PowderAvg():
         # self.n_alpha=len(self._alpha)
         return self
     
+    @use_zoom
     def plot(self,ax=None,beta_gamma:bool=False,color='darkcyan',s=3):
         """
         Plots the powder average. By default, plots the alpha and beta angles.
@@ -453,7 +455,6 @@ class RotInter():
     def Afull(self):
         if self._Afull is None or len(self._Afull)!=self.pwdavg.N:self.MOL2LAB_Afull()
         return self._Afull.copy()
-    
     
     def plot(self,n:int=0,avg=0,ax=None):
         """

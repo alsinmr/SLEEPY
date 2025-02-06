@@ -22,8 +22,7 @@ from . import Constants
 import numpy as np
 from . import Defaults
 from scipy.linalg import expm
-import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator
+from .plot_tools import use_zoom
 
 
 class Hamiltonian():
@@ -363,6 +362,7 @@ class Hamiltonian():
         
         return rho_eq
     
+    @use_zoom
     def plot(self,what:str='H',cmap:str=None,mode:str='log',colorbar:bool=True,
              step:int=0,ax=None):
         """

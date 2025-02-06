@@ -16,6 +16,7 @@ from . import Defaults
 from . import Constants
 import warnings
 import matplotlib.pyplot as plt
+from .plot_tools import use_zoom,zoom
 
 #%% Some useful tools (Gyromagnetic ratios, spins, dipole couplings)
 class NucInfo(Info):
@@ -904,7 +905,8 @@ class TwoD_Builder():
         self.Simag=np.fft.fftshift(np.fft.fft(RE.imag+1j*IM.imag,n=self.apod_pars['SI'][0],axis=1),axes=[0,1])
         
         return self
-        
+    
+    @use_zoom    
     def plot(self,mode:str='3D',n_contours:int=12,min_contour:float=0.01,cmap=None,ax=None):
         """
         Plots the 2D spectrum as a contour plot or 3D surface plot (default)
@@ -1044,4 +1046,4 @@ class TwoD_Builder():
         return self.U[3]
     
     
-       
+    

@@ -12,6 +12,7 @@ import warnings
 from copy import copy
 from scipy.linalg import expm
 from . import Defaults
+from .plot_tools import use_zoom
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 
@@ -345,7 +346,8 @@ class Propagator():
         out=Propagator(Uout,t0=self.t0,tf=self.t0+self.Dt*n,taur=self.taur,L=self.L,isotropic=self.isotropic,phase_accum=self.phase_accum*n)
         out._eig=_eig
         return out   
-
+    
+    @use_zoom
     def plot(self,index:int=None,mode:str='log',cmap:str=None,colorbar:bool=True,
              ax=None) -> plt.axes:
         """

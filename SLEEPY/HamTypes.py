@@ -15,6 +15,7 @@ from .Tools import NucInfo
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from . import Constants
+from .plot_tools import use_zoom
 
 class Ham1inter():
     def __init__(self,M=None,H=None,T=None,isotropic=False,delta=0,eta=0,euler=[0,0,0],avg=0,
@@ -128,6 +129,7 @@ class Ham1inter():
 
         return out
     
+    @use_zoom
     def plot(self,what:str='H',cmap:str=None,mode:str='abs',colorbar:bool=True,
              step:int=0,ax=None):
         """

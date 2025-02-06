@@ -26,6 +26,7 @@ from . import RelaxMat
 from .RelaxClass import RelaxClass
 from .Sequence import Sequence
 from .Para import ParallelManager, StepCalculator
+from .plot_tools import use_zoom
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 
@@ -1108,7 +1109,7 @@ class Liouvillian():
             Energy[k*N:(k+1)*N]=H.Energy2(step)
         return Energy
 
-    
+    @use_zoom
     def plot(self,what:str='L',seq=None,rho=None,cmap:str=None,mode:str='log',colorbar:bool=True,
              step:int=0,block:int=None,ax=None) -> plt.axes:
         """
@@ -1170,6 +1171,11 @@ class Liouvillian():
         if seq is not None:
             assert seq.L is self,"Sequence was not generated from this Liouvillian"
     
+        if ax is None:
+            fig,ax=plt.subplots()
+        else:
+            fig=None
+    
         if rho is not None:
             if seq is None:seq=self.Sequence()
             _,seq=rho.ReducedSetup(seq)
@@ -1181,10 +1187,7 @@ class Liouvillian():
         if what=='Lrelax' and np.max(np.abs(self.Lrelax))==0 and self.LrelaxOS.active:
             what='LrelaxOS'
     
-        if ax is None:
-            fig,ax=plt.subplots()
-        else:
-            fig=None
+        
             
         if seq is not None:
             fields=copy(self.rf.fields)

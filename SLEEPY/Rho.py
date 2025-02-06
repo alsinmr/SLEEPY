@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from . import Defaults
 from .Tools import NucInfo,BlockDiagonal,ApodizationFun
 import re
+from .plot_tools import use_zoom
 
 
 ctype=Defaults['ctype']
@@ -1293,7 +1294,7 @@ class Rho():
                 out[k*Op.size:(k+1)*Op.size]=Op*pop0
             return out
         
-        
+    @use_zoom    
     def plot(self,det_num:int=None,pwd_index:int=None,ax=None,FT:bool=False,mode:str='Real',apodize=False,axis=None,**kwargs):
         """
         Plots the amplitudes as a function of time or frequency
@@ -1502,53 +1503,7 @@ class Rho():
                 
             ax.set_ylabel(det2label(self.detect[det_num]))
             ax.set_xlabel(xlabel)
-            
-            # if self._tstatus==0:
-            #     if mode.lower()=='reim':
-            #         ax.plot(np.arange(len(self.t_axis)),self.I[det_num].real,label=f'Re[{label}]',**kwargs)
-            #         ax.plot(np.arange(len(self.t_axis)),self.I[det_num].imag,label=f'Im[{label}]',**kwargs)
-            #         ax.legend(('Re','Im'))
-            #     elif mode[0].lower()=='r':
-            #         ax.plot(np.arange(len(self.t_axis)),self.I[det_num].real,label=label,**kwargs)
-            #     elif mode[0].lower()=='a':
-            #         ax.plot(np.arange(len(self.t_axis)),np.abs(self.I[det_num]),label=f'Abs[{label}]',**kwargs)
-            #     elif mode[0].lower()=='i':
-            #         ax.plot(np.arange(len(self.t_axis)),self.I[det_num].imag,label=f'Im[{label}]',**kwargs)
-            #     else:
-            #         assert 0,'Unrecognized plotting mode'
-                
-            #     ax.set_ylabel('<'+self.detect[det_num]+'>')
-            #     ax.set_xlabel('Acquisition Number')
-                
-            # else:
-            #     if axis.lower() in ['microseconds','us']:
-            #         t_axis=self.t_axis*1e6
-            #         label=r'$t$ / $\mu$s'
-            #     elif axis.lower()=='s':
-            #         t_axis=self.t_axis
-            #         label=r'$t$ / s'
-            #     elif axis.lower()=='ns':
-            #         t_axis=self.t_axis*1e9
-            #         label=r'$t$ / ns'
-            #     else:
-            #         t_axis=self.t_axis*1e3
-            #         label=r'$t$ / ms'
-                    
-            #     if mode.lower()=='reim':
-            #         ax.plot(t_axis,self.I[det_num].real,**kwargs)
-            #         ax.plot(t_axis,self.I[det_num].imag,**kwargs)
-            #         ax.legend(('Re','Im'))
-            #     elif mode[0].lower()=='r':
-            #         ax.plot(t_axis,self.I[det_num].real,**kwargs)
-            #     elif mode[0].lower()=='a':
-            #         ax.plot(t_axis,np.abs(self.I[det_num]),**kwargs)
-            #     elif mode[0].lower()=='i':
-            #         ax.plot(t_axis,self.I[det_num].imag,**kwargs)
-            #     else:
-            #         assert 0,'Unrecognized plotting mode'
-                
-            #     ax.set_ylabel(det2label(self.detect[det_num]))
-            #     ax.set_xlabel(label)
+
         self.apodize=ap
         return ax
             
@@ -1763,6 +1718,7 @@ class Rho():
             
         return bins,I
     
+    @use_zoom
     def plot_R_dist(self,U,det_num:int=0,ax=None):
         """
         Plots a histogram showing the distribution of relaxation rate
@@ -1790,7 +1746,7 @@ class Rho():
         ax.bar(bins-(bins[1]-bins[0])/1,I,width=(bins[1]-bins[0])*.5)
         ax.set_xlabel(r'R / s$^{-1}$')
         ax.set_ylabel('Weight')
-        
+        return ax
         
     def __repr__(self):
         out='Density Matrix/Detection Operator\n'
