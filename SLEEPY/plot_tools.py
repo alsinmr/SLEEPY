@@ -12,6 +12,16 @@ from IPython.display import display
 import matplotlib.pyplot as plt
 from . import Defaults
 
+def set_dark():
+    x=56
+    plt.rcParams["figure.facecolor"]=(x/256,x/256,x/256)
+    plt.rcParams["axes.facecolor"]=(x/256,x/256,x/256)
+    plt.rcParams["axes.edgecolor"]=(1,1,1)
+    plt.rcParams["axes.labelcolor"]=(1,1,1)
+    plt.rcParams["xtick.color"]=(1,1,1)
+    plt.rcParams["ytick.color"]=(1,1,1)
+    plt.rcParams["text.color"]=(1,1,1)
+
 
 def zoom(ax):
     plt.close(ax.figure)
@@ -135,6 +145,8 @@ def ColabZoom(ax):
     
 
 def use_zoom(plot):
+    if Defaults['Dark']:set_dark()
+    
     def setup(*args,**kwargs):
         ax=plot(*args,**kwargs)
         

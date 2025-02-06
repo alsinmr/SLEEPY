@@ -5,7 +5,8 @@ Defaults={}
 from numpy import float64 as _rtype       #Not much gain if we reduced precision.
 from numpy import complex128 as _ctype    #Also, overflow errors become common at lower precision
 Defaults.update({'rtype':_rtype,'ctype':_ctype,'parallel':False,'cache':True,
-                 'ncores':None,'verbose':True,'zoom':False,'Colab':False,'Binder':False})
+                 'ncores':None,'verbose':True,'zoom':False,
+                 'Colab':False,'Binder':False,'Dark':False})
 
 _h=6.62607015e-34
 Constants={'h':_h,  #Planck constant, Js
@@ -50,16 +51,8 @@ if 'google.colab' in _sys.modules:
     Defaults['zoom']=True
     from google.colab import output
     is_dark = output.eval_js('document.documentElement.matches("[theme=dark]")')
-    if is_dark:
-        import matplotlib.pyplot as plt
-        x=56
-        plt.rcParams["figure.facecolor"]=(x/256,x/256,x/256)
-        plt.rcParams["axes.facecolor"]=(x/256,x/256,x/256)
-        plt.rcParams["axes.edgecolor"]=(1,1,1)
-        plt.rcParams["axes.labelcolor"]=(1,1,1)
-        plt.rcParams["xtick.color"]=(1,1,1)
-        plt.rcParams["ytick.color"]=(1,1,1)
-        plt.rcParams["text.color"]=(1,1,1)
+    if is_dark:Defaults['Dark']=True
+
         
 import os as _os
 if 'USER' in _os.environ and _os.environ['USER']=='jovyan':
