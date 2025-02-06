@@ -27,6 +27,8 @@ def set_dark(dark=True):
 
 
 def zoom(ax):
+    if Defaults['Colab']:
+        return ColabZoom(ax)
     plt.close(ax.figure)
     
     hdisplay=display("",display_id=True)
