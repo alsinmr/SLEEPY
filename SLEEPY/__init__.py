@@ -6,7 +6,7 @@ from numpy import float64 as _rtype       #Not much gain if we reduced precision
 from numpy import complex128 as _ctype    #Also, overflow errors become common at lower precision
 Defaults.update({'rtype':_rtype,'ctype':_ctype,'parallel':False,'cache':True,
                  'ncores':None,'verbose':True,'zoom':False,
-                 'Colab':False,'Binder':False,'Dark':False})
+                 'Colab':False,'Binder':False})
 
 _h=6.62607015e-34
 Constants={'h':_h,  #Planck constant, Js
@@ -27,6 +27,7 @@ from .Sequence import Sequence
 from .Rho import Rho
 from .LFrf import LFrf
 
+from .plot_tools import set_dark
 
 
 from matplotlib.axes import Subplot as _Subplot
@@ -51,7 +52,7 @@ if 'google.colab' in _sys.modules:
     Defaults['zoom']=True
     from google.colab import output
     is_dark = output.eval_js('document.documentElement.matches("[theme=dark]")')
-    if is_dark:Defaults['Dark']=True
+    if is_dark:set_dark()
 
         
 import os as _os
