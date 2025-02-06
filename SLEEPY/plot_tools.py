@@ -116,6 +116,8 @@ def ColabZoom(ax):
 
         xr=xr0/xz
         yr=yr0/yz
+        xd=1 if xlim[1]>xlim[0] else -1
+        yd=1 if ylim[1]>ylim[0] else -1
         
         
         fig,ax0=plt.subplots(figsize=ax.figure.get_size_inches())
@@ -124,8 +126,8 @@ def ColabZoom(ax):
             ax0.plot(line.get_xdata(), line.get_ydata(), label=line.get_label(), color=line.get_color())
 
         
-        ax0.set_xlim((xc-xr/2,xc+xr/2))
-        ax0.set_ylim((yc-yr/2,yc+yr/2))
+        ax0.set_xlim((xc-xr/2,xc+xr/2)[::xd])
+        ax0.set_ylim((yc-yr/2,yc+yr/2)[::yd])
         ax0.set_xlabel(ax.get_xlabel())
         ax0.set_ylabel(ax.get_ylabel())
         if ax.get_legend() is not None:
