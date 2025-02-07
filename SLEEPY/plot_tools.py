@@ -123,7 +123,8 @@ def ColabZoom(ax):
         fig,ax0=plt.subplots(figsize=ax.figure.get_size_inches())
         
         for line in ax.get_lines():
-            ax0.plot(line.get_xdata(), line.get_ydata(), label=line.get_label(), color=line.get_color())
+            ax0.plot(line.get_xdata(), line.get_ydata(), label=line.get_label(), 
+                     linestyle=line.get_linestyle(), color=line.get_color())
 
         
         ax0.set_xlim((xc-xr/2,xc+xr/2)[::xd])
@@ -131,7 +132,7 @@ def ColabZoom(ax):
         ax0.set_xlabel(ax.get_xlabel())
         ax0.set_ylabel(ax.get_ylabel())
         if ax.get_legend() is not None:
-            ax0.legend(*ax.get_legend_handles_labels())
+            ax0.legend(*[[t.get_text() for t in ax.get_legend().get_texts()]])
         plt.show()
         
     x_center = widgets.FloatSlider(min=min(xlim), max=max(xlim), step=xr0/100, value=xc0, description='x center')

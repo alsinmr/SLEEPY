@@ -288,8 +288,7 @@ class Sequence():
                 new[:,k]=x[:,i]
                 
             setattr(self,name,new)
-            
-    @use_zoom        
+                    
     def plot(self,fig=None,ax=None,show_ph_off=True):
         """
         Plots the pulse sequence

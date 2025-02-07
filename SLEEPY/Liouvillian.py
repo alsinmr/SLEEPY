@@ -1283,7 +1283,10 @@ class Liouvillian():
             
         labels=self.expsys.Op.Llabels
         if labels is not None:
-            if len(self.H)>1:
+            if what.lower()=='kex':
+                label0=[str(k) for k in range(len(self.H))]
+                bi=np.ones(len(label0),dtype=bool)
+            elif len(self.H)>1:
                 label0=[]
                 for k in range(len(self.H)):
                     for l in labels:
@@ -1302,7 +1305,9 @@ class Liouvillian():
             ax.set_xticklabels('',rotation=-90)
             ax.xaxis.set_major_formatter(plt.FuncFormatter(format_func))
             
-            if len(self.H)>1:
+            if what.lower()=='kex':
+                label1=label0
+            elif len(self.H)>1:
                 label1=[]
                 for k in range(len(self.H)):
                     for l in labels:

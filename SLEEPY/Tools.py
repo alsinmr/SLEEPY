@@ -642,7 +642,56 @@ def tumbling(tc:float,q:int=3):
     kex/=kavg*tc
     
     return kex,euler
+
+def kex_ex_2A(kex,ex_list):
+    """
+    Calculates the order parameter, correlation times, and amplitudes resulting
+    from an exchange matrix, and the corresponding list of expsys. Then, these
+    parameters are returned for each anisotropic interaction in the system.
+
+    Parameters
+    ----------
+    kex : TYPE
+        DESCRIPTION.
+    ex_list : TYPE
+        DESCRIPTION.
+
+     Returns
+     -------
+     S2 : float
+         Order parameter (S^2, not S).
+     peq : np.array
+         Equilibrium populations
+     tc : np.array
+         correlation times.
+     A : np.array
+         Amplitudes.
+
+
+    """    
     
+    S2=[]
+    A=[]
+    peq=None
+    tc=[]
+    
+    H=[ex.Hamiltonian() for ex in ex_list]
+    
+    N=len(H[0].Hinter)
+    for k in range(N):
+        if H[0].Hinter[k].isotropic:
+            continue
+        euler=[Spher2pars(H0[0].Hinter[k].rotInter.A[0],return_angles=True)[:,0][2:] for H0 in H]
+        
+        out=kex2A(kex,euler)
+        S2.append(out[0])
+        if peq is None:
+            peq=out[1]
+        tc.append(out[2])
+        A.append(out[3])
+        
+    return np.array(S2),peq,np.array(tc),np.array(A)
+        
     
 def kex2A(kex,euler):
     """
@@ -673,6 +722,7 @@ def kex2A(kex,euler):
 
     """
     
+    euler=np.array(euler)
     tci,v=np.linalg.eigh(kex)
     tc=-1/tci[:-1]
     
