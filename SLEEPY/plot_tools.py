@@ -31,7 +31,7 @@ def zoom(ax):
         return ColabZoom(ax)
     plt.close(ax.figure)
     
-    hdisplay=display("",display_id=True)
+    hdisplay=display(ax.figure,display_id=True)
     
     threeD=ax.name=='3d'
     
