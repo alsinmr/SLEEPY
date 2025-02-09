@@ -467,10 +467,11 @@ def twoSite_S_eta(theta:float,p:float=0.5):
     
     return S[0],eta[0]
 
-def SetupTumbling(expsys,tc:float,q:int=3):
+def SetupTumbling(expsys,tc:float,q:int=3,returnL:bool=True):
     """
     Takes an expsys and adds a simulated tumbling to it, returning a list
-    of expsys's and an exchange matrix to use to set up a Liouvillian
+    of expsys's and an exchange matrix to use to set up a Liouvillian, or can
+    return the Liouvillian directly (default behavior).
     
     e.g.
     L=sl.Liouvillian(ex_list,kex=kex)
@@ -481,9 +482,15 @@ def SetupTumbling(expsys,tc:float,q:int=3):
         SLEEPY expsys
     tc : float
         Desired correlation time of tumbling.
+    returnL : bool
+        Flag to specify that the Liouvillian should be return directly
 
     Returns
     -------
+    L : Liouvillian
+    
+        or
+    
     ex_list : list
         list of expsys
     kex : np.array
@@ -507,10 +514,13 @@ def SetupTumbling(expsys,tc:float,q:int=3):
                     kwargs['euler']=[kwargs['euler'],euler0]
                 
                 ex_list[-1].set_inter(**kwargs)
-                
+    
+    if returnL:
+        from .Liouvillian import Liouvillian
+        return Liouvillian(ex_list,kex=kex)
     return ex_list,kex
 
-def SetupTetraHop(expsys,tc:float,n:int=4):
+def SetupTetraHop(expsys,tc:float,n:int=4,returnL:bool=True):
     """
     Sets up a system undergoing tetrahedral hopping with from 2-4 sites
 
@@ -521,20 +531,33 @@ def SetupTetraHop(expsys,tc:float,n:int=4):
     tc : float
         Desired correlation time of tumbling.
     n  : number of tetrahedral sites in exchange (2-4)
+    returnL : bool
+        Flag to specify that the Liouvillian should be return directly
 
     Returns
     -------
+    L : Liouvillian
+    
+        or
+    
     ex_list : list
         list of expsys
     kex : np.array
         Exchange matrix
     """
             
-    ex_list,kex=SetupTumbling(expsys, tc,q=1)
-    if n==4:return ex_list,kex
-    return ex_list[4-n:],nSite_sym(n=n, tc=tc)
+    ex_list,kex=SetupTumbling(expsys, tc,q=1,returnL=False)
+    
+    if n<4:
+        ex_list=ex_list[4-n:]
+        kex=nSite_sym(n=n,tc=tc)
+        
+    if returnL:
+        from .Liouvillian import Liouvillian
+        return Liouvillian(ex_list,kex=kex)
+    return ex_list,kex
 
-def Setup3siteSym(expsys,tc:float,phi:float=np.arccos(-1/3)):
+def Setup3siteSym(expsys,tc:float,phi:float=np.arccos(-1/3),returnL:bool=True):
     """
     Sets up a system undergoing 3-site symmetric hopping
 
@@ -545,9 +568,15 @@ def Setup3siteSym(expsys,tc:float,phi:float=np.arccos(-1/3)):
     tc : float
         Desired correlation time of tumbling.
     phi : Desired opening angle of hopping
+    returnL : bool
+        Flag to specify that the Liouvillian should be return directly
 
     Returns
     -------
+    L : Liouvillian
+    
+        or
+    
     ex_list : list
         list of expsys
     kex : np.array
@@ -559,13 +588,16 @@ def Setup3siteSym(expsys,tc:float,phi:float=np.arccos(-1/3)):
         for inter in ex.inter:
             if 'euler' in inter:
                 inter['euler'][-1][1]=phi
-                
+    
+    if returnL:
+        from .Liouvillian import Liouvillian
+        return Liouvillian(ex_list,kex=kex)            
     return ex_list,kex
 
 def tumbling(tc:float,q:int=3):
     """
     Constructs an exchange matrix for isotropic tumbling based on one of the
-    "rep" powder averages. q (index from 0 to 10, 0 is just a tetrahedral hop).
+    "rep" powder averages. q (index from 0 to 12, 0 is just a tetrahedral hop).
     Returns the exchange matrix and the corresponding list of euler angles.
     
     Currently set up only for averaging symmetrix (eta=0) tensors
@@ -643,64 +675,18 @@ def tumbling(tc:float,q:int=3):
     
     return kex,euler
 
-def kex_ex_2A(kex,ex_list):
-    """
-    Calculates the order parameter, correlation times, and amplitudes resulting
-    from an exchange matrix, and the corresponding list of expsys. Then, these
-    parameters are returned for each anisotropic interaction in the system.
 
-    Parameters
-    ----------
-    kex : TYPE
-        DESCRIPTION.
-    ex_list : TYPE
-        DESCRIPTION.
-
-     Returns
-     -------
-     S2 : float
-         Order parameter (S^2, not S).
-     peq : np.array
-         Equilibrium populations
-     tc : np.array
-         correlation times.
-     A : np.array
-         Amplitudes.
-
-
-    """    
-    
-    S2=[]
-    A=[]
-    peq=None
-    tc=[]
-    
-    H=[ex.Hamiltonian() for ex in ex_list]
-    
-    N=len(H[0].Hinter)
-    for k in range(N):
-        if H[0].Hinter[k].isotropic:
-            continue
-        euler=[Spher2pars(H0[0].Hinter[k].rotInter.A[0],return_angles=True)[:,0][2:] for H0 in H]
-        
-        out=kex2A(kex,euler)
-        S2.append(out[0])
-        if peq is None:
-            peq=out[1]
-        tc.append(out[2])
-        A.append(out[3])
-        
-    return np.array(S2),peq,np.array(tc),np.array(A)
         
     
 def kex2A(kex,euler):
     """
-    Calculates the order parameter, correlation times, and amplitudes resulting
-    from an exchange matrix, and the corresponding n Euler angles.
+    Calculates the order parameter, equilibrium populations, correlation times, 
+    and amplitudes resulting from an nxn exchange matrix and the corresponding 
+    nx3 Euler angles.
     
-    The corresponding correlation function is then
+    The correlation function is then
     
-    C(t)=S2 + (1-S2)*sum(Ai*np.exp(-t/tci))
+    C(t)=S2 + (1-S2) * sum(Ai * np.exp(-t/tci))
 
     Parameters
     ----------
@@ -712,7 +698,7 @@ def kex2A(kex,euler):
     Returns
     -------
     S2 : float
-        Order parameter (S^2, not S).
+        Order parameter (S**2, not S).
     peq : np.array
         Equilibrium populations
     tc : np.array
@@ -745,9 +731,146 @@ def kex2A(kex,euler):
 
     A=np.array(A).real
     
-    A=A[:-1]/(1-S2)
+    if S2!=1:
+        A=A[:-1]/(1-S2)
     
     return S2,peq,tc,A
+
+def L2A(L=None,kex=None,ex_list=None):
+    """
+    Calculates the order parameter, correlation times, and amplitudes resulting
+    either  a Liouvillian (with exchange matrix), or from the from the exchange 
+    matrix itself, and the corresponding expsys list. Then, the order parameters,
+    equilibrium population, correlation times, and amplitudes are returned.
+    
+    Note that for isotropic interactions, S2 is simply set to 1, all amplitudes
+    are equal, and all correlation times are 1. 
+
+    Parameters
+    ----------
+    L : Liouvillian, optional
+        Liouvillian with exchange matrix. Use instead of kex and ex_list.
+        The default is None.
+    kex : np.array, optional
+        Exchange matrix (use instead of Liouvillian). The default is None.
+    ex_list : list, optional
+        Expsys list. The default is None.
+
+    Returns
+    -------
+    S2 : float
+        Order parameter (S**2, not S).
+    peq : np.array
+        Equilibrium populations
+    tc : np.array
+        correlation times.
+    A : np.array
+        Amplitudes.
+
+    """
+    
+    assert L is not None or (kex is not None and ex_list is not None)
+    
+    S2=[]
+    A=[]
+    peq=None
+    tc=[]
+    
+    
+    H=L.H if L is not None else [ex.Hamiltonian() for ex in ex_list]
+    if L is not None:kex=L.kex
+    
+    N=len(H[0].Hinter)
+    n=len(H)-1
+    
+    euler=[np.array([0,0,0]) for _ in range(n+1)]
+    _,peq,_,_=kex2A(kex,euler)
+    
+    for k in range(N):
+        if H[0].Hinter[k].isotropic:
+            S2.append(1)
+            A.append(1/n*np.ones(n))
+            tc.append(np.ones(n))
+            continue
+            
+        euler=[Spher2pars(H0[0].Hinter[k].rotInter.A[0],return_angles=True)[:,0][2:] for H0 in H]
+        
+        out=kex2A(kex,euler)
+        S2.append(out[0])
+        tc.append(out[2])
+        A.append(out[3])
+        
+    return np.array(S2),peq,np.array(tc),np.array(A)
+
+def pars2Ct(S2,tc,A,t=None):
+    """
+    Returns the correlation function for an order parameter, list of amplitudes
+    (should sum to 1), and list of correlation times. If a time axis is not 
+    provided, then this will default to 200 linearly spaced time points, and
+    extend to 5x the inverse of the average rate constant.
+
+    Parameters
+    ----------
+    S2 : float
+        Order parameter (S**2, not S).
+    tc : np.array
+        correlation times.
+    A : np.array
+        Amplitudes.
+    t : np.array
+
+    Returns
+    -------
+    t : np.array
+        Time axis for the correlation function
+        
+    Ct : np.array
+        Correlation function
+
+    """
+    
+    if t is None:
+        kavg=(A/tc).sum()
+        t=np.linspace(0,5/kavg,200)
+        
+    Ct=S2+(1-S2)*np.sum([A0*np.exp(-t/tc0) for A0,tc0 in zip(A,tc)],axis=0)
+    return t,Ct
+
+def L2Ct(L,t=None):
+    """
+    Returns a time axis and list of correlation functions for interactions in
+    a Liouvillian
+
+    Parameters
+    ----------
+    L : Liouvillian
+        Liouvillian with exchange matrix.
+    t : np.array, optional
+        Time axis for the correlation function. The default is None, which will
+        yield a linear spaced time axis with 200 time points, extending to
+        5 times the maximum averaged correlation time in the 
+
+    Returns
+    -------
+        t : np.array
+        Time axis for the correlation function
+        
+    Ct : list
+        List of correlation functions
+
+    """
+    
+    S2,_,tc,A=L2A(L)
+    if t is None:
+        kavg=[]
+        for S20,tc0,A0 in zip(S2,tc,A):
+            if S20<1:
+                kavg.append((A0/tc0).sum())
+        t=np.linspace(0,5/min(kavg),200)
+        
+    return t,[pars2Ct(S20,tc0,A0)[1] for S20,tc0,A0 in zip(S2,tc,A)]
+                
+        
 
 def commute(A,B):
     """
