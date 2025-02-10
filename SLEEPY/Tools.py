@@ -582,7 +582,7 @@ def Setup3siteSym(expsys,tc:float,phi:float=np.arccos(-1/3),returnL:bool=True):
     kex : np.array
         Exchange matrix
     """
-    ex_list,kex=SetupTetraHop(expsys,tc=tc,n=3)
+    ex_list,kex=SetupTetraHop(expsys,tc=tc,n=3,returnL=False)
     
     for ex in ex_list:
         for inter in ex.inter:
