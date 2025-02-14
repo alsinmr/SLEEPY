@@ -309,9 +309,14 @@ class RelaxClass():
         
         Lrelax=np.zeros([n**2*N,n**2*N],dtype=Defaults['ctype'])
         
-        nt=(np.prod(self.Op.Mult)//(self.Op.Mult[i]))**2*(self.Op.Mult[i]-1)  #Number of T1 transitions
+        # nt=(np.prod(self.Op.Mult)//(self.Op.Mult[i]))**2*(self.Op.Mult[i]-1)  #Number of T1 transitions
+        
+        nt=(np.abs(M-np.diag(np.diag(M)))>1e-6).sum()//2  #Number of T1 transitions
         
         loop=[(k,H) for k,H in enumerate(L.H)] if state is None else [(state,L.H[state])]
+        
+        S=self.Op[i].S
+        if S>1:warn('Tilted frame relaxation may not behave as expected for S>1')
         
         for k,H in loop:
             U,Ui,v=H.eig2L(step)
@@ -323,10 +328,10 @@ class RelaxClass():
 
             out=np.zeros(Mp.shape,dtype=Mp.dtype)
             for i0,i1 in index:
-                out[i0,i1]=-0.5/T1*Mp[i0,i1]/np.abs(Mp[i0,i1])
-                out[i1,i0]=-0.5/T1*Mp[i1,i0]/np.abs(Mp[i1,i0])
-                out[i0,i0]-=0.5/T1
-                out[i1,i1]-=0.5/T1
+                out[i0,i1]=-S/T1*Mp[i0,i1]/np.abs(Mp[i0,i1])
+                out[i1,i0]=-S/T1*Mp[i1,i0]/np.abs(Mp[i1,i0])
+                out[i0,i0]-=S/T1
+                out[i1,i1]-=S/T1
             
             
             
@@ -386,14 +391,15 @@ class RelaxClass():
         
         L=self.L
         
+        S=self.Op[i].S
+        if S>1:warn('Tilted frame relaxation may not behave as expected for S>1')
+        
         
         Lz=Ham2Super(self.Op[i].z)
         
         Lx,Ly,Lz=[Ham2Super(getattr(self.Op[i],q)) for q in ['x','y','z']]
         
-        # TODO why does this change behavior?
         M=Lx@Lx+Ly@Ly+Lz@Lz #This is isotropic (will not transform for 1 spin)
-        # M=Lz@Lz
         
         N=len(L.H)      #Number of Hamiltonians
         n=L.H[0].shape[0]  #Dimension of Hamiltonians
@@ -425,7 +431,7 @@ class RelaxClass():
             #     out[i0,i0]=-1/T2
                             
             out=Ui@out@U
-                
+            
             Lrelax[k*n**2:(k+1)*n**2][:,k*n**2:(k+1)*n**2]=out
         
         return Lrelax

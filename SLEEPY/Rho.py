@@ -1271,10 +1271,6 @@ class Rho():
         """
         nHam=len(self.L.H)
         
-        # I'm not 100% sure that I shouldn't be taking the transpose of both the 
-        # initial and detection operators. Or maybe I should not be taking the 
-        # transpose of either operator.
-        
         
         if detect:
             Op=Op.T.conj()

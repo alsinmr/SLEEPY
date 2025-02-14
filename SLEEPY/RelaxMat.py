@@ -68,28 +68,32 @@ def T1(expsys,i:int,T1:float):
 
     Lp=Ham2Super(expsys.Op[i].p)
     Lm=Ham2Super(expsys.Op[i].m)
-    M=Lp@Lm+Lm@Lp
-    M=Lp@Lm
+    M=(Lp@Lm+Lm@Lp)
+    # M=Lp@Lm
+    M-=np.diag(np.diag(M))  #This knocks out T2 relaxation
+    M-=np.diag(M.sum(0))
+    M/=-(4*T1)
+    return M.real
     # return -M.real/(2*T1)/M[0,0].real
     
     
-    M-=np.diag(np.diag(M))
-    index=np.argwhere(M)
-    index.sort()
-    index=np.unique(index,axis=0)
+    # M-=np.diag(np.diag(M))
+    # index=np.argwhere(M)
+    # index.sort()
+    # index=np.unique(index,axis=0)
 
-    out=np.zeros([sz**2,sz**2],dtype=Defaults['rtype'])
-    # I'm not sure how valid this is for spin>1/2
-    for id0,id1 in index:
-        out[id0,id1]=1/(T1*2)
-        out[id1,id0]=1/(T1*2)
-        # out[id0,id0]=p[0,0]
-        # out[id0,id1]=p[0,-1]
-        # out[id1,id0]=p[-1,0]
-        # out[id1,id1]=p[1,1]
-    out-=np.diag(out.sum(0))
+    # out=np.zeros([sz**2,sz**2],dtype=Defaults['rtype'])
+    # # I'm not sure how valid this is for spin>1/2
+    # for id0,id1 in index:
+    #     out[id0,id1]=1/(T1*2)
+    #     out[id1,id0]=1/(T1*2)
+    #     # out[id0,id0]=p[0,0]
+    #     # out[id0,id1]=p[0,-1]
+    #     # out[id1,id0]=p[-1,0]
+    #     # out[id1,id1]=p[1,1]
+    # out-=np.diag(out.sum(0))
 
-    return out
+    # return out
 
 def SpinDiffusion(expsys,i:int,k:float):
     """
