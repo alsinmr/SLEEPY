@@ -285,14 +285,12 @@ class Propagator():
         """
         Raise the operator to a given power
         
-        Probably, we should consider when to use eigenvalues and when to do
-        a direct calculation. Currently always uses eigenvalues, which always
-        takes about the same amount of time regardless of n. For a 32x32 matrix,
-        n=100 is roughly equally as fast for both operations.  
+        This always uses eigenvalues, where computational time depends mostly 
+        on matrix diagonalization and very little on the size of n.
         
-        But, this is the rule for a 32x32 L matrix. Scaling is supposedly
-        O(n^3) for matrix multiplication
-        O(n^2) for eigenvalue decomposition.
+        Using 'inf' or np.inf as argument will remove all eigenvectors except
+        the eigenvalue corresponding to 1
+        
 
         Parameters
         ----------
