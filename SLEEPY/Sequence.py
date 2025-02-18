@@ -62,8 +62,6 @@ class Sequence():
         
         self._spin_specific=False
         self.cyclic=cyclic
-        # self._rho=None
-        # self.rho=rho
         
         self.t0_seq=0
         
@@ -75,23 +73,6 @@ class Sequence():
         self._phase=np.zeros([ns,2])
         return self
     
-    # @property
-    # def rho(self):
-    #     return self._rho
-    
-    # @rho.setter
-    # def rho(self,rho):
-    #     if rho is None:return
-    #     assert self._rho is None,"rho cannot be changed for a sequence"
-    #     self._rho=rho
-        
-    #     if rho.BlockDiagonal:
-    #         rho.L=self.L
-    #         blocks=rho.Blocks(self)
-    #         block=np.sum(blocks,0).astype(bool)
-    #         self.L=self.L.getBlock(block)
-    #         self.block=block
-    #         rho._reduce(self)
             
     @property
     def block(self):
@@ -309,19 +290,9 @@ class Sequence():
         
         if ax is None:
             if fig is None:
-                fig=plt.figure()
-            ax=[fig.add_subplot(len(spins),1,k+1) for k in range(len(spins))]
-        
-        # if len(self.t)==2 and self.isotropic:
-        #     assert 0,"For isotropic systems, one must specify tf"
-        # elif len(self.t)==2:
-        #     tf=self.taur
-        # elif self.isotropic:
-        #     tf=self.t[-2]
-        # elif self.t[-2]%self.taur<1e-10:
-        #     tf=self.t[-2]
-        # else:
-        #     tf=(self.t[-2]//self.taur+1)*self.taur  #Plot until end of next rotor period
+                fig,ax=plt.subplots(len(spins),1,sharex=True)
+            else:
+                ax=[fig.add_subplot(len(spins),1,k+1) for k in range(len(spins))]
         
         tf=self.Dt
         
@@ -449,30 +420,14 @@ class Sequence():
         t[0]=0
         
         
-        #WHY DO THESE SOMETIMES ONLY GET ONE ELEMENT????
         t=t+t0 #Absolute time axis (relative to rotor period)
         
-        
-        
 
-        
-        # ini_fields=copy(self.fields)
-
-        # U=self.L.Ueye(t[0])
         i1=np.argmax(t>=tf) #First time after tf
         t=np.concatenate((t[:i1],[tf]))
         
         ph_acc=(np.diff(t)*voff[:,i:i+i1]).sum(-1)*2*np.pi
         
-        # for m,(ta,tb) in enumerate(zip(t[:-1],t[1:])):
-        #     for k,(v1,phase,voff) in enumerate(zip(self.v1,self.phase,self.voff)):
-        #         self.fields[k]=(v1[m],phase[m],voff[m])
-        #     U0=self.L.U(t0=ta,Dt=tb-ta)
-        #     U=U0*U
-         
-        # self.L.rf.fields=ini_fields        
-        
-        # dct={'t':t,'v1':copy(self.v1)[:,i:],'phase':copy(self.phase)[:,i:],'voff':copy(self.voff)[:,i:]}
         dct={'t':t,'v1':v1[:,i:i+i1+1],'phase':phase[:,i:i+i1+1],'voff':voff[:,i:i+i1+1]}
         self.expsys._tprop=0 if self.taur is None else tf%self.taur
         

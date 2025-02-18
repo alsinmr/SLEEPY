@@ -398,8 +398,6 @@ class RotInter():
         Note that the isotropic component is scaled and added to   
         """
         
-        # self.pwdavg=pwdavg
-        # rotor_angle=self.rotor_angle
         A=self.MOL
         alpha,beta,gamma=[getattr(self.pwdavg,x) for x in ['alpha','beta','gamma']]
         

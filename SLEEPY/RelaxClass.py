@@ -27,7 +27,6 @@ class RelaxClass():
     """
     
     h=Constants['h']
-    # h=6.62607015e-34
     
     def __init__(self,L):
         """
@@ -83,8 +82,6 @@ class RelaxClass():
     @property        
     def L(self):
         if self._L.reduced:
-            # self._L._L=self._L._L[self._L._index]
-            # self._L._L._index=self._L._index
             self._L._L=self._L._L[self._L._index]
             return self._L._L
         else:
@@ -189,40 +186,12 @@ class RelaxClass():
             DelE=E[i0]-E[i1]
             rat=np.exp(DelE/(Constants['kB']*self.T_K))
             
-            # Del=M[i0,i1]*(1-rat)/(1+rat)*np.sign(M[i0,i1])
-            
-            #Suppose Del should b positive. 
-            #Del is corrected above
-            #Case 1: i0 has switched sign
-                
-                
-            # out[i0,i1]=-Del*M[i0,i1]/np.abs(M[i0,i1])
-            # out[i1,i1]+=Del
-            # out[i1,i0]=Del*M[i0,i1]/np.abs(M[i0,i1])
-            # out[i0,i0]+=-Del
-            
-            
-            # TODO I don't see why out[i0,i0] should always be reduced
-            # Shouldn't it depend on which has higher energy?
             Del=M[i0,i1]*(1-rat)/(1+rat)
             
-            out[i0,i0]-=np.abs(Del)
-            out[i1,i1]+=np.abs(Del)
+            out[i0,i0]-=np.abs(Del)*np.sign(1-rat)
+            out[i1,i1]+=np.abs(Del)*np.sign(1-rat)
             out[i0,i1]=-Del
             out[i1,i0]=Del.conj()
-
-            # print(M[i0,i1])
-
-            #This one seems to break DynamicThermal
-            # out[i0,i0]+=M[i0,i0]*(1-rat)/(1+rat)
-            # out[i1,i1]-=M[i1,i1]*(1-rat)/(1+rat)
-            # out[i0,i1]=-M[i0,i1]*(1-rat)/(1+rat)
-            # out[i1,i0]=M[i1,i0]*(1-rat)/(1+rat)
-            
-            # out[i0,i0]-=Del
-            # out[i1,i1]+=Del
-            # out[i0,i1]=-Del
-            # out[i1,i0]=Del
             
             
         return out
@@ -339,14 +308,6 @@ class RelaxClass():
                 out+=self.Lindblad(out, v*self.h)
                 
             out=Ui@out@U
-            
-            
-            # Is this really ok?
-            # out-=np.diag(np.diag(out))
-            # out=np.abs(out)
-            # out-=np.diag(out.sum(0))
-            # TODO : The action on coherences is somehow wrong (in some/all cases?)
-                
         
             Lrelax[k*n**2:(k+1)*n**2][:,k*n**2:(k+1)*n**2]=out
         
@@ -438,7 +399,7 @@ class RelaxClass():
     
     def DynamicThermal(self,step:int=None):
         """
-        Attempts to thermalize dynamic processes.
+        Thermalizes dynamic processes.
 
         Parameters
         ----------
@@ -468,43 +429,8 @@ class RelaxClass():
         
         
         L=self.L
-
-        # Lex correction
-        
-        nH=len(L.H)
-        n=L.shape[0]//nH
-        rho_eq=L.rho_eq(step=step)
-        rho_eq=[rho_eq[k*n:(k+1)*n] for k in range(nH)]
-        
-        for k in range(len(rho_eq)):
-            rho_eq[k][np.abs(rho_eq[k])<1e-8]=0
-            
-        # Lex0=np.zeros(L.Lex.shape,dtype=Defaults['ctype'])
-        # for k in range(nH):
-        #     for j in range(k+1,nH):
-        #         DelK=np.zeros(n,dtype=Defaults['ctype'])
-        #         d=rho_eq[k]+rho_eq[j]
-        #         i=d.astype(bool)
-        #         DelK[i]=(L.kex[k,j]*rho_eq[j]-L.kex[j,k]*rho_eq[k])[i]\
-        #             /(d[i])
-        #         Lex0[j*n:(j+1)*n][:,k*n:(k+1)*n]+=np.diag(DelK)
-        #         Lex0[k*n:(k+1)*n][:,j*n:(j+1)*n]-=np.diag(DelK)
-
-        # Lex0-=np.diag(np.sum(Lex0,axis=0))
-        # # Lex0=0
-        # L0=L.Lcoh(step)+L.Lex+L.Lrelax+Lex0
         
         L0=L.Lcoh(step)+L.Lex+L.Lrelax
-        
-        
-        # a,b=np.linalg.eig(L.kex)
-        # i=np.argmin(np.abs(a))
-        # ex_eq=b[:,i]/b[:,i].sum()
-        
-        # rho_eq=np.sum([L.rho_eq(step=step,Hindex=k)*eq for k,eq in enumerate(ex_eq)],axis=0)
-        # rho_eq=np.tile(rho_eq,len(ex_eq))
-        # recovery=-L0@rho_eq
-        
 
         recovery=-L0@L.rho_eq(step=step)
         
@@ -515,8 +441,7 @@ class RelaxClass():
         
 
         return out*self.sc
-        # return (out*self.sc+Lex0)
-            
+
         
     def plot(self,what:str='L',cmap:str=None,mode:str='log',colorbar:bool=True,
              step:int=0,block:int=None,ax=None) -> plt.axes:

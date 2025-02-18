@@ -151,8 +151,9 @@ class Propagator():
                     # representing the equilibrium position of the density
                     # matrix. This is analogous to the null-space of the 
                     # Liouvillian (which, btw, if only coherent, then has
-                    # a larger null-space, but once relaxation/dynamics come
-                    # in, then the null-space seems to reduce to 1 element)
+                    # a null-space with the number of elements in the Hamiltonian,
+                    # but once relaxation/dynamics come in, then the null-space
+                    # reduces to 1 element)
                     
                     # However, it is not correct under irradiation to force
                     # the corresponding eigenvector to be equal to the equilibrium
@@ -276,11 +277,6 @@ class Propagator():
         if not(self.pwdavg):Uout=Uout[0]
         return Propagator(Uout,t0=U.t0,tf=U.tf+self.Dt,taur=self.taur,L=self.L,isotropic=self.isotropic,phase_accum=self.phase_accum+U.phase_accum)
     
-    # def __rmul__(self,U):
-    #     if U==1:
-    #         return self
-        
-    
     def __pow__(self,n):
         """
         Raise the operator to a given power
@@ -332,12 +328,6 @@ class Propagator():
             Uout.append(v@np.diag(D)@vi)
             _eig.append((D,v,vi))
         
-        # for U in self:
-        #     d,v=np.linalg.eig(U)
-        #     i=np.abs(d)>1
-        #     d[i]/=np.abs(d[i]) #Avoid growth from numerical error
-        #     D=d**n
-        #     Uout.append(v@np.diag(D)@np.linalg.pinv(v))
             
         if not(self.pwdavg):Uout=Uout[0]
         
@@ -685,6 +675,8 @@ class PropCache():
     def add_field(self):
         if not(self.cache):return
         if self.field not in self.fields:
+            if len(self.field)>=Defaults['MaxPropCache']:return
+            
             self.fields.append(self.field)
             if Defaults['parallel'] and self.shared_memory:
                 self.sm0=SharedMemory(create=True,size=np.prod(self.SZ[:2]))

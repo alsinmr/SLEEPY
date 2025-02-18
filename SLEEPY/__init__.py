@@ -4,7 +4,7 @@
 Defaults={}
 from numpy import float64 as _rtype       #Not much gain if we reduced precision.
 from numpy import complex128 as _ctype    #Also, overflow errors become common at lower precision
-Defaults.update({'rtype':_rtype,'ctype':_ctype,'parallel':False,'cache':True,
+Defaults.update({'rtype':_rtype,'ctype':_ctype,'parallel':False,'cache':True,'MaxPropCache':10,
                  'ncores':None,'verbose':True,'zoom':False,
                  'Colab':False,'Binder':False})
 

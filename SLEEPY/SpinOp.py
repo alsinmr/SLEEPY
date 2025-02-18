@@ -235,17 +235,6 @@ class OneSpin():
             
     
 
-#Doesn't work below. Not sure why
-# class OpMat(np.ndarray):
-#     def __new__(cls, x):
-#         return super().__new__(cls, shape=x.shape,dtype=x.dtype)
-#     def __init__(self,x):
-#         self[:]=x
-#     def __mul__(self,x):
-#         if x.ndim==2 and x.shape[0]==x.shape[1] and x.shape[0]==self.shape[0]:
-#             return self@x
-#         else:
-#             return self*x
     
 class SphericalTensor():
     def __init__(self,Op0,S0:float=None,Op1=None):
@@ -272,26 +261,7 @@ class SphericalTensor():
         self._S0=S0
         
         self._T=None
-        
-        # if Op1 is None:
-        #     # M=np.round(2*S0+1).astype(int)
-        #     self._T=[None for _ in range(2)]
-        #     self._T[0]=[Op0.eye]
-        #     self._T[1]=[-1/np.sqrt(2)*Op0.p,Op0.z,1/np.sqrt(2)*Op0.m]
-        #     return
-        # else:
-        #     self._T=[None for _ in range(3)]
-        #     self._T[0]=[-1/np.sqrt(3)*(Op0.x@Op1.x+Op0.y@Op1.y+Op0.z*Op1.z)]
-            
-        #     self._T[1]=[-1/2*(Op0.m@Op1.z-Op0.z@Op1.m),
-        #                 -1/(2*np.sqrt(2))*(Op0.p@Op1.m-Op0.m@Op1.p),
-        #                 -1/2*(Op0.p@Op1.z-Op0.z@Op1.p)]
-            
-        #     self._T[2]=[1/2*Op0.m@Op1.m,
-        #                 -1/2*(Op0.p@Op1.z+Op0.z@Op1.p),
-        #                 1/np.sqrt(6)*(2*Op0.z@Op1.z-(Op0.x@Op1.x+Op0.y@Op1.y)),
-        #                 1/2*(Op0.m@Op1.z+Op0.z@Op1.m),
-        #                 1/2*Op0.p@Op1.p]
+
             
     def set_mode(self,mode:str=None):
         """

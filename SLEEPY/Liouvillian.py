@@ -30,12 +30,6 @@ from .plot_tools import use_zoom
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 
-# import importlib.util
-# numba=importlib.util.find_spec('numba') is not None
-# if numba:
-#     from .Parallel import prop
-
-# from .Parallel import prop,prop_static
 
 class Liouvillian():
     def __init__(self,*ex,kex=None):
@@ -275,40 +269,6 @@ class Liouvillian():
     def fields(self):
         return self.rf.fields
     
-    # def __setattr__(self,name,value):
-    #     """
-    #     Resets certain parameters if edits occur
-
-    #     Parameters
-    #     ----------
-    #     name : str
-    #         Parameter name.
-    #     value : TYPE
-    #         Parameter value.
-
-    #     Returns
-    #     -------
-    #     None.
-
-    #     """
-        
-    #     if name=='kex':
-            
-    #         if value is not None:
-    #             value=np.array(value)
-    #             assert value.shape[0]==value.shape[1],"Exchange matrix must be square"
-    #             assert value.shape[0]==len(self.H),f"For {len(self.H)} Hamiltonians, exchange matrix must be {len(self.H)}x{len(self.H)}"
-    #             if np.any(np.diag(value)>0):
-    #                 warnings.warn("Diagonals of exchange matrix should not be positive")
-    #             elif np.any(np.abs(value.sum(0))>1e-10*np.mean(-np.diag(value))):
-    #                 warnings.warn("Invalid exchange matrix. Columns should sum to 0. Expect unphysical behavior.")
-        
-    #             self._Lex=None
-    #             super().__setattr__(name,value)
-    #             self.clear_cache()
-    #             return
-        
-    #     super().__setattr__(name,value)
     
     def __getitem__(self,i:int):
         """
@@ -334,9 +294,7 @@ class Liouvillian():
         out._PropCache=self._PropCache
         out._PropCache.L=out 
         out._LrelaxOS.L=out
-        # The above line bothers me. If we extract a particular element and
-        # then later another element, the first element's propagator cache
-        # references the wrong element of the Liouvillian.
+
         return out
     
     def add_SpinEx(self,i:list,tc:float):
@@ -433,7 +391,7 @@ class Liouvillian():
         if hasattr(self,'recovery'):
             warnings.warn('recovery should always be the last term added to Lrelax')
         
-        if Type in ['DynamicThermal']:OS=True   #List methods only in RelaxClass here
+        if Type in ['DynamicThermal','DynamicLindblad']:OS=True   #List methods only in RelaxClass here
         
         if OS:
             if state is not None:
@@ -689,11 +647,7 @@ class Liouvillian():
         None.
 
         """
-        # Ln=[self.Ln(n) for n in range(-2,3)]
-        # n_gamma=self.expsys.n_gamma
-        # ph=np.exp(1j*2*np.pi*step/n_gamma)
-        # return np.sum([Ln0*ph**(-m) for Ln0,m in zip(Ln,range(-2,3))],axis=0)+self.Lrf
-    
+
         ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
         return np.sum([self.Ln(m)*(ph**(-m)) for m in range(-2,3)],axis=0)+self.Lrf+self.LrelaxOS(step)    
     
@@ -711,10 +665,6 @@ class Liouvillian():
         None.
 
         """
-        # Ln=[self.Ln(n) for n in range(-2,3)]
-        # n_gamma=self.expsys.n_gamma
-        # ph=np.exp(1j*2*np.pi*step/n_gamma)
-        # return np.sum([Ln0*ph**(-m) for Ln0,m in zip(Ln,range(-2,3))],axis=0)+self.Lrf
     
         ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
         out=np.sum([self.Ln_H(m)*(ph**(-m)) for m in range(-2,3)],axis=0)   
@@ -777,14 +727,6 @@ class Liouvillian():
     
                     return Propagator(U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic,phase_accum=ph_acc)
                 else:
-                    # dt=self.dt
-                    # n0=int(t0//dt)
-                    # nf=int(tf//dt)
-                    
-                    # tm1=t0-n0*dt
-                    # tp1=tf-nf*dt
-                    
-                    # if tm1<=0:tm1=dt
                     
                     dt=self.dt
                     n0,nf,tm1,tp1=StepCalculator(t0=t0,Dt=Dt,dt=dt)
@@ -816,29 +758,6 @@ class Liouvillian():
                     pm=ParallelManager(L=self,t0=t0,Dt=Dt)
                     U=pm()
                     return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic,phase_accum=ph_acc)
-                # if self._parallel and not(self.static):
-                #     dt=self.dt
-                #     n0=int(t0//dt)
-                #     nf=int(tf//dt)
-                    
-                #     tm1=t0-n0*dt
-                #     tp1=tf-nf*dt
-                    
-                #     if tm1<=0:tm1=dt
-                #     # Ln=[[L0.Ln(k) for k in range(-2,3)] for L0 in self]
-                #     # U=prop(Ln,Lrf=np.array(self.Lrf),n0=n0,nf=nf,tm1=tm1,tp1=tp1,dt=dt,n_gamma=int(self.expsys.n_gamma))
-                    
-                #     pm=ParallelManager(L=self,n0=n0,nf=nf,tm1=tm1,tp1=tp1,dt=dt,n_gamma=self.pwdavg.n_gamma)
-                #     U=pm()
-                    
-                    
-                #     return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
-                # elif self._parallel and not(self.isotropic) and False:  #Why doesn't this work?
-                #     L=[L0.L(0) for L0 in self]
-                #     U=prop_static(L,Dt=tf-t0)
-                # else:
-                #     U=[L0.U(t0=t0,Dt=Dt,calc_now=calc_now).U for L0 in self]
-                # return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic)
         else:
             dct=dict()
             dct['t']=[t0,tf]
@@ -933,7 +852,6 @@ class Liouvillian():
 
         """
         
-        # d,v=eig(self.U(),k=self.shape[0]-1)
         d,v=np.linalg.eig(self.U())
         i=np.abs(d)>1
         d[i]/=np.abs(d[i])
@@ -1029,47 +947,7 @@ class Liouvillian():
             for k,p in enumerate(pop):
                 rho_eq[N*k:N*(k+1)]=self.rho_eq(k,pwdindex=pwdindex,step=step,sub1=sub1)*p
             return rho_eq[self.block]
-            # pop=self.ex_pop
-            
-            
-            # # 6 July 2024. Why were we calculating this here and not just getting it from the Hamiltonian?
-            # H0=list()
-            # for H in self.H:
-            #     if self.static and not(self.isotropic): #Include all terms Hn
-            #         H0.append(np.sum([H[pwdindex].Hn(m) for m in range(-2,3)],axis=0))
-            #     else:
-            #         H0.append(H[pwdindex].Hn(0))
-            #     for k,LF in enumerate(self.expsys.LF):
-            #         if not(LF):
-            #             H0[-1]+=H.expsys.v0[k]*self.expsys.Op[k].z
-            
-            
-            # ##Approach 1: same rho_eq0 for all states in exchange
-            # # H=(np.array(H0).T*pop).sum(-1).T
-            # # rho_eq0=expm(6.62607015e-34*H/(1.380649e-23*self.expsys.T_K))
-            # # rho_eq0/=np.trace(rho_eq0)
-            # # if sub1:
-            # #     eye=np.eye(rho_eq0.shape[0])
-            # #     rho_eq0-=np.trace(rho_eq0@eye)/rho_eq0.shape[0]*eye
-            # # rho_eq=np.zeros(self.shape[0],dtype=self._ctype)
-            # # n=self.H[0].shape[0]**2
-            # # for k,p in enumerate(pop):
-            # #     rho_eq[k*n:(k+1)*n]=rho_eq0.flatten()*p
-            
-            # ##Approach 2: different rho_eq0 for each state in exchange
-            
-            # rho_eq=np.zeros(self.shape[0],dtype=self._ctype)
-            # n=self.H[0].shape[0]**2
-            # for k,(H,p) in enumerate(zip(H0,pop)):
-            #     rho_eq0=expm(6.62607015e-34*H/(1.380649e-23*self.expsys.T_K))
-            #     rho_eq0/=np.trace(rho_eq0)
-            #     if sub1:
-            #         eye=np.eye(rho_eq0.shape[0])
-            #         rho_eq0-=np.trace(rho_eq0@eye)/rho_eq0.shape[0]*eye
-            #     rho_eq[k*n:(k+1)*n]=rho_eq0.flatten()*p
-                
-        
-            # return rho_eq
+
         else:
             return self.H[Hindex].rho_eq(pwdindex=pwdindex,step=step,sub1=sub1).reshape(self.block.shape[0]//len(self.H))
         
@@ -1207,10 +1085,6 @@ class Liouvillian():
                 
         if what in ['L0','L1','L2','L-1','L-2']:
             x=self[len(self)//2].Ln_H(int(what[1:])) if self._index==-1 else self.Ln_H(int(what[1:]))
-        # elif what=='Lcoh':
-        #     ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
-        #     index=len(self)//2 if self._index==-1 else self._index
-        #     x=np.sum([self[index].Ln_H(k)*ph**(-k) for k in range(-2,3)],axis=0)
         else:
             x=getattr(self[len(self)//2] if self._index==-1 else self,what)
             if hasattr(x,'__call__'):
@@ -1395,7 +1269,6 @@ class LiouvilleBlock(Liouvillian):
         self.LrelaxOS.methods=L.LrelaxOS.methods
         
     def __getitem__(self,i:int):
-        # TODO edit accordingly
         """
         Goes to a particular item of the powder average
 
@@ -1422,12 +1295,6 @@ class LiouvilleBlock(Liouvillian):
         # then later another element, the first element's propagator cache
         # references the wrong element of the Liouvillian.
         return out
-        
-    # def L(self,step):
-    #     return self._L[self._index].L(step)[self.block][:,self.block]
-    
-    # def Ln(self,n:int):
-    #     return self._L[self._index].Ln(n)[self.block][:,self.block]
     
     def L(self,step):
         return self._L.L(step)[self.block][:,self.block]

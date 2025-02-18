@@ -133,10 +133,6 @@ class ParallelManager():
         else:
             out=((pm.Ln,self.L.Lrf,pm.LrelaxOS,*self.pars,self.sm0,self.sm1,self.index,self.step_index,self.PropCache.SZ) for pm in self)
         
-        # TODO why is the next line necessary?
-        # There's some failure to update reduced in LrelaxOS without it
-        # self.L[0].LrelaxOS.reduced
-        # print(self[0].L.reduced)
         return out
 
     

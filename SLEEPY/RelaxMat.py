@@ -42,27 +42,6 @@ def T1(expsys,i:int,T1:float):
     
     N=expsys.Op.Mult[i]
     
-    # Matrix leading to T1 relaxation
-    # p=np.zeros([N,N])
-    # for n in range(N-1):
-    #     p[n,n+1]=1
-    #     p[n+1,n]=1
-    # p-=np.diag(p.sum(0))
-    # p*=1/(T1*2)
-    
-    # Add offset to get desired polarization
-    # if Peq:
-    #     Peq=expsys.Peq[i]
-        
-    #     peq=np.zeros([N,N])
-    #     for n in range(N-1):
-    #         peq[n,n+1]=Peq
-    #         peq[n+1,n]=-Peq
-    #     peq-=np.diag(peq.sum(0))
-    #     peq*=1/(T1*2)
-        
-    #     p+=peq
-    
     
     sz=expsys.Op.Mult.prod()
 
@@ -74,7 +53,6 @@ def T1(expsys,i:int,T1:float):
     M-=np.diag(M.sum(0))
     M/=-(4*T1)
     return M.real
-    # return -M.real/(2*T1)/M[0,0].real
     
     
     # M-=np.diag(np.diag(M))
@@ -145,108 +123,19 @@ def T2(expsys,i:int,T2:float):
 
     """
     
-    # N=expsys.Op.Mult[i]
-    # P=np.eye(N**2,dtype=Defaults['rtype'])*(-1/T2)
-    # index=np.arange(0,N**2,N+1)
-    # for i0 in index:P[i0,i0]=0
-    
-    # # # Expand to the size of the full Liouville space
-    # # out=np.kron(np.kron(np.eye(expsys.Op.Mult[:i].prod()**2),P),np.eye(expsys.Op.Mult[i+1:].prod()**2))
-    
-    # N=expsys.Op.Mult.prod()
-    
-    # i=(expsys.Op[i].p+expsys.Op[i].m).astype(bool).reshape(N**2)
-    # out0=np.zeros(N**2,dtype=Defaults['rtype'])
-    # out0[i]=1/T2
-    
     Lz=Ham2Super(expsys.Op[i].z)
     out=(Lz@Lz).astype(bool).astype(Defaults['rtype'])*(-1/T2)
     
     return out
-
-# def Thermal(L,step):
-#     if L.reduced:
-#         block=L.block
-#         L=L._L
-#     else:
-#         block=None
-    
-#     out=np.zeros(L[0].Ln(0).shape,dtype=Defaults['ctype'])
-#     index=np.argwhere(L.Lrelax-np.diag(np.diag(L.Lrelax)))
-#     index.sort(-1)
-#     index=np.unique(index,axis=0)
-        
-#     rho_eq=L.rho_eq(pwdindex=L._index,step=step,sub1=False)
-#     E=L.Energy2(step)
-#     for i0,i1 in index:
-#         if rho_eq[i0]==0 or rho_eq[i1]==0 or True:
-#             DelE=E[i0]-E[i1]
-#             # DelE=(L.Energy[i0]-L.Energy[i1])
-#             rat=np.exp(DelE/(1.380649e-23*L.expsys.T_K))
-#         else:
-#             rat=rho_eq[i0]/rho_eq[i1]
-#         Del=L.Lrelax[i0,i1]*(1-rat)/(1+rat)
-#         out[i0,i1]=-Del
-#         out[i1,i1]+=Del
-#         out[i1,i0]=Del
-#         out[i0,i0]+=-Del
-        
-#     if block is None:
-#         return out
-#     else:
-#         return out[block][:,block]
     
 
 def recovery(expsys,L):
-    # L.Lex
-    # d,v=np.linalg.eig(L.kex)
-    # pop=v[:,np.argmax(d)]    #We need to make sure we start at equilibrium
-    # pop/=pop.sum()
-    # N=expsys.Op.Mult.prod()
-    # rho_eq=np.zeros([N**2*len(L.H)],dtype=Defaults['ctype'])
-    # for k,H in enumerate(L[0].H):   #Here, we select the first element of powder average (wrong off magic angle?)
-    #     H0=H.Hn(0)
-    #     for q,b in enumerate(expsys.LF):
-    #         if not(b):
-    #             H0+=expsys.v0[q]*expsys.Op[q].z  #Don't forget the Larmor terms!
-    #     x=(expm(6.62607015e-34*H0/(1.380649e-23*expsys.T_K)))
-    #     Z=np.trace(x@x.conj().T)
-    #     # print(Z)
-    #     x-=np.eye(H0.shape[0])
-    #     x/=Z
-    #     # x/=expsys.Op.Mult.prod()
-        
-    #     rho_eq[k*N**2:(k+1)*N**2]=x.reshape(x.size)
     
-    
-    ## Version 2
-    # rho_eq=L.rho_eq()
-
-    # Lrhoeq=(L[0].Ln(0)@rho_eq)
-    # out=np.zeros(L[0].Ln(0).shape,dtype=Defaults['ctype'])
-    
-    # n=np.prod(L[0].H[0].shape)
-    # i0=np.arange(0,n,expsys.Op.Mult.prod()+1)
-    # i=np.concatenate([i0+k*n for k in range(len(L.H))])
-    
-    # out[:,i]=-np.atleast_2d(Lrhoeq).T.repeat(i.size,axis=1)
-    # L.recovery=-out
-    # print('updated')
-    # return out
-    
-    
-    # ## Version 3
     out=np.zeros(L[0].Ln(0).shape,dtype=Defaults['ctype'])
     index=np.argwhere(L.Lrelax-np.diag(np.diag(L.Lrelax)))
     index.sort(-1)
     index=np.unique(index,axis=0)
-    
-    # Ln_H=L[0].Ln_H(0)/1j/(2*np.pi)
-    # for LF,v0,Op in zip(expsys.LF,expsys.v0,expsys.Op):
-    #     if not(LF):
-    #         n=L.H[0].shape[0]**2
-    #         for k in range(len(L.H)):
-    #             Ln_H[k*n:(k+1)*n][:,k*n:(k+1)*n]+=Ham2Super(v0*Op.z)
+
         
     rho_eq=L.rho_eq()
     for i0,i1 in index:

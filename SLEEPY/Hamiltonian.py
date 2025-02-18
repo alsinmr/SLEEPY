@@ -248,11 +248,6 @@ class Hamiltonian():
         
         energy=(Hdiag+Hdiag.T)/2
         
-        # Below was to try to bring in off-diagonal terms of the Hamiltonian
-        # I think where these terms are important, we probably shouldn't be
-        # using this approach anyway
-        # energy=(Hdiag+Hdiag.T)/2+(H-np.diag(np.diag(H)))
-        
         return energy.reshape(energy.size).real*Constants['h']
     
     def Energy2(self,step:int):
@@ -313,8 +308,6 @@ class Hamiltonian():
 
         """
         return -1j*2*np.pi*Ham2Super(self.H(step))
-        # ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
-        # return -1j*2*np.pi*np.sum([self.Ln(m)*(ph**(-m)) for m in range(-2,3)],axis=0)
         
         
         
@@ -353,7 +346,6 @@ class Hamiltonian():
                 H+=self.expsys.v0[k]*self.expsys.Op[k].z
             
         rho_eq=expm(Constants['h']*H/(Constants['kB']*self.expsys.T_K))
-        # rho_eq/=np.trace(rho_eq)
         rho_eq/=np.sum(np.abs(rho_eq))
         if sub1:
             eye=np.eye(rho_eq.shape[0])

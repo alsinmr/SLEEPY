@@ -453,30 +453,6 @@ class Rho():
                 
         return self
             
-            
-            
-        
-        # # Old approach
-        # for k,detect in enumerate(self.detect):
-        #     OpName,_=self.OpScaling(detect)
-        #     v0=None
-        #     q=None
-        #     if OpName[0]=='S':
-        #         i=int(OpName[1])   #At the moment, I'm assuming this program won't work with 11 spins...
-        #         if self.expsys.LF[i] and OpName[2:] in ['p','m']: #Downmix required
-        #             v0=self.expsys.v0[i]*(-1 if OpName[2:]=='p' else 1)
-        #     else:
-        #         Nuc,a=self.parseOp(OpName)
-        #         i=self.expsys.Nucs.tolist().index(Nuc)
-        #         if self.expsys.LF[i] and a in ['p','m']:
-        #             v0=self.expsys.v0[i]*(-1 if a=='p' else 1)
-                    
-        #     if v0 is not None:
-        #         Ipwd=self.Ipwd[:,k]
-        #         Idm=Ipwd*np.exp(1j*v0*2*np.pi*(self.t_axis-t0))
-        #         for m in range(self.pwdavg.N):
-        #             self._Ipwd[m][k]=Idm[m]
-                
     
     @property
     def Ipwd(self):
@@ -664,22 +640,7 @@ class Rho():
             else:
                 self._rho0-=(self._rho0@one)*one/one.sum()
                 self._rho0+=(one/self.L.LrelaxOS.sc)/one.sum()
-                
-                # if self.rho0=='Thermal':
-                #     Dt=0.1 if self.L.static else self.L.taur
-                #     self.L.U(Dt)**np.inf*self
-                #     self._rho0=copy(self._rho)
-                
-            
-            
-            # if self.rho0=='Thermal':
-            #     Dt=0.1 if self.L.static else self.L.taur
-            #     self.L.U(Dt)**np.inf*self
-            #     self._rho0=copy(self._rho)
-            #     self.reset()
-            #     print('checkpoint')
-            # else:
-            #     warnings.warn('DynamicThermal should be initialized with Thermal')
+
         
         
     def reset(self):
@@ -784,6 +745,7 @@ class Rho():
             warnings.warn('\nMatrix blocks do not match. This is almost always wrong')
         
         
+        if not(U.calculated):U[0]
             
         if U.calculated:
             self._rho=[U0@rho for U0,rho in zip(U,self._rho)]
@@ -791,6 +753,7 @@ class Rho():
             
         else:
             # This approach is incomplete and should not be used!
+            # Note that it is not actually accessible, a few lines above, U[0], forces calculation
             
             dct=U.U
             t=dct['t']
@@ -1042,10 +1005,6 @@ class Rho():
             
             
             Dt=seq.Dt/n_per_seq
-            # U=[seq.U(Dt=Dt,t0_seq=k*Dt) for k in range(nsteps)]
-            # Eliminating the second argument should let us set t0_seq to change the starting time on the sequence
-            # This would be special usage, but maybe useful occasionally
-            # seq should keep track itself of the current time
             U=[seq.U(Dt=Dt) for k in range(nsteps)]
             
             if n//nsteps>100:
@@ -1086,21 +1045,6 @@ class Rho():
             else:
                 for k in range(n):
                     U[k%nsteps]*self()
-            # t0,rho0=self.t,copy(self._rho)  #We need to keep the starting state in case this has already been propagated
-            
-            # Ua=seq.L.Ueye(t0=t0)
-            # for k in range(nsteps):
-            #     self.reset(t0=t0)  #This line and next set rho back to its starting state
-            #     self._rho=copy(rho0)
-                
-            #     Ua*self  #Accumlate (k-1) steps to the density matrix
-            #     Ua=U[k]*Ua  #Accumulate the kth step into the propagator
-            #     Ur=seq.L.Ueye(t0=self.t) #Propagator for one rotor period                
-            #     for m in range(nsteps):
-            #         Ur=U[(k+m)%nsteps]*Ur
-            #     print(Ua.Dt,Ur.t0,Ur.Dt,self.t)
-                
-            #     self.DetProp(U=Ur,n=n//nsteps+(k<n%nsteps))
             
             
         return self
@@ -1647,18 +1591,13 @@ class Rho():
             
             
             
-        #avg = True   
         Aavg=list()
         Ravg=list()
         for R0,A0 in zip(Rout,Aout):
-            # i=np.logical_and(np.abs(f0)<1e-5,np.abs(A0)>1e-2)  #non-oscillating terms (??)
-            # Aout.append(A0[i].sum())
-            # Rout.append((R0[i]*A0[i]).sum()/Aout[-1])
+
             Aavg.append(A0.sum())
             Ravg.append((R0*A0).sum()/Aavg[-1] if Aavg[-1] else 0)
-            
-        # R=np.array(Rout)
-        # A=np.array(Aout)
+
             
         R=np.array(Ravg)
         A=np.array(Aavg)
@@ -1666,7 +1605,6 @@ class Rho():
         if not(pwdavg):
             return R,A
 
-        # pwdavg=True
         wt=U.L.pwdavg.weight*A
         if wt.sum()==0:
             warnings.warn("Only oscillating terms found in powder average")

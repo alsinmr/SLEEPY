@@ -37,7 +37,7 @@ class NucInfo(Info):
         with open(dir_path+'/GyroRatio.txt','r') as f:
             for line in f:
                 line=line.strip().split()
-                self.new_exper(Nuc=line[3],mass=float(line[1]),spin=float(line[5]),\
+                self.new_exper(Nuc=line[3],mass=int(line[1]),spin=float(line[5]),\
                                gyro=float(line[6])*muen,abundance=float(line[7])/100)
         self.new_exper(Nuc='e-',mass=0,spin=1/2,gyro=Constants['ge']*Constants['mub'],abundance=1)
     
@@ -86,7 +86,7 @@ class NucInfo(Info):
             return ftd[info]
     
     def __repr__(self):
-        self['gyro',-1]=Constants['ge']*Constants['mub']
+        self[-1,'gyro']=Constants['ge']*Constants['mub']
         out=''
         for k in self.keys:out+='{:7s}'.format(k)+'\t'
         out=out[:-1]
@@ -97,22 +97,44 @@ class NucInfo(Info):
                 out+=fs.format(v*(1e-6 if k==3 else 1))+'\t'
         return out
     
+    @property
+    def names(self):
+        return [(str(v0) if v0 else '')+v1 for v0,v1 in zip(self.values[1],self.values[0])]    
+    
     def __getitem__(self,index):
         if isinstance(index,str):
             if index=='D':   #Deuterium
                 return self[1]
             if index in ['e','e-']: #Electron
-                self['gyro',-1]=Constants['ge']*Constants['mub']
+                self[-1,'gyro']=Constants['ge']*Constants['mub']
                 return self[-1]
             mass=re.findall(r'\d+',index)
             Nuc=re.findall(r'[A-Z]',index.upper())
             if len(mass) and len(Nuc):
                 Nuc=Nuc[0].capitalize()
                 i=np.logical_and(self['Nuc']==Nuc,self['mass']==int(mass[0]))
-                if np.any(i):
-                    return super().__getitem__(i)
+                assert np.any(i),'Unknown nucleus'
+                i=np.argmax(i)
+                return super().__getitem__(i)
+                    
+        elif isinstance(index,tuple):
+            assert len(index)==2,"NucInfo tuple indexing requires two arguments"
+            if isinstance(index[0],int):return super().__getitem__(index[::-1])
+            
+            assert index[0] in self.names,'Unknown nucleus'
+            return super().__getitem__((index[1],self.names.index(index[0])))
+            
         return super().__getitem__(index)
-        
+    
+    def __setitem__(self,index,value):
+        if isinstance(index,tuple):
+            assert len(index)==2,"NucInfo tuple indexing requires two arguments"
+            if isinstance(index[0],str):
+                assert index[0] in self.names,'Unknown nucleus'                
+                super().__setitem__((index[1],self.names.index(index[0])),value)
+                return
+        super().__setitem__(index[::-1],value)
+            
         
         
 NucInfo=NucInfo()
