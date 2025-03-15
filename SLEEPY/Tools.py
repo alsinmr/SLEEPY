@@ -914,6 +914,7 @@ def commute(A,B):
     return A@B-B@A
 
 def ApodizationFun(t,WDW:str='em',LB:float=None,SSB:float=2,GB:float=15,**kwargs):
+    t-=t.min()
     wdw=WDW.lower()
     if LB is None:LB=5/t[-1]/np.pi
     
