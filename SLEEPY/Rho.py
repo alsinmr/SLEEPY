@@ -390,7 +390,6 @@ class Rho():
         lab frame (result replaces Ipwd). Only applied to signals detected with
         + or - (i.e., the complex signal is required!)
         
-        Not heavily tested. 
         
         Parameters
         ----------
@@ -523,6 +522,7 @@ class Rho():
         """
         if self._tstatus!=1:
             warnings.warn('Time points are not equally spaced. FT will be incorrect')
+            
 
         I=np.concatenate((self.I[:,:1]/2,self.I[:,1:]),axis=1)
         if self.apodize:

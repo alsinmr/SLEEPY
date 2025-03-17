@@ -539,7 +539,10 @@ def SetupTumbling(expsys,tc:float,q:int=3,returnL:bool=True):
     
     if returnL:
         from .Liouvillian import Liouvillian
-        return Liouvillian(ex_list,kex=kex)
+        L=Liouvillian(ex_list,kex=kex)
+        L.expsys.vr=0
+        L.expsys.pwdavg='alpha0beta0'
+        return L
     return ex_list,kex
 
 def SetupTetraHop(expsys,tc:float,n:int=4,returnL:bool=True):
