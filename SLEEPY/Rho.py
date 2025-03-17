@@ -1348,7 +1348,7 @@ class Rho():
         ap=self.apodize
         self.apodize=apodize
         
-        label=det2label(self.detect[det_num])
+        label=kwargs.pop('label') if 'label' in kwargs else det2label(self.detect[det_num])
         
         if FT:
             if axis.lower()=='ppm' and self.parseOp(self.detect[det_num]) is not None:
@@ -1356,22 +1356,22 @@ class Rho():
                 v0=NucInfo(Nuc)*self.expsys.B0
                 v_axis=self.v_axis/v0*1e6
                 mass,name=''.join(re.findall(r'\d',Nuc)),''.join(re.findall('[A-Z]',Nuc.upper()))
-                label=r"$\delta$($^{"+mass+r"}$"+name+") / ppm"
+                xlabel=r"$\delta$($^{"+mass+r"}$"+name+") / ppm"
             elif axis.lower()=='ghz':
                 v_axis=self.v_axis/1e9
-                label=r'$\nu$ / GHz'
+                xlabel=r'$\nu$ / GHz'
             elif axis.lower()=='mhz':
                 v_axis=self.v_axis/1e6
-                label=r'$\nu$ / MHz'
+                xlabel=r'$\nu$ / MHz'
             elif axis.lower()=='khz':
                 v_axis=self.v_axis/1e3
-                label=r'$\nu$ / kHz'
+                xlabel=r'$\nu$ / kHz'
             elif axis.lower()=='points':
                 v_axis=np.arange(len(self.v_axis))
-                label='points'
+                xlabel='points'
             else:
                 v_axis=self.v_axis
-                label=r'$\nu$ / Hz'
+                xlabel=r'$\nu$ / Hz'
             
             
             if pwd_index is None:
@@ -1394,7 +1394,7 @@ class Rho():
             else:
                 assert 0,'Unrecognized plotting mode'
                 
-            ax.set_xlabel(label)
+            ax.set_xlabel(xlabel)
             ax.set_ylabel('I / a.u.')
             ax.xaxis.set_inverted(True)
         else:
