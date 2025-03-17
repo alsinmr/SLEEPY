@@ -291,6 +291,7 @@ class Sequence():
         if ax is None:
             if fig is None:
                 fig,ax=plt.subplots(len(spins),1,sharex=True)
+                if len(spins)==1:ax=[ax]
             else:
                 ax=[fig.add_subplot(len(spins),1,k+1) for k in range(len(spins))]
         
