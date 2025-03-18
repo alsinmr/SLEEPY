@@ -449,6 +449,47 @@ class Sequence():
         
         return self.U()**n
     
+    def __mul__(self,X):
+        """
+        Multiplies the sequence by a propagator, sequence, or density matrix
+        Parameters
+        ----------
+        X : Rho, Propagator, or Sequence
+            Propagator, sequence, or density matrix 
+
+        Returns
+        -------
+        None.
+
+        """
+        name=X.__class__.__name__
+        if name not in ['Propagator','Sequence']:
+            return NotImplemented
+        if name=='Propagator':
+            return self.U(t0=X.tf)*X
+        U=X.U()
+        return self.U(t0=U.tf)*U
+    
+    def __rmul__(self,X):
+        """
+        Multiplies the sequence by a propagator, sequence, or density matrix
+        Parameters
+        ----------
+        X : Rho, Propagator, or Sequence
+            Propagator, sequence, or density matrix 
+
+        Returns
+        -------
+        None.
+
+        """
+        name=X.__class__.__name__
+        if name != 'Propagator':
+            return NotImplemented
+        return X*self.U(t0=(X.t0-self.Dt)%self.taur if self.taur is not None else 0)
+        
+        
+    
     def __repr__(self):
         out='Sequence for the following Liouvillian:\n\t'
         out+=self.L.__repr__().rsplit('\n',maxsplit=2)[0].replace('\n','\n\t')[:-2]
