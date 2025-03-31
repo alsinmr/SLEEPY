@@ -8,10 +8,10 @@ SLEEPY is software intended for the simulation of NMR spin-systems including exc
 Requires standard python packages plus numpy/scipy/matplotlib.
 
 Tested versions:
-Python: 3.8.8, 3.9.3, 3.11.11, 3.13.2 
-numpy: 1.20.1, 2.0.2, 2.2.3
-scipy: 1.6.2, 1.14.1, 1.15.2
-matplotlib: 3.3.4, 3.10.0
+* Python: 3.8.8, 3.9.3, 3.11.11, 3.13.2
+* numpy: 1.20.1, 2.0.2, 2.2.3
+* scipy: 1.6.2, 1.14.1, 1.15.2
+* matplotlib: 3.3.4, 3.10.0
 
 Testing has been performed on the various notebooks found at [https://github.com/alsinmr/SLEEPY_tutoria/](https://github.com/alsinmr/SLEEPY_tutoria/) using Jupyter Notebooks on MacOS and on myBinder.org, and also on Google Colab.
 
