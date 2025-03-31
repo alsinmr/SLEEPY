@@ -26,7 +26,11 @@ The SLEEPY tutorial provides extensive examples of applications of SLEEPY and is
 or
 [https://alsinmr.github.io/SLEEPY](https://alsinmr.github.io/SLEEPY)
 
-These examples may be downloaded as Jupyter notebooks or run online via Google Colab (demo). To run these, please navigate to the examples folder and then run either
+
+
+These examples may be downloaded as Jupyter notebooks or run online via Google Colab (demo). 
+
+We also provide example scripts here, in the folder 'examples', which may be run as Python3 scripts. To run these, please navigate to the examples folder and then run either
 
 ```
 python3 ShortExamples.py
@@ -37,7 +41,6 @@ python3 Figure3.py
 ```
 Both scripts will run a number of examples and create a folder of the corresponding figures. The former calculation takes on the order of 1 minute for 6 examples, and the latter on the order of 10 minutes for 9 examples (these correspond to Figure 3 of the corresponding manuscript).
 
-We also provide example scripts here, in the folder 'examples', which may be run as Python3 scripts.
 
 Copyright 2025 Albert Smith-Penzel, Kai Zumpfe
 
