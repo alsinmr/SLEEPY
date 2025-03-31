@@ -114,3 +114,6 @@ dmypy.json
 .pyre/
 
 */.DS_Store
+examples/ShortExampleFigs/*.png
+examples/Figure3Figs/*.png
+
