@@ -5,11 +5,32 @@ Spins in Liouville space for rElaxation and Exchange in PYthon
 
 SLEEPY is software intended for the simulation of NMR spin-systems including exchange processes and relaxation. Includes easy setup of the spin system, and allows application of arbitrary pulse sequences in both the rotating- and lab-frames.
 
-Currently under development. Requires standard python packages plus numpy/scipy/matplotlib.
+Requires standard python packages plus numpy/scipy/matplotlib.
 
-While the number of known issues has been greatly reduced, testing is still underway. It may be a good idea to contact us and ask if your specific simulation should run correctly. Most simulations, however, should work at this point.
+Tested versions:
+Python: 3.8.8, 3.9.3, 3.11.11, 3.13.2 
+numpy: 1.20.1, 2.0.2, 2.2.3
+scipy: 1.6.2, 1.14.1, 1.15.2
+matplotlib: 3.3.4, 3.10.0
 
-Copyright 2025 Albert Smith-Penzel
+Testing has been performed on the various notebooks found at [https://github.com/alsinmr/SLEEPY_tutoria/](https://github.com/alsinmr/SLEEPY_tutoria/) using Jupyter Notebooks on MacOS and on myBinder.org, and also on Google Colab.
+
+Installation is possible via pip. Please run
+```
+pip install sleepy-nmr
+```
+This will create the "sleepy" module (not sleepy-nmr!). Typical install time is ~5 seconds (install time will be significantly longer if numpy, scipy, and matplotlib are not already installed, since these will be installed as dependencies).
+
+The SLEEPY tutorial provides extensive examples of applications of SLEEPY and is available online at 
+[http://sleepy-nmr.org](http://sleepy-nmr.org)
+or
+[https://alsinmr.github.io/SLEEPY](https://alsinmr.github.io/SLEEPY)
+
+These examples may be downloaded as Jupyter notebooks or run online via Google Colab.
+
+We also provide example scripts here, in the folder 'examples', which may be run as Python3 scripts.
+
+Copyright 2025 Albert Smith-Penzel, Kai Zumpfe
 
 All files are copyrighted under the GNU General Public License. A copy of the license has been provided in the file LICENSE
 
