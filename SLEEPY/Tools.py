@@ -283,6 +283,27 @@ def D2(ca=0,sa=0,cb=0,sb=None,cg=None,sg=None,m=None,mp=0):
         
     return (d2(cb,sb,m,mp)*phase).T
 
+def djmmp(beta,m:int=0,mp:int=0,j:int=2):
+    # fc=np.math.factorial
+    lfc=lambda n:np.math.lgamma(n+1)
+    smin=max(0,m-mp)
+    smax=min(j+m,j-mp)
+    
+    logc=1/2*(lfc(j+mp)+lfc(j-mp)+lfc(j+m)+lfc(j-m))
+    # c=np.sqrt(fc(j+mp)*fc(j-mp)*fc(j+m)*fc(j-m))
+    out=0
+    for s in np.arange(smin,smax+1):
+        a=(-1)**(mp-m+s)*np.cos(beta/2)**(2*j+m-mp-2*s)*np.sin(beta/2)**(mp-m+2*s)
+        logb=lfc(j+m-s)+lfc(s)+lfc(mp-m+s)+lfc(j-mp-s)
+        # b=fc(j+m-s)*fc(s)*fc(mp-m+s)*fc(j-mp-s)
+        # out+=(c/b)*a
+        out+=np.exp(logc-logb)*a
+    return out
+
+def Djmmp(alpha,beta,gamma,m:int=0,mp:int=0,j:int=2):
+    return np.exp(-1j*alpha*mp)*np.exp(-1j*gamma*m)*djmmp(beta,m=m,mp=mp,j=j)
+        
+
 def Ham2Super(H):
     """
     Calculates
@@ -489,7 +510,7 @@ def twoSite_S_eta(theta:float,p:float=0.5):
     
     return S[0],eta[0]
 
-def SetupTumbling(expsys,tc:float,q:int=3,returnL:bool=True):
+def SetupTumbling(expsys,tc:float,q:int=3,returnL:bool=True,beta_only:bool=False):
     """
     Takes an expsys and adds a simulated tumbling to it, returning a list
     of expsys's and an exchange matrix to use to set up a Liouvillian, or can
@@ -503,9 +524,16 @@ def SetupTumbling(expsys,tc:float,q:int=3,returnL:bool=True):
     expsys : TYPE
         SLEEPY expsys
     tc : float
-        Desired correlation time of tumbling.
-    returnL : bool
-        Flag to specify that the Liouvillian should be return directly
+        Desired correlation of the tumbling
+    q : int
+        Quality of tumbling powder average. 
+        0 returns angles along x,y,z,
+        1 returns tetrahedral hopping
+        2-12 returns a repulsion powder average
+    beta_only : bool
+        Returns diffusion only along the beta angle 
+        (use for a single symmetric tensor)
+        In this case, the number of beta angles between 0 and 2pi is q*10
 
     Returns
     -------
@@ -520,7 +548,7 @@ def SetupTumbling(expsys,tc:float,q:int=3,returnL:bool=True):
     """
     
     
-    kex,euler=tumbling(tc,q)
+    kex,euler=tumbling(tc=tc,q=q,beta_only=beta_only)
     
     H=expsys.Hamiltonian()[0].Hinter
     
@@ -619,10 +647,10 @@ def Setup3siteSym(expsys,tc:float,phi:float=np.arccos(-1/3),returnL:bool=True):
         return Liouvillian(ex_list,kex=kex)            
     return ex_list,kex
 
-def tumbling(tc:float,q:int=3):
+def tumbling(tc:float,q:int=3,beta_only:bool=False):
     """
     Constructs an exchange matrix for isotropic tumbling based on one of the
-    "rep" powder averages. q (index from 0 to 12, 0 is just a tetrahedral hop).
+    "rep" powder averages. q (index from 0 to 12, 0 is just a three-site hop).
     Returns the exchange matrix and the corresponding list of euler angles.
     
     Currently set up only for averaging symmetrix (eta=0) tensors
@@ -630,10 +658,19 @@ def tumbling(tc:float,q:int=3):
 
     Parameters
     ----------
-    pwdavg : TYPE
-        DESCRIPTION.
+    
     tc : float
-        DESCRIPTION.
+        Desired correlation of the tumbling
+    q : int
+        Quality of tumbling powder average. 
+        0 returns angles along x,y,z,
+        1 returns tetrahedral hopping
+        2-12 returns a repulsion powder average
+    beta_only : bool
+        Returns diffusion only along the beta angle 
+        (use for a single symmetric tensor)
+        In this case, the number of beta angles between 0 and 2pi is q*10. Then,
+        q may take on any value 0 and higher
 
     Returns
     -------
@@ -645,36 +682,46 @@ def tumbling(tc:float,q:int=3):
 
     """
     
-    assert q>=0 and q<=11,"q must be an integer between 0 and 11"
+    assert (q>=0 and q<=11) or beta_only,"q must be an integer between 0 and 11"
     
-
-    n0=[3,4,10,20,30,66,100,144,168,256,320,678,2000]
-    nc0=[2,3,5,6,6,6,6,6,6,6,6,6,6]
-
-    n=n0[q]
-    nc=nc0[q]
-
-    if q==0:
-        beta=[0,np.pi/2,np.pi/2]
-        gamma=[0,0,np.pi/2]
-    elif q==1:
-        tetra=np.arccos(-1/3)
-        beta=np.array([0,tetra,tetra,tetra])
-        gamma=np.array([0,0,2*np.pi/3,4*np.pi/3])
+    if beta_only:
+        beta=np.linspace(0,2*np.pi,2*int((q+1)*5)+1)[:-1]
+        Dbeta=beta[1]
+        beta+=Dbeta/2
+        gamma=np.zeros(beta.shape)
+        w=np.cos(beta-Dbeta/2)-np.cos(beta+Dbeta/2)
+        w[len(beta)//2:]=w[:len(beta)//2]
+        w/=w.sum()
+        n=len(beta)
+        nc=2
     else:
-        pwdpath=os.path.join(os.path.dirname(os.path.realpath(__file__)),'PowderFiles')
-        pwdfile=os.path.join(pwdpath,f'rep{n}.txt')
-        
-        with open(pwdfile,'r') as f:
-            alpha,beta=list(),list()
-            for line in f:
-                if len(line.strip().split(' '))==3:
-                    a,b,w=[float(x) for x in line.strip().split(' ')]
-                    alpha.append(a*np.pi/180)
-                    beta.append(b*np.pi/180)
-        
-        
-        gamma,beta=np.array(alpha),np.array(beta)
+        n0=[3,4,10,20,30,66,100,144,168,256,320,678,2000]
+        nc0=[2,3,5,6,6,6,6,6,6,6,6,6,6]
+    
+        n=n0[q]
+        nc=nc0[q]
+    
+        if q==0:
+            beta=[0,np.pi/2,np.pi/2]
+            gamma=[0,0,np.pi/2]
+        elif q==1:
+            tetra=np.arccos(-1/3)
+            beta=np.array([0,tetra,tetra,tetra])
+            gamma=np.array([0,0,2*np.pi/3,4*np.pi/3])
+        else:
+            pwdpath=os.path.join(os.path.dirname(os.path.realpath(__file__)),'PowderFiles')
+            pwdfile=os.path.join(pwdpath,f'rep{n}.txt')
+            
+            with open(pwdfile,'r') as f:
+                alpha,beta=list(),list()
+                for line in f:
+                    if len(line.strip().split(' '))==3:
+                        a,b,w=[float(x) for x in line.strip().split(' ')]
+                        alpha.append(a*np.pi/180)
+                        beta.append(b*np.pi/180)
+            
+            
+            gamma,beta=np.array(alpha),np.array(beta)
         
     euler=np.concatenate([[np.zeros(n)],[beta],[gamma]],axis=0).T
         
@@ -692,6 +739,12 @@ def tumbling(tc:float,q:int=3):
             
     kex-=np.diag(kex.sum(0))
     
+    if beta_only:
+        rat=w[0:-1]/w[1:]
+        Del=kex[0,1]*(1-rat)/(1+rat)
+        kex+=np.diag(Del,-1)-np.diag(Del,1)
+        kex-=np.diag(kex.sum(0))
+        
     _,_,tc0,A=kex2A(kex,euler)
     
     kavg=((1/tc0)*A).sum()
@@ -734,10 +787,13 @@ def kex2A(kex,euler):
     """
     
     euler=np.array(euler)
-    tci,v=np.linalg.eigh(kex)
-    tc=-1/tci[:-1]
+    tci,v=np.linalg.eig(kex)
+    i=np.argmin(np.abs(tci))
+    index=np.ones(tci.shape,dtype=bool)
+    index[i]=False
+    tc=-1/tci[index]
     
-    peq=v[:,-1]
+    peq=v[:,i]
     peq/=peq.sum()
     
     beta,gamma=euler.T[-2:]
@@ -757,7 +813,7 @@ def kex2A(kex,euler):
     A=np.array(A).real
     
     if S2!=1:
-        A=A[:-1]/(1-S2)
+        A=A[index]/(1-S2)
     
     return S2,peq,tc,A
 

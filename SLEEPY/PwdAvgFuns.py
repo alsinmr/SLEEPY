@@ -56,4 +56,3 @@ def pwd_grid(n_alpha:int=50,n_beta:int=30):
     weight/=weight.sum()
     
     return alpha,beta,weight
-    

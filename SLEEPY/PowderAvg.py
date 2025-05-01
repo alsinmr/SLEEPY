@@ -11,8 +11,9 @@ import os
 from copy import copy
 import matplotlib.pyplot as plt
 from .plot_tools import use_zoom
-from .Tools import D2,d2
+from .Tools import D2,d2,Djmmp
 from . import PwdAvgFuns
+from scipy.optimize import lsq_linear
 
 
 
@@ -52,6 +53,8 @@ class PowderAvg():
         self.n_alpha=0
         self._gamma_incl=gamma_encoded 
         self._gamma_encoded=gamma_encoded
+        self._M=None
+        self._sym=None
         
         self._pwdpath=os.path.join(os.path.dirname(os.path.realpath(__file__)),'PowderFiles')
         self._inter=list()
@@ -153,7 +156,7 @@ class PowderAvg():
                 self.alpha,self.beta,self.gamma,self.weight=np.array(out)
             elif len(out)==3:
                 self.alpha,self.beta=np.array(out[:2])
-                self.gamma=np.zeros(self.N)
+                # self.gamma=np.zeros(self.N)
                 self.weight=np.array(out[2])
             self.PwdType=PwdType
         else:
@@ -208,6 +211,189 @@ class PowderAvg():
         ax.set_box_aspect([1,1,1])
         return ax
     
+    def sampling_moment_matrix(self,Lmax:int=None,sym:str='Ci'):
+        """
+        Calculates a matrix that, when multiplied by the powder average weighting,
+        returns the sampling moments.
+        
+        Matthias Eden, Malcolm H. Levitt. "Computational of Orientational Averages in
+        Solid-State NMR by Gaussian Spherical Quadrature". J. Magn. Reson. 132, 220-239
+        (1998)
+        
+        
+
+        Parameters
+        ----------
+        Lmax : int, optional
+            Highest rank tensor to calculate. The default is None, which will
+            generate
+
+        Returns
+        -------
+        np.array
+
+        """
+        assert sym in ['C0','Ci','D2h'],'Symmetry (sym) must be C0, Ci, or D2h'
+        
+        if self._sym!=sym:
+            self._M=None
+            self._sym=sym
+        
+        if Lmax is None:
+            Lmax=1000
+            auto=True
+        else:
+            auto=False
+            
+        if self._M is None:self._M=[]
+        M=self._M
+        
+        Neqs=self.sampling_moment_N(Lmax=Lmax,sym=sym)
+        start=Lmax if Neqs[-1]<=len(M) else [0,*Neqs.tolist()].index(len(M))
+        stop=np.argmax(Neqs>self.N) if auto else Lmax
+        print(start,stop)
+        if sym=='C0':
+            for L in range(start,stop+1):
+                M0=[]
+                for m in range(-L,L+1):
+                    for mp in range(-L,L+1):
+                        M0.append(Djmmp(self.alpha,self.beta,self.gamma,m=m,mp=mp,j=L))
+                M.extend(M0)
+        elif sym=='Ci':
+            for L in range(start,stop+2,2):
+                M0=[]
+                for m in range(0,L+1):
+                    M0.append(Djmmp(self.alpha,self.beta,self.gamma,m=m,mp=0,j=L).real)
+                for m in range(1,L+1):
+                    M0.append(Djmmp(self.alpha,self.beta,self.gamma,m=m,mp=0,j=L).imag)
+                M.extend(M0)
+        elif sym=='D2h':
+            for L in range(start,stop+1,2):
+                M0=[]
+                for m in range(0,L+1,2):
+                    M0.append(Djmmp(self.alpha,self.beta,self.gamma,m=m,mp=0,j=L).real)
+                M.extend(M0) 
+        print(Neqs[:Lmax+1])
+        return np.array(M[:Neqs[Lmax]])
+    
+    def sampling_moment_N(self,Lmax:int=1000,sym:str='Ci'):
+        """
+        Returns the number of simultaneous equations for symmetry groups C0,
+        Ci, and D2h. Returns a vector corresponding to values of L from 0 up to
+        Lmax (default Lmax=100, thus returning a vector with 101 elements)
+
+        Parameters
+        ----------
+        Lmax : int, optional
+            Maximum tensor rank to include. The default is 100.
+        sym : str, optional
+            Symmetry group ('C0','Ci', or 'D2h'). The default is 'Ci'.
+
+        Returns
+        -------
+        np.array
+
+        """
+        assert sym in ['C0','Ci','D2h'],'Symmetry (sym) must be C0, Ci, or D2h'
+        
+        if sym=='C0':
+            return ((2*np.arange(Lmax+1)+1)**2).cumsum()
+        if sym=='Ci':
+            L=np.arange(Lmax+1)
+            return (1/2*L*(L+3)+1).astype(int)
+        if sym=='D2h':
+            L=np.arange(Lmax+1)
+            return (1/8*(L+4)*(L+2)).astype(int)
+    
+    def sampling_moment(self,Lmax:int=50,sym='Ci',weight=None):
+        """
+        Calculates the sampling moments as a function of L
+
+        Parameters
+        ----------
+        Lmax : int, optional
+            DESCRIPTION. The default is 50.
+        sym : TYPE, optional
+            DESCRIPTION. The default is 'Ci'.
+        weight : TYPE, optional
+            DESCRIPTION. The default is None.
+
+        Returns
+        -------
+        None.
+
+        """
+        if weight is None:weight=self.weight
+        M=self.sampling_moment_matrix(Lmax=Lmax,sym=sym)
+        
+        target=np.zeros(M.shape[0])
+        target[0]=1
+        var=(M@weight-target)**2
+        
+        error=[]
+        Neqs=np.concatenate(([0],self.sampling_moment_N(Lmax=Lmax,sym=sym)))
+        for k in range(len(Neqs)-1):
+            error.append(np.sqrt(var[Neqs[k]:Neqs[k+1]].sum()/(2*k+1)))
+        return error
+    
+    def plot_sampling_moment(self,Lmax:int=50,sym='Ci',weight=None,ax=None):
+        """
+        Plots the sampling moment as a function of L
+
+        Parameters
+        ----------
+        Lmax : int, optional
+            DESCRIPTION. The default is 50.
+        sym : TYPE, optional
+            DESCRIPTION. The default is 'Ci'.
+        weight : TYPE, optional
+            DESCRIPTION. The default is None.
+
+        Returns
+        -------
+        axis
+
+        """
+        error=self.sampling_moment(Lmax=Lmax,sym=sym,weight=weight)
+        if ax is None:ax=plt.subplots()[1]
+        ax.plot(np.arange(Lmax+1),error)
+        ax.set_xlabel(r'$L$')
+        ax.set_ylabel(r"$\sigma^S_{Lqq'}$")
+        return ax
+        
+    def SHREWDopt(self,Lmax:int=None,sym:str='Ci',update_wt:bool=True):
+        """
+        Generates a weight-optimized optimized powder average according to the 
+        SHREWD scheme. 
+        
+        Matthias Eden, Malcolm H. Levitt. "Computational of Orientational Averages in
+        Solid-State NMR by Gaussian Spherical Quadrature". J. Magn. Reson. 132, 220-239
+        (1998)
+        
+        Input is Lmax, the largest tensor rank to be modeled with the powder 
+        average, and a powder average to be optimized with new weights. 
+
+        Parameters
+        ----------
+        Lmax : int, optional
+            DESCRIPTION. The default is None.
+        sym : str, optional
+            DESCRIPTION. The default is 'Ci'.
+
+        Returns
+        -------
+        None.
+
+        """
+        M=self.sampling_moment_matrix(Lmax=Lmax,sym=sym)
+        target=np.zeros(M.shape[0])
+        target[0]=1
+        
+        w=lsq_linear(M,target,bounds=(0,1))['x']
+        
+        if update_wt:self.weight=w
+        return w
+    
     def __eq__(self,pwdavg):
         if pwdavg is self:return True
         for key in ['N','alpha','beta','gamma']:
@@ -235,7 +421,7 @@ class PowderAvg():
         if isinstance(i,slice):
             out=copy(self)
             out._gamma_incl=True
-            out.ngamma=1
+            out.n_gamma=1
             out.alpha=self.alpha[i]
             out.beta=self.beta[i]
             out.gamma=self.gamma[i]
@@ -246,7 +432,7 @@ class PowderAvg():
             return out
         out=copy(self)
         out._gamma_incl=True
-        out.ngamma=1
+        out.n_gamma=1
         j=i+1
         i%=len(self)
         j%=len(self)
