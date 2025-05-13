@@ -211,188 +211,210 @@ class PowderAvg():
         ax.set_box_aspect([1,1,1])
         return ax
     
-    def sampling_moment_matrix(self,Lmax:int=None,sym:str='Ci'):
-        """
-        Calculates a matrix that, when multiplied by the powder average weighting,
-        returns the sampling moments.
+    # def sampling_moment_matrix(self,Lmax:int=None,sym:str='Ci'):
+    #     """
+    #     Calculates a matrix that, when multiplied by the powder average weighting,
+    #     returns the sampling moments.
         
-        Matthias Eden, Malcolm H. Levitt. "Computational of Orientational Averages in
-        Solid-State NMR by Gaussian Spherical Quadrature". J. Magn. Reson. 132, 220-239
-        (1998)
+    #     Matthias Eden, Malcolm H. Levitt. "Computational of Orientational Averages in
+    #     Solid-State NMR by Gaussian Spherical Quadrature". J. Magn. Reson. 132, 220-239
+    #     (1998)
         
         
 
-        Parameters
-        ----------
-        Lmax : int, optional
-            Highest rank tensor to calculate. The default is None, which will
-            generate
+    #     Parameters
+    #     ----------
+    #     Lmax : int, optional
+    #         Highest rank tensor to calculate. The default is None, which will
+    #         generate
 
-        Returns
-        -------
-        np.array
+    #     Returns
+    #     -------
+    #     np.array
 
-        """
-        assert sym in ['C0','Ci','D2h'],'Symmetry (sym) must be C0, Ci, or D2h'
+    #     """
+    #     assert sym in ['C0','Ci','D2h'],'Symmetry (sym) must be C0, Ci, or D2h'
         
-        if self._sym!=sym:
-            self._M=None
-            self._sym=sym
+    #     if self._sym!=sym:
+    #         self._M=None
+    #         self._sym=sym
         
-        if Lmax is None:
-            Lmax=1000
-            auto=True
-        else:
-            auto=False
+    #     if Lmax is None:
+    #         Lmax=1000
+    #         auto=True
+    #     else:
+    #         auto=False
             
-        if self._M is None:self._M=[]
-        M=self._M
+    #     if self._M is None:self._M=[]
+    #     M=self._M
         
-        Neqs=self.sampling_moment_N(Lmax=Lmax,sym=sym)
-        start=Lmax if Neqs[-1]<=len(M) else [0,*Neqs.tolist()].index(len(M))
-        stop=np.argmax(Neqs>self.N) if auto else Lmax
-        print(start,stop)
-        if sym=='C0':
-            for L in range(start,stop+1):
-                M0=[]
-                for m in range(-L,L+1):
-                    for mp in range(-L,L+1):
-                        M0.append(Djmmp(self.alpha,self.beta,self.gamma,m=m,mp=mp,j=L))
-                M.extend(M0)
-        elif sym=='Ci':
-            for L in range(start,stop+2,2):
-                M0=[]
-                for m in range(0,L+1):
-                    M0.append(Djmmp(self.alpha,self.beta,self.gamma,m=m,mp=0,j=L).real)
-                for m in range(1,L+1):
-                    M0.append(Djmmp(self.alpha,self.beta,self.gamma,m=m,mp=0,j=L).imag)
-                M.extend(M0)
-        elif sym=='D2h':
-            for L in range(start,stop+1,2):
-                M0=[]
-                for m in range(0,L+1,2):
-                    M0.append(Djmmp(self.alpha,self.beta,self.gamma,m=m,mp=0,j=L).real)
-                M.extend(M0) 
-        print(Neqs[:Lmax+1])
-        return np.array(M[:Neqs[Lmax]])
+    #     Neqs=self.sampling_moment_N(Lmax=Lmax,sym=sym)
+    #     if Lmax is not None and sym!='C0':Lmax=(Lmax//2)*2
+
+    #     N=self.N if self._gamma_incl else self.N//self.n_gamma
+        
+    #     start=Lmax+1 if Neqs[-1]<=len(M) else [0,*Neqs.tolist()].index(len(M))
+    #     stop=np.argmax(Neqs>=N) if auto else Lmax
+        
+
+    #     a,b,g=self.alpha[:N],self.beta[:N],self.gamma[:N]
+        
+    #     if auto:Lmax=stop
+    #     if sym=='C0':
+    #         for L in range(start,stop+1):
+    #             M0=[]
+    #             for m in range(-L,L+1):
+    #                 for mp in range(-L,L+1):
+    #                     M0.append(Djmmp(a,b,g,m=m,mp=mp,j=L))
+    #             M.extend(M0)
+    #     elif sym=='Ci':
+    #         if start%2:start+=1
+    #         for L in range(start,stop+1,2):
+    #             M0=[]
+    #             for m in range(0,L+1):
+    #                 M0.append(Djmmp(a,b,g,m=0,mp=m,j=L).real)
+    #             for m in range(1,L+1):
+    #                 M0.append(Djmmp(a,b,g,m=0,mp=m,j=L).imag)
+    #             M.extend(M0)
+    #     elif sym=='D2h':
+    #         if start%2:start+=1
+    #         for L in range(start,stop+1,2):
+    #             M0=[]
+    #             for m in range(0,L+1,2):
+    #                 M0.append(Djmmp(a,b,g,m=0,mp=m,j=L).real)
+    #             M.extend(M0) 
+
+        
+    #     return np.array(M[:Neqs[Lmax]])
     
-    def sampling_moment_N(self,Lmax:int=1000,sym:str='Ci'):
-        """
-        Returns the number of simultaneous equations for symmetry groups C0,
-        Ci, and D2h. Returns a vector corresponding to values of L from 0 up to
-        Lmax (default Lmax=100, thus returning a vector with 101 elements)
+    # def sampling_moment_N(self,Lmax:int=1000,sym:str='Ci'):
+    #     """
+    #     Returns the number of simultaneous equations for symmetry groups C0,
+    #     Ci, and D2h. Returns a vector corresponding to values of L from 0 up to
+    #     Lmax (default Lmax=100, thus returning a vector with 101 elements)
 
-        Parameters
-        ----------
-        Lmax : int, optional
-            Maximum tensor rank to include. The default is 100.
-        sym : str, optional
-            Symmetry group ('C0','Ci', or 'D2h'). The default is 'Ci'.
+    #     Parameters
+    #     ----------
+    #     Lmax : int, optional
+    #         Maximum tensor rank to include. The default is 100.
+    #     sym : str, optional
+    #         Symmetry group ('C0','Ci', or 'D2h'). The default is 'Ci'.
 
-        Returns
-        -------
-        np.array
+    #     Returns
+    #     -------
+    #     np.array
 
-        """
-        assert sym in ['C0','Ci','D2h'],'Symmetry (sym) must be C0, Ci, or D2h'
+    #     """
+    #     assert sym in ['C0','Ci','D2h'],'Symmetry (sym) must be C0, Ci, or D2h'
         
-        if sym=='C0':
-            return ((2*np.arange(Lmax+1)+1)**2).cumsum()
-        if sym=='Ci':
-            L=np.arange(Lmax+1)
-            return (1/2*L*(L+3)+1).astype(int)
-        if sym=='D2h':
-            L=np.arange(Lmax+1)
-            return (1/8*(L+4)*(L+2)).astype(int)
+    #     if sym=='C0':
+    #         return ((2*np.arange(Lmax+1)+1)**2).cumsum()
+    #     if sym=='Ci':
+    #         L=np.arange(Lmax+1)
+    #         L=np.floor(L/2)*2
+    #         return (1/2*L*(L+3)+1).astype(int)
+    #     if sym=='D2h':
+    #         L=np.arange(Lmax+1)
+    #         L=np.floor(L/2)*2
+    #         return (1/8*(L+4)*(L+2)).astype(int)
     
-    def sampling_moment(self,Lmax:int=50,sym='Ci',weight=None):
-        """
-        Calculates the sampling moments as a function of L
+    # def sampling_moment(self,Lmax:int=50,sym='Ci',weight=None):
+    #     """
+    #     Calculates the sampling moments as a function of L
 
-        Parameters
-        ----------
-        Lmax : int, optional
-            DESCRIPTION. The default is 50.
-        sym : TYPE, optional
-            DESCRIPTION. The default is 'Ci'.
-        weight : TYPE, optional
-            DESCRIPTION. The default is None.
+    #     Parameters
+    #     ----------
+    #     Lmax : int, optional
+    #         DESCRIPTION. The default is 50.
+    #     sym : TYPE, optional
+    #         DESCRIPTION. The default is 'Ci'.
+    #     weight : TYPE, optional
+    #         DESCRIPTION. The default is None.
 
-        Returns
-        -------
-        None.
+    #     Returns
+    #     -------
+    #     None.
 
-        """
-        if weight is None:weight=self.weight
-        M=self.sampling_moment_matrix(Lmax=Lmax,sym=sym)
+    #     """
+    #     N=self.N if self._gamma_incl else self.N//self.n_gamma
+    #     if weight is None:
+    #         weight=self.weight[:N]
+    #         weight/=weight.sum()
+    #     M=self.sampling_moment_matrix(Lmax=Lmax,sym=sym)
         
-        target=np.zeros(M.shape[0])
-        target[0]=1
-        var=(M@weight-target)**2
+    #     target=np.zeros(M.shape[0])
+    #     target[0]=1
+    #     var=(M@weight-target)**2
         
-        error=[]
-        Neqs=np.concatenate(([0],self.sampling_moment_N(Lmax=Lmax,sym=sym)))
-        for k in range(len(Neqs)-1):
-            error.append(np.sqrt(var[Neqs[k]:Neqs[k+1]].sum()/(2*k+1)))
-        return error
+    #     error=[]
+    #     Neqs=np.concatenate(([0],self.sampling_moment_N(Lmax=Lmax,sym=sym)))
+    #     for k in range(len(Neqs)-1):
+    #         error.append(np.sqrt(var[Neqs[k]:Neqs[k+1]].sum()/(2*k+1)))
+    #     return error
     
-    def plot_sampling_moment(self,Lmax:int=50,sym='Ci',weight=None,ax=None):
-        """
-        Plots the sampling moment as a function of L
+    # def plot_sampling_moment(self,Lmax:int=50,sym='Ci',weight=None,ax=None):
+    #     """
+    #     Plots the sampling moment as a function of L
 
-        Parameters
-        ----------
-        Lmax : int, optional
-            DESCRIPTION. The default is 50.
-        sym : TYPE, optional
-            DESCRIPTION. The default is 'Ci'.
-        weight : TYPE, optional
-            DESCRIPTION. The default is None.
+    #     Parameters
+    #     ----------
+    #     Lmax : int, optional
+    #         DESCRIPTION. The default is 50.
+    #     sym : TYPE, optional
+    #         DESCRIPTION. The default is 'Ci'.
+    #     weight : TYPE, optional
+    #         DESCRIPTION. The default is None.
 
-        Returns
-        -------
-        axis
+    #     Returns
+    #     -------
+    #     axis
 
-        """
-        error=self.sampling_moment(Lmax=Lmax,sym=sym,weight=weight)
-        if ax is None:ax=plt.subplots()[1]
-        ax.plot(np.arange(Lmax+1),error)
-        ax.set_xlabel(r'$L$')
-        ax.set_ylabel(r"$\sigma^S_{Lqq'}$")
-        return ax
+    #     """
+    #     error=self.sampling_moment(Lmax=Lmax,sym=sym,weight=weight)
+    #     if ax is None:ax=plt.subplots()[1]
+    #     ax.plot(np.arange(Lmax+1),error)
+    #     ax.set_xlabel(r'$L$')
+    #     ax.set_ylabel(r"$\sigma^S_{Lqq'}$")
+    #     return ax
         
-    def SHREWDopt(self,Lmax:int=None,sym:str='Ci',update_wt:bool=True):
-        """
-        Generates a weight-optimized optimized powder average according to the 
-        SHREWD scheme. 
+    # def SHREWDopt(self,Lmax:int=None,sym:str='Ci',update_wt:bool=True):
+    #     """
+    #     Generates a weight-optimized optimized powder average according to the 
+    #     SHREWD scheme. 
         
-        Matthias Eden, Malcolm H. Levitt. "Computational of Orientational Averages in
-        Solid-State NMR by Gaussian Spherical Quadrature". J. Magn. Reson. 132, 220-239
-        (1998)
+    #     Matthias Eden, Malcolm H. Levitt. "Computational of Orientational Averages in
+    #     Solid-State NMR by Gaussian Spherical Quadrature". J. Magn. Reson. 132, 220-239
+    #     (1998)
         
-        Input is Lmax, the largest tensor rank to be modeled with the powder 
-        average, and a powder average to be optimized with new weights. 
+    #     Input is Lmax, the largest tensor rank to be modeled with the powder 
+    #     average, and a powder average to be optimized with new weights. 
 
-        Parameters
-        ----------
-        Lmax : int, optional
-            DESCRIPTION. The default is None.
-        sym : str, optional
-            DESCRIPTION. The default is 'Ci'.
+    #     Parameters
+    #     ----------
+    #     Lmax : int, optional
+    #         DESCRIPTION. The default is None.
+    #     sym : str, optional
+    #         DESCRIPTION. The default is 'Ci'.
 
-        Returns
-        -------
-        None.
+    #     Returns
+    #     -------
+    #     None.
 
-        """
-        M=self.sampling_moment_matrix(Lmax=Lmax,sym=sym)
-        target=np.zeros(M.shape[0])
-        target[0]=1
+    #     """
+    #     M=self.sampling_moment_matrix(Lmax=Lmax,sym=sym)
+    #     print(M.shape)
+    #     target=np.zeros(M.shape[0])
+    #     target[0]=1
         
-        w=lsq_linear(M,target,bounds=(0,1))['x']
+    #     w=lsq_linear(M,target,bounds=(0,1))['x']
+    #     w/=w.sum()
         
-        if update_wt:self.weight=w
-        return w
+    #     if update_wt:
+    #         if self._gamma_incl:
+    #             self.weight=w
+    #         else:
+    #             self.weight=np.tile(w,self.n_gamma)/self.n_gamma
+    #     return w
     
     def __eq__(self,pwdavg):
         if pwdavg is self:return True
