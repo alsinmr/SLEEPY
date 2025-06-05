@@ -247,18 +247,18 @@ class Rho():
             else:
                 x+=np.abs(seq0[0])>1e-5  #Tolerance ok?
                 # We try to avoid any weird orientations that are missing cross terms so check a few orientations
-                x+=np.abs(seq0[len(self.L)//2])>1e-5
-                x+=np.abs(seq0[len(self.L)//3])>1e-5  #Tolerance ok?
-                x+=np.abs(seq0[len(self.L)//4])>1e-5  #Tolerance ok?
+                x+=np.abs(seq0[int(len(self.L)/np.e)])>1e-5
+                x+=np.abs(seq0[int(len(self.L)/np.pi)])>1e-5  #Tolerance ok?
+                x+=np.abs(seq0[int(len(self.L)/np.sqrt(17))])>1e-5  #Tolerance ok?
 
         
         rf.fields=ini_fields
         
         x+=self.L[0].L(0).astype(bool)
         # We try to avoid any weird orientations that are missing cross terms so check a few orientations
-        x+=self.L[len(self.L)//2].L(0).astype(bool)
-        x+=self.L[len(self.L)//3].L(0).astype(bool)
-        x+=self.L[1*len(self.L)//4].L(0).astype(bool)
+        x+=self.L[int(len(self.L)/np.e)].L(0).astype(bool)
+        x+=self.L[int(len(self.L)/np.pi)].L(0).astype(bool)
+        x+=self.L[int(len(self.L)/np.sqrt(17))].L(0).astype(bool)
         
         
         B=BlockDiagonal(x)

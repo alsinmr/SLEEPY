@@ -460,6 +460,14 @@ class ExpSys():
             for i in np.argwhere(index)[0][::-1]:
                 self.inter.pop(i)
                 
+    def list_interactions(self):
+        for k in dir(HamTypes):
+            if k=='_larmor':continue
+            fun=getattr(HamTypes,k)
+            if hasattr(fun,'__code__') and fun.__code__.co_varnames[0]=='es':
+                print(f'{k}, with args:')
+                print('\t'+','.join(fun.__code__.co_varnames[1:fun.__code__.co_argcount]))
+                
     def __repr__(self): 
         out=f'{len(self.Nucs)}-spin system ('+','.join([f'{Nuc}' for Nuc in self.Nucs])+')\n'
         out+=f'B0 = {self.B0:.3f} T ({self.v0H/1e6:.3f} MHz 1H frequency)\n'

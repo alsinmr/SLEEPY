@@ -11,6 +11,7 @@ import ipywidgets as widgets
 from IPython.display import display
 import matplotlib.pyplot as plt
 from . import Defaults
+import functools
 
 def set_dark(dark=True):
     if dark:
@@ -156,6 +157,8 @@ def ColabZoom(ax):
     
 
 def use_zoom(plot):
+    @functools.wraps(plot)  #Preserve the doc string
+    
     def setup(*args,**kwargs):
         ax=plot(*args,**kwargs)
         
