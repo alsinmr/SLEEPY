@@ -273,7 +273,7 @@ class ExpSys():
         """
         return Hamiltonian(self)
         
-    def Liouvillian(self):
+    def Liouvillian(self,*args,kex=None):
         """
         Creates a Liouvillian from the ExpSys Object
 
@@ -283,7 +283,7 @@ class ExpSys():
             Liouvillian for this ExpSys object
 
         """
-        return Liouvillian(self)
+        return Liouvillian(self,*args,kex=kex)
                 
     def set_inter(self,Type,**kwargs):
         """
@@ -459,7 +459,8 @@ class ExpSys():
         if np.any(index):
             for i in np.argwhere(index)[0][::-1]:
                 self.inter.pop(i)
-                
+    
+    @property            
     def list_interactions(self):
         for k in dir(HamTypes):
             if k=='_larmor':continue

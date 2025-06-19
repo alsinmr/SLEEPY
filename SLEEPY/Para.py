@@ -122,6 +122,13 @@ class ParallelManager():
             return self.PropCache.sm1
         elif self.cache:
             return self.PropCache.U
+        
+    @property
+    def sm2(self):
+        if self.parallel and self.cache:
+            return self.PropCache.sm2
+        else:
+            return self.PropCache.cache_count
     
     @property
     def setup(self):
@@ -129,9 +136,11 @@ class ParallelManager():
             return [(pm.L.L(0),*self.pars) for pm in self]
         
         if self.parallel or True:
-            out=[(pm.Ln,self.L.Lrf,pm.LrelaxOS,*self.pars,self.sm0,self.sm1,self.index,self.step_index,self.PropCache.SZ) for pm in self]
+            out=[(pm.Ln,self.L.Lrf,pm.LrelaxOS,*self.pars,self.sm0,self.sm1,self.sm2,
+                  self.index,self.step_index,self.PropCache.SZ) for pm in self]
         else:
-            out=((pm.Ln,self.L.Lrf,pm.LrelaxOS,*self.pars,self.sm0,self.sm1,self.index,self.step_index,self.PropCache.SZ) for pm in self)
+            out=((pm.Ln,self.L.Lrf,pm.LrelaxOS,*self.pars,self.sm0,self.sm1,self.sm2,
+                  self.index,self.step_index,self.PropCache.SZ) for pm in self)
         
         return out
 
@@ -140,6 +149,13 @@ class ParallelManager():
     def cpu_count(self):
         if isinstance(Defaults['ncores'],int):return Defaults['ncores']
         return mp.cpu_count()
+    
+    @property
+    def chunk_size(self):
+        if Defaults['parallel_chunk_size']:
+            return Defaults['parallel_chunk_size']
+        return len(self)//(self.cpu_count*3)
+        
     
     def __call__(self):
         if self.L.static:
@@ -150,8 +166,7 @@ class ParallelManager():
         X=self.setup
         if Defaults['parallel']:
             with mp.Pool(processes=self.cpu_count) as pool:
-                U=pool.map(fun,X)
-                
+                U=pool.map(fun,X,chunksize = len(X) // (10 * self.cpu_count))
         else:
             U=[fun(X0) for X0 in X]
         return U
@@ -159,31 +174,33 @@ class ParallelManager():
 
 #%% Parallel functions
 def prop(X):
-    Ln0,Lrf,LrelaxOS,n0,nf,tm1,tp1,dt,n_gamma,sm0,sm1,index,step_index,SZ=X
+    Ln0,Lrf,LrelaxOS,n0,nf,tm1,tp1,dt,n_gamma,sm0,sm1,sm2,index,step_index,SZ=X
     
     if LrelaxOS is None:LrelaxOS=lambda n:0
     
     # Setup if using the shared cache
     if sm0 is None:
         ci=None
+        cache_count=[0,0]
     elif hasattr(sm0,'buf'):
         ci=np.ndarray(SZ[:2],dtype=bool,buffer=sm0.buf)
         Ucache=np.ndarray(SZ,dtype=Defaults['ctype'],buffer=sm1.buf)
+        cache_count=np.ndarray(2,dtype='int16',buffer=sm2.buf)
     else:
         ci=sm0
         Ucache=sm1
+        cache_count=sm2
         
     #Initial propagator
-    # count0,count1=0,0
-    if ci is not None and tm1==dt and ci[index[n0%n_gamma],step_index[n0%n_gamma]]:
+    if ci is not None and tm1-1e-10<=dt and tm1+1e-10>=dt and ci[index[n0%n_gamma],step_index[n0%n_gamma]]:
         U=Ucache[index[n0%n_gamma],step_index[n0%n_gamma]]
-        # count0+=1
+        cache_count[1]+=1
     else:
         ph=np.exp(1j*2*np.pi*n0/n_gamma)
         L=np.sum([Ln0[m+2]*(ph**(-m)) for m in range(-2,3)],axis=0)+Lrf+LrelaxOS(n0)
         U=expm(L*tm1)
+        cache_count[0]+=1
         if tm1==dt and ci is not None:
-            # count1+=1
             Ucache[index[n0%n_gamma],step_index[n0%n_gamma]]=U
             ci[index[n0%n_gamma],step_index[n0%n_gamma]]=True
 
@@ -193,15 +210,14 @@ def prop(X):
             ph=np.exp(1j*2*np.pi*n/n_gamma)
             L=np.sum([Ln0[m+2]*(ph**(-m)) for m in range(-2,3)],axis=0)+Lrf+LrelaxOS(n)
             U0=expm(L*dt)
+            cache_count[0]+=1
             if ci is not None:
-                # count1+=1
                 Ucache[i,si]=U0
                 ci[i,si]=True
         else:
-            # count0+=1
+            cache_count[1]+=1
             U0=Ucache[i,si]
         U=U0@U
-    # print(count0,count1)
             
     if tp1>1e-10: #Last propagator
         ph=np.exp(1j*2*np.pi*nf/n_gamma)

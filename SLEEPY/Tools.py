@@ -647,8 +647,24 @@ def Setup3siteSym(expsys,tc:float,phi:float=np.arccos(-1/3),returnL:bool=True):
         return Liouvillian(ex_list,kex=kex)            
     return ex_list,kex
 
-def tumbling(tc:float,q:int=3,beta_only:bool=False):
+def tumbling(tc:float,q:int=3,incl_alpha=False,incl_gamma=True):
     """
+    Constructs an exchange matrix and sets up a corresponding set of euler 
+    angles to model tumbling. Parameters are the desired mean correlation time,
+    q, which determines the number of angles used, and flags alpha and gamma,
+    which determine if alpha and/or gamma angles are included. beta is always
+    included
+    
+    For Lab-frame simulations, usually gamma needs to be included where rotation
+    around the field can induce relaxation due to changes in pseudosecular
+    interactions. In principle, gamma should also be included in MAS simulations,
+    but this would be unusual usage to combine tumbling and MAS; there are 
+    certainly some reasons to do this, however.
+    
+    alpha should be included if interactions are asymmetric or interactions
+    are not initially along the z-axis.
+    
+    
     Constructs an exchange matrix for isotropic tumbling based on one of the
     "rep" powder averages. q (index from 0 to 12, 0 is just a three-site hop).
     Returns the exchange matrix and the corresponding list of euler angles.
@@ -682,7 +698,61 @@ def tumbling(tc:float,q:int=3,beta_only:bool=False):
 
     """
     
+    beta_only=True
+    
+    if incl_alpha and incl_gamma:
+        return
+    
+    if not(incl_alpha) and not(incl_gamma):
+        nbeta=2*int((q+1)*5+1)-1
+        beta=np.linspace(0,2*np.pi,nbeta+1)[:-1]
+        Dbeta=beta[1]
+        beta+=Dbeta/2
+        gamma=np.zeros(beta.shape)
+        w=np.cos(beta-Dbeta/2)-np.cos(beta+Dbeta/2)
+        w[len(beta)//2:]=w[:len(beta)//2]
+        w/=w.sum()
+        n=len(beta)
+        nc=2
+        
+        euler=np.concatenate([[np.zeros(n)],[beta],[np.zeros(n)]],axis=0).T
+    elif incl_alpha and incl_gamma:
+        return
+    else:
+        n0=[3,4,10,20,30,66,100,144,168,256,320,678,2000]
+        nc0=[2,3,5,6,6,6,6,6,6,6,6,6,6]
+    
+        n=n0[q]
+        nc=nc0[q]
+    
+        if q==0:
+            beta=[0,np.pi/2,np.pi/2]
+            gamma=[0,0,np.pi/2]
+        elif q==1:
+            tetra=np.arccos(-1/3)
+            beta=np.array([0,tetra,tetra,tetra])
+            gamma=np.array([0,0,2*np.pi/3,4*np.pi/3])
+        else:
+            pwdpath=os.path.join(os.path.dirname(os.path.realpath(__file__)),'PowderFiles')
+            pwdfile=os.path.join(pwdpath,f'rep{n}.txt')
+            
+            with open(pwdfile,'r') as f:
+                alpha,beta,w=list(),list(),list()
+                for line in f:
+                    if len(line.strip().split(' '))==3:
+                        a,b,w0=[float(x) for x in line.strip().split(' ')]
+                        alpha.append(a*np.pi/180)
+                        beta.append(b*np.pi/180)
+            
+            
+            gamma,beta=np.array(alpha),np.array(beta)
+        
+        
+    
+    
     assert (q>=0 and q<=11) or beta_only,"q must be an integer between 0 and 11"
+    
+    if not(alpha) and not(gamma):beta_only=True
     
     if beta_only:
         beta=np.linspace(0,2*np.pi,2*int((q+1)*5)+1)[:-1]

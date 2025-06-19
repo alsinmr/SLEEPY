@@ -304,7 +304,7 @@ class Rho():
         """
         Sets up reduced matrices for the density matrix and all provided sequences.
         Note that one should prepare all sequences to be used in the simulation
-        and enter them here. All operations are 
+        and enter them here.  
 
         Parameters
         ----------
@@ -321,6 +321,10 @@ class Rho():
         block=np.sum(self.Blocks(*seq_U),axis=0).astype(bool)
         rho=self.getBlock(block)
         seq_red=[s.getBlock(block) for s in seq_U]
+        for s in seq_U:
+            if s.L is not self.L:
+                warnings.warn("Reduced setup assignes the same Liouvillian to all sequences and propagators \n"+\
+                              "(you may be receiving this warning because you're mixing Liouvillians)")
         
         if Defaults['verbose']:
             if block.sum()==0:
@@ -626,7 +630,7 @@ class Rho():
         self._phase_accum0=np.zeros(self.expsys.nspins)
         self.reset()
         if self.L.reduced:
-            warnings.warn('Reduced Liouvillian applied to uninitialized propagator. Make sure reduction was perfomed with same Rho')
+            warnings.warn('Reduced Liouvillian applied to uninitialized rho. Make sure reduction was perfomed with same Rho')
             rho=self.getBlock(self.L.block)
             self.__dict__=rho.__dict__
             
@@ -917,11 +921,11 @@ class Rho():
                 self.L=seq.L
         
         # Block-diagonal propagation
-        if seq is not None and self.Reduce:
-            rb,sb=self.ReducedSetup(seq)
+        if self.Reduce:
+            rb,sb=self.ReducedSetup(U if seq is None else seq)
             
             if not(np.all(rb.block)):
-                rb.DetProp(seq=sb,n=n,n_per_seq=n_per_seq)
+                rb.DetProp(sb,n=n,n_per_seq=n_per_seq)
                 Ipwd=rb.Ipwd
                 for k in range(Ipwd.shape[0]):
                     for j in range(Ipwd.shape[1]):
@@ -948,7 +952,7 @@ class Rho():
             self._t=0
         
         if U is not None:
-            if n>=100:
+            if n>=100 or U._eig is not None:
                 self()  #This is the initial detection
                 U.eig()
                 for k,((d,v,vi),rho) in enumerate(zip(U._eig,self)):
@@ -1027,7 +1031,7 @@ class Rho():
                         for m,det in enumerate(self._detect):
                             det_d=det@v
                             Ipwd[k][m][q::nsteps]=(det_d*rho_d).sum(-1)
-                        if q==nsteps-1:
+                        if q==n%nsteps:
                             self._rho[k]=v@rho_d[-1]
                             
                         rho00[k]=U[q][k]@rho00[k] #Step forward by 1/nsteps rotor period for the next step

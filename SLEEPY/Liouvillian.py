@@ -553,7 +553,6 @@ class Liouvillian():
         
         Only works if we are at a particular index of the Liouvillian
         L[0].Ln_H(0)
-        Other
 
         Parameters
         ----------
@@ -1136,7 +1135,10 @@ class Liouvillian():
         else:
             bi=np.ones(len(x),dtype=bool)
         
-        hdl=ax.imshow(x,cmap=cmap,vmin=0,vmax=1)
+        if what=="L":
+            hdl=ax.imshow(x,cmap=cmap,vmin=0,vmax=1)
+        else:
+            hdl=ax.imshow(x[bi][:,bi],cmap=cmap,vmin=0,vmax=1)
         
         if colorbar and mode!='spy':
             hdl=plt.colorbar(hdl)

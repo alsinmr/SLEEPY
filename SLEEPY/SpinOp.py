@@ -101,7 +101,11 @@ class SpinOp:
 
         """
         if not(np.all(self.Mult==2)):
-            return None
+            labels=[]
+            for label0 in self.Hlabels:
+                for label1 in self.Hlabels:
+                    labels.append(label0+';'+label1)   
+            return labels
         
         labels=[]
         N=len(self.Mult)
@@ -122,8 +126,8 @@ class SpinOp:
         None.
 
         """
-        if not(np.all(self.Mult==2)):
-            return None
+        # if not(np.all(self.Mult==2)):
+        #     return None
         
         labels=[]
         N=len(self.Mult)
@@ -136,7 +140,7 @@ class SpinOp:
                 k//=mult
                 if np.mod(mult,2):
                     start=(mult-1)//2
-                    labels[-1]=f'{start-i}'+labels[-1]
+                    labels[-1]=f'{start-i},'+labels[-1]
                 else:
                     start=mult//2
                     if start-2*i<0:

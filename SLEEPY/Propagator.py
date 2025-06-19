@@ -83,8 +83,10 @@ class Propagator():
         out=copy(self)
         out.L=self.L.getBlock(block)
         if self.calculated:
+            out.U=[]
             for k,U in enumerate(self.U):
-                out.U[k]=U[block][:,block]
+                out.U.append(U[block][:,block])
+            out._eig=None
                 
         return out
             
@@ -681,13 +683,17 @@ class PropCache():
             if Defaults['parallel'] and self.shared_memory:
                 self.sm0=SharedMemory(create=True,size=np.prod(self.SZ[:2]))
                 self.sm1=SharedMemory(create=True,size=self.nbytes)
+                self.sm2=SharedMemory(create=True,size=4)
                 self.calc_index=np.ndarray(shape=self.SZ[:2],dtype=bool,buffer=self.sm0.buf)
                 self.U=np.ndarray(shape=self.SZ,dtype=Defaults['ctype'],buffer=self.sm1.buf)
+                self.cache_count=np.ndarray(shape=2,dtype='int16',buffer=self.sm2.buf)
             else:
                 self.sm0=None
                 self.sm1=None
+                self.sm2=None
                 self.calc_index=np.zeros(self.SZ[:2],dtype=bool)
-                self.U=np.zeros(self.SZ,dtype=Defaults['ctype'])          
+                self.U=np.zeros(self.SZ,dtype=Defaults['ctype'])    
+                self.cache_count=np.ndarray(shape=2,dtype='int16')
         return self
     
     def __del__(self,*args):

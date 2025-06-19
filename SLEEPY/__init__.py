@@ -6,7 +6,7 @@ from numpy import float64 as _rtype       #Not much gain if we reduced precision
 from numpy import complex128 as _ctype    #Also, overflow errors become common at lower precision
 Defaults.update({'rtype':_rtype,'ctype':_ctype,'parallel':False,'cache':True,'MaxPropCache':10,
                  'ncores':None,'verbose':True,'zoom':False,
-                 'Colab':False,'Binder':False})
+                 'Colab':False,'Binder':False,'parallel_chunk_size':None})
 
 _h=6.62607015e-34
 Constants={'h':_h,  #Planck constant, Js
@@ -16,6 +16,7 @@ Constants={'h':_h,  #Planck constant, Js
            'mun':5.05078369931e-27/6.62607015e-34, #Nuclear magneton, Hz/T
            'mu0':1.256637e-6  #Permeability of vacuum [T^2m^3/J]
            }
+
 
 from . import Tools
 from .PowderAvg import PowderAvg
