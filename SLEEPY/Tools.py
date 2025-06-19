@@ -13,7 +13,8 @@ import re
 from .Info import Info
 from .vft import Spher2pars
 from . import Defaults
-from . import Constants
+from . import Constants 
+from .PwdAvgFuns import pwd_JCP59
 import warnings
 import matplotlib.pyplot as plt
 from .plot_tools import use_zoom,zoom
@@ -510,7 +511,7 @@ def twoSite_S_eta(theta:float,p:float=0.5):
     
     return S[0],eta[0]
 
-def SetupTumbling(expsys,tc:float,q:int=3,returnL:bool=True,beta_only:bool=False):
+def SetupTumbling(expsys,tc:float,q:int=3,returnL:bool=True,incl_alpha:bool=False,incl_gamma:bool=True):
     """
     Takes an expsys and adds a simulated tumbling to it, returning a list
     of expsys's and an exchange matrix to use to set up a Liouvillian, or can
@@ -548,7 +549,7 @@ def SetupTumbling(expsys,tc:float,q:int=3,returnL:bool=True,beta_only:bool=False
     """
     
     
-    kex,euler=tumbling(tc=tc,q=q,beta_only=beta_only)
+    kex,euler=tumbling(tc=tc,q=q,incl_alpha=incl_alpha,incl_gamma=incl_gamma)
     
     H=expsys.Hamiltonian()[0].Hinter
     
@@ -657,9 +658,11 @@ def tumbling(tc:float,q:int=3,incl_alpha=False,incl_gamma=True):
     
     For Lab-frame simulations, usually gamma needs to be included where rotation
     around the field can induce relaxation due to changes in pseudosecular
-    interactions. In principle, gamma should also be included in MAS simulations,
-    but this would be unusual usage to combine tumbling and MAS; there are 
-    certainly some reasons to do this, however.
+    interactions. gamma is not required in static, rotating frame simulations,
+    since it has not impact on the rotating frame Hamiltonian. In principle, 
+    gamma should also be included in MAS simulations, but this would be unusual
+    usage to combine tumbling and MAS; however, there can be reasons to use
+    tumbling with MAS (e.g. if the tumbling is on the MAS timescale)
     
     alpha should be included if interactions are asymmetric or interactions
     are not initially along the z-axis.
@@ -698,11 +701,6 @@ def tumbling(tc:float,q:int=3,incl_alpha=False,incl_gamma=True):
 
     """
     
-    beta_only=True
-    
-    if incl_alpha and incl_gamma:
-        return
-    
     if not(incl_alpha) and not(incl_gamma):
         nbeta=2*int((q+1)*5+1)-1
         beta=np.linspace(0,2*np.pi,nbeta+1)[:-1]
@@ -714,10 +712,15 @@ def tumbling(tc:float,q:int=3,incl_alpha=False,incl_gamma=True):
         w/=w.sum()
         n=len(beta)
         nc=2
-        
-        euler=np.concatenate([[np.zeros(n)],[beta],[np.zeros(n)]],axis=0).T
+        alpha=gamma=np.zeros(n)
+        euler=np.concatenate([[alpha],[beta],[gamma]],axis=0).T
     elif incl_alpha and incl_gamma:
-        return
+        assert q>1,"q must be 2 or higher for 3-angle tumbling"
+        alpha,beta,gamma,w=pwd_JCP59(q)
+        euler=np.concatenate(([alpha],[beta],[gamma]),axis=0).T
+        nc=15
+        n=len(gamma)
+        
     else:
         n0=[3,4,10,20,30,66,100,144,168,256,320,678,2000]
         nc0=[2,3,5,6,6,6,6,6,6,6,6,6,6]
@@ -726,12 +729,16 @@ def tumbling(tc:float,q:int=3,incl_alpha=False,incl_gamma=True):
         nc=nc0[q]
     
         if q==0:
+            alpha=[0,0,0]
             beta=[0,np.pi/2,np.pi/2]
             gamma=[0,0,np.pi/2]
+            w=[1/3,1/3,1/3]
         elif q==1:
             tetra=np.arccos(-1/3)
+            alpha=[0,0,0,0]
             beta=np.array([0,tetra,tetra,tetra])
             gamma=np.array([0,0,2*np.pi/3,4*np.pi/3])
+            w=[1/4,1/4,1/4,1/4]
         else:
             pwdpath=os.path.join(os.path.dirname(os.path.realpath(__file__)),'PowderFiles')
             pwdfile=os.path.join(pwdpath,f'rep{n}.txt')
@@ -743,78 +750,41 @@ def tumbling(tc:float,q:int=3,incl_alpha=False,incl_gamma=True):
                         a,b,w0=[float(x) for x in line.strip().split(' ')]
                         alpha.append(a*np.pi/180)
                         beta.append(b*np.pi/180)
-            
+                        w.append(w0)
             
             gamma,beta=np.array(alpha),np.array(beta)
-        
-        
-    
-    
-    assert (q>=0 and q<=11) or beta_only,"q must be an integer between 0 and 11"
-    
-    if not(alpha) and not(gamma):beta_only=True
-    
-    if beta_only:
-        beta=np.linspace(0,2*np.pi,2*int((q+1)*5)+1)[:-1]
-        Dbeta=beta[1]
-        beta+=Dbeta/2
-        gamma=np.zeros(beta.shape)
-        w=np.cos(beta-Dbeta/2)-np.cos(beta+Dbeta/2)
-        w[len(beta)//2:]=w[:len(beta)//2]
-        w/=w.sum()
-        n=len(beta)
-        nc=2
-    else:
-        n0=[3,4,10,20,30,66,100,144,168,256,320,678,2000]
-        nc0=[2,3,5,6,6,6,6,6,6,6,6,6,6]
-    
-        n=n0[q]
-        nc=nc0[q]
-    
-        if q==0:
-            beta=[0,np.pi/2,np.pi/2]
-            gamma=[0,0,np.pi/2]
-        elif q==1:
-            tetra=np.arccos(-1/3)
-            beta=np.array([0,tetra,tetra,tetra])
-            gamma=np.array([0,0,2*np.pi/3,4*np.pi/3])
+            alpha=np.zeros(n)
+            
+        if incl_alpha:
+            euler=np.concatenate(([gamma],[beta],[alpha]),axis=0).T
         else:
-            pwdpath=os.path.join(os.path.dirname(os.path.realpath(__file__)),'PowderFiles')
-            pwdfile=os.path.join(pwdpath,f'rep{n}.txt')
+            euler=np.concatenate(([alpha],[beta],[gamma]),axis=0).T
             
-            with open(pwdfile,'r') as f:
-                alpha,beta=list(),list()
-                for line in f:
-                    if len(line.strip().split(' '))==3:
-                        a,b,w=[float(x) for x in line.strip().split(' ')]
-                        alpha.append(a*np.pi/180)
-                        beta.append(b*np.pi/180)
-            
-            
-            gamma,beta=np.array(alpha),np.array(beta)
-        
-    euler=np.concatenate([[np.zeros(n)],[beta],[gamma]],axis=0).T
-        
-    x,y,z=np.sin(beta)*np.cos(gamma),np.sin(beta)*np.sin(gamma),np.cos(beta)
+    
+    x0,y0,z0=np.sin(beta)*np.cos(gamma),np.sin(beta)*np.sin(gamma),np.cos(beta)
+    x1,y1,z1=np.cos(alpha)*np.cos(beta),np.sin(alpha),-np.cos(alpha)*np.sin(beta)
+    x1,y1=np.cos(gamma)*x1-np.sin(gamma)*y1,np.sin(gamma)*x1+np.cos(gamma)*y1
     
     kex=np.zeros([len(gamma),len(gamma)],dtype=Defaults['rtype'])
-
+    
     for k in range(n):
-        c=x[k]*x+y[k]*y+z[k]*z
-        i=np.argsort(c)[-nc-1:-1]
+        c0=x0[k]*x0+y0[k]*y0+z0[k]*z0
+        c1=x1[k]*x1+y1[k]*y1+z1[k]*z1
+        c0[c0>1]=1
+        c0[c0<-1]=-1
+        c1[c1>1]=1
+        c1[c1<1]=1
+        d2=np.arccos(c0)**2+np.arccos(c1)**2
+        i=np.argsort(d2)[1:nc+1]
         for i0 in i:
-            kex[k,i0]=(1/np.arccos(c[i0]))**2
+            kex[k,i0]=1/d2[i0]
+            kex[i0,k]=1/d2[i0]
+            rat=w[k]/w[i0]
+            Del=kex[k,i0]*(1-rat)/(1+rat)
+            kex[k,i0]-=Del
+            kex[i0,k]+=Del
     
-    kex=(kex+kex.T)/2
-            
-    kex-=np.diag(kex.sum(0))
-    
-    if beta_only:
-        rat=w[0:-1]/w[1:]
-        Del=kex[0,1]*(1-rat)/(1+rat)
-        kex+=np.diag(Del,-1)-np.diag(Del,1)
-        kex-=np.diag(kex.sum(0))
-        
+    kex-=np.diag(np.sum(kex,axis=0))
     _,_,tc0,A=kex2A(kex,euler)
     
     kavg=((1/tc0)*A).sum()
@@ -822,6 +792,80 @@ def tumbling(tc:float,q:int=3,incl_alpha=False,incl_gamma=True):
     kex/=kavg*tc
     
     return kex,euler
+    
+    
+    # assert (q>=0 and q<=11) or beta_only,"q must be an integer between 0 and 11"
+    
+    # if not(alpha) and not(gamma):beta_only=True
+    
+    # if beta_only:
+    #     beta=np.linspace(0,2*np.pi,2*int((q+1)*5)+1)[:-1]
+    #     Dbeta=beta[1]
+    #     beta+=Dbeta/2
+    #     gamma=np.zeros(beta.shape)
+    #     w=np.cos(beta-Dbeta/2)-np.cos(beta+Dbeta/2)
+    #     w[len(beta)//2:]=w[:len(beta)//2]
+    #     w/=w.sum()
+    #     n=len(beta)
+    #     nc=2
+    # else:
+    #     n0=[3,4,10,20,30,66,100,144,168,256,320,678,2000]
+    #     nc0=[2,3,5,6,6,6,6,6,6,6,6,6,6]
+    
+    #     n=n0[q]
+    #     nc=nc0[q]
+    
+    #     if q==0:
+    #         beta=[0,np.pi/2,np.pi/2]
+    #         gamma=[0,0,np.pi/2]
+    #     elif q==1:
+    #         tetra=np.arccos(-1/3)
+    #         beta=np.array([0,tetra,tetra,tetra])
+    #         gamma=np.array([0,0,2*np.pi/3,4*np.pi/3])
+    #     else:
+    #         pwdpath=os.path.join(os.path.dirname(os.path.realpath(__file__)),'PowderFiles')
+    #         pwdfile=os.path.join(pwdpath,f'rep{n}.txt')
+            
+    #         with open(pwdfile,'r') as f:
+    #             alpha,beta=list(),list()
+    #             for line in f:
+    #                 if len(line.strip().split(' '))==3:
+    #                     a,b,w=[float(x) for x in line.strip().split(' ')]
+    #                     alpha.append(a*np.pi/180)
+    #                     beta.append(b*np.pi/180)
+            
+            
+    #         gamma,beta=np.array(alpha),np.array(beta)
+        
+    # euler=np.concatenate([[np.zeros(n)],[beta],[gamma]],axis=0).T
+        
+    # x,y,z=np.sin(beta)*np.cos(gamma),np.sin(beta)*np.sin(gamma),np.cos(beta)
+    
+    # kex=np.zeros([len(gamma),len(gamma)],dtype=Defaults['rtype'])
+
+    # for k in range(n):
+    #     c=x[k]*x+y[k]*y+z[k]*z
+    #     i=np.argsort(c)[-nc-1:-1]
+    #     for i0 in i:
+    #         kex[k,i0]=(1/np.arccos(c[i0]))**2
+    
+    # kex=(kex+kex.T)/2
+            
+    # kex-=np.diag(kex.sum(0))
+    
+    # if beta_only:
+    #     rat=w[0:-1]/w[1:]
+    #     Del=kex[0,1]*(1-rat)/(1+rat)
+    #     kex+=np.diag(Del,-1)-np.diag(Del,1)
+    #     kex-=np.diag(kex.sum(0))
+        
+    # _,_,tc0,A=kex2A(kex,euler)
+    
+    # kavg=((1/tc0)*A).sum()
+    
+    # kex/=kavg*tc
+    
+    # return kex,euler
 
 
         
