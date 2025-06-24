@@ -236,12 +236,12 @@ class LFrf():
         
         if ax is None:
             ax=plt.subplots()[1]
-        ax.plot(f/1e6,np.abs((S).T),color='black',linewidth=2)
-        ax.plot(f/1e6,((S).real.T))
-        ax.plot(f/1e6,((S).imag.T))
+        ax.plot(f/1e6,np.abs((S).T),color='black',linewidth=2,label='Abs')
+        ax.plot(f/1e6,((S).real.T),label='Real')
+        ax.plot(f/1e6,((S).imag.T),label='Imag.')
         
         ax.set_xlabel('f / MHz')
-        ax.legend(('Abs','Real','Imag'))
+        ax.legend()
         
         return ax
 

@@ -685,11 +685,14 @@ def tumbling(tc:float,q:int=3,incl_alpha=False,incl_gamma=True):
         0 returns angles along x,y,z,
         1 returns tetrahedral hopping
         2-12 returns a repulsion powder average
-    beta_only : bool
-        Returns diffusion only along the beta angle 
-        (use for a single symmetric tensor)
-        In this case, the number of beta angles between 0 and 2pi is q*10. Then,
-        q may take on any value 0 and higher
+    incl_alpha : bool
+        Flag to include alpha-angle motion in the tumbling. Needs to be true
+        for tensors with asymmetry or multiple tensors with different Euler
+        angles. The default is False
+    incl_gamma : bool
+        Flag to include gamma-angle motion in the tumbling. Should be true if 
+        non-secular terms are responsible for inducing relaxation, e.g. for
+        T1 or NOE relaxation. The default is True
 
     Returns
     -------
@@ -702,13 +705,13 @@ def tumbling(tc:float,q:int=3,incl_alpha=False,incl_gamma=True):
     """
     
     if not(incl_alpha) and not(incl_gamma):
-        nbeta=2*int((q+1)*5+1)-1
+        nbeta=2*int((q+1)*5)
         beta=np.linspace(0,2*np.pi,nbeta+1)[:-1]
         Dbeta=beta[1]
-        beta+=Dbeta/2
+        beta+=Dbeta/4
         gamma=np.zeros(beta.shape)
         w=np.cos(beta-Dbeta/2)-np.cos(beta+Dbeta/2)
-        w[len(beta)//2:]=w[:len(beta)//2]
+        w[:nbeta//2-1:-1]=w[:len(beta)//2]
         w/=w.sum()
         n=len(beta)
         nc=2
@@ -764,17 +767,22 @@ def tumbling(tc:float,q:int=3,incl_alpha=False,incl_gamma=True):
     x0,y0,z0=np.sin(beta)*np.cos(gamma),np.sin(beta)*np.sin(gamma),np.cos(beta)
     x1,y1,z1=np.cos(alpha)*np.cos(beta),np.sin(alpha),-np.cos(alpha)*np.sin(beta)
     x1,y1=np.cos(gamma)*x1-np.sin(gamma)*y1,np.sin(gamma)*x1+np.cos(gamma)*y1
+    x2,y2,z2=-np.sin(alpha)*np.cos(beta),np.cos(alpha),np.sin(alpha)*np.sin(beta)
+    x2,y2=np.cos(gamma)*x2-np.sin(gamma)*y2,np.cos(gamma)*y2+np.sin(gamma)*x2
     
     kex=np.zeros([len(gamma),len(gamma)],dtype=Defaults['rtype'])
     
     for k in range(n):
         c0=x0[k]*x0+y0[k]*y0+z0[k]*z0
         c1=x1[k]*x1+y1[k]*y1+z1[k]*z1
+        c2=x2[k]*x2+y2[k]*y2+z2[k]*z2
         c0[c0>1]=1
         c0[c0<-1]=-1
         c1[c1>1]=1
         c1[c1<1]=1
-        d2=np.arccos(c0)**2+np.arccos(c1)**2
+        c2[c2>1]=1
+        c2[c2<1]=1
+        d2=np.arccos(c0)**2+np.arccos(c1)**2+np.arccos(c2)**2
         i=np.argsort(d2)[1:nc+1]
         for i0 in i:
             kex[k,i0]=1/d2[i0]
