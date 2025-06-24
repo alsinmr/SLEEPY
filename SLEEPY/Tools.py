@@ -705,10 +705,10 @@ def tumbling(tc:float,q:int=3,incl_alpha=False,incl_gamma=True):
     """
     
     if not(incl_alpha) and not(incl_gamma):
-        nbeta=2*int((q+1)*5)
-        beta=np.linspace(0,2*np.pi,nbeta+1)[:-1]
+        nbeta=2*int(q*5)
+        beta=np.linspace(0,np.pi,nbeta+1)[:-1]
         Dbeta=beta[1]
-        beta+=Dbeta/4
+        beta+=Dbeta/2
         gamma=np.zeros(beta.shape)
         w=np.cos(beta-Dbeta/2)-np.cos(beta+Dbeta/2)
         w[:nbeta//2-1:-1]=w[:len(beta)//2]
@@ -717,6 +717,10 @@ def tumbling(tc:float,q:int=3,incl_alpha=False,incl_gamma=True):
         nc=2
         alpha=gamma=np.zeros(n)
         euler=np.concatenate([[alpha],[beta],[gamma]],axis=0).T
+        
+        
+        
+        
     elif incl_alpha and incl_gamma:
         assert q>1,"q must be 2 or higher for 3-angle tumbling"
         alpha,beta,gamma,w=pwd_JCP59(q)
@@ -747,15 +751,15 @@ def tumbling(tc:float,q:int=3,incl_alpha=False,incl_gamma=True):
             pwdfile=os.path.join(pwdpath,f'rep{n}.txt')
             
             with open(pwdfile,'r') as f:
-                alpha,beta,w=list(),list(),list()
+                beta,gamma,w=list(),list(),list()
                 for line in f:
                     if len(line.strip().split(' '))==3:
-                        a,b,w0=[float(x) for x in line.strip().split(' ')]
-                        alpha.append(a*np.pi/180)
+                        g,b,w0=[float(x) for x in line.strip().split(' ')]
+                        gamma.append(g*np.pi/180)
                         beta.append(b*np.pi/180)
                         w.append(w0)
             
-            gamma,beta=np.array(alpha),np.array(beta)
+            gamma,beta=np.array(gamma),np.array(beta)
             alpha=np.zeros(n)
             
         if incl_alpha:
@@ -783,7 +787,10 @@ def tumbling(tc:float,q:int=3,incl_alpha=False,incl_gamma=True):
         c2[c2>1]=1
         c2[c2<1]=1
         d2=np.arccos(c0)**2+np.arccos(c1)**2+np.arccos(c2)**2
-        i=np.argsort(d2)[1:nc+1]
+        if not(incl_alpha) and not(incl_gamma) and (k==0 or k==n-1):
+            i=np.argsort(d2)[1:2]
+        else:
+            i=np.argsort(d2)[1:nc+1]
         for i0 in i:
             kex[k,i0]=1/d2[i0]
             kex[i0,k]=1/d2[i0]
