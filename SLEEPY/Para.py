@@ -154,7 +154,11 @@ class ParallelManager():
     def chunk_size(self):
         if Defaults['parallel_chunk_size']:
             return Defaults['parallel_chunk_size']
-        return len(self)//(self.cpu_count*3)
+        
+        if len(self)//(self.cpu_count)<2:
+            return np.ceil(len(self)/self.cpu_count).astype(int)
+        
+        return np.ceil(len(self)//(self.cpu_count*3)).astype(int)
         
     
     def __call__(self):
@@ -164,9 +168,9 @@ class ParallelManager():
             fun=prop
         
         X=self.setup
-        if Defaults['parallel']:
+        if Defaults['parallel'] and X[0][2] is None:
             with mp.Pool(processes=self.cpu_count) as pool:
-                U=pool.map(fun,X,chunksize = len(X) // (10 * self.cpu_count))
+                U=pool.map(fun,X,chunksize = self.chunk_size)
         else:
             U=[fun(X0) for X0 in X]
         return U

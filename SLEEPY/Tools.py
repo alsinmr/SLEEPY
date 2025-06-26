@@ -511,7 +511,7 @@ def twoSite_S_eta(theta:float,p:float=0.5):
     
     return S[0],eta[0]
 
-def SetupTumbling(expsys,tc:float,q:int=3,returnL:bool=True,incl_alpha:bool=False,incl_gamma:bool=True):
+def SetupTumbling(expsys,tc:float,q:int=3,returnL:bool=True,incl_alpha:bool=False,incl_gamma:bool=True,edit_vr=True):
     """
     Takes an expsys and adds a simulated tumbling to it, returning a list
     of expsys's and an exchange matrix to use to set up a Liouvillian, or can
@@ -566,11 +566,14 @@ def SetupTumbling(expsys,tc:float,q:int=3,returnL:bool=True,incl_alpha:bool=Fals
                 
                 ex_list[-1].set_inter(**kwargs)
     
+    if edit_vr:
+        for ex in ex_list:
+            ex.vr=0
+            ex._rotor_angle=0
+            ex.pwdavg='alpha0beta0'
     if returnL:
         from .Liouvillian import Liouvillian
         L=Liouvillian(ex_list,kex=kex)
-        L.expsys.vr=0
-        L.expsys.pwdavg='alpha0beta0'
         return L
     return ex_list,kex
 
@@ -600,7 +603,7 @@ def SetupTetraHop(expsys,tc:float,n:int=4,returnL:bool=True):
         Exchange matrix
     """
             
-    ex_list,kex=SetupTumbling(expsys, tc,q=1,returnL=False)
+    ex_list,kex=SetupTumbling(expsys, tc,q=1,returnL=False,edit_vr=False)
     
     if n<4:
         ex_list=ex_list[4-n:]
@@ -705,6 +708,7 @@ def tumbling(tc:float,q:int=3,incl_alpha=False,incl_gamma=True):
     """
     
     if not(incl_alpha) and not(incl_gamma):
+        assert q>0,"q must be 1 or higher for beta tumbling"
         nbeta=2*int(q*5)
         beta=np.linspace(0,np.pi,nbeta+1)[:-1]
         Dbeta=beta[1]
@@ -717,8 +721,6 @@ def tumbling(tc:float,q:int=3,incl_alpha=False,incl_gamma=True):
         nc=2
         alpha=gamma=np.zeros(n)
         euler=np.concatenate([[alpha],[beta],[gamma]],axis=0).T
-        
-        
         
         
     elif incl_alpha and incl_gamma:
@@ -885,7 +887,7 @@ def tumbling(tc:float,q:int=3,incl_alpha=False,incl_gamma=True):
 
         
     
-def kex2A(kex,euler):
+def kex2A(kex,euler=None):
     """
     Calculates the order parameter, equilibrium populations, correlation times, 
     and amplitudes resulting from an nxn exchange matrix and the corresponding 
@@ -901,6 +903,10 @@ def kex2A(kex,euler):
         nxn exchange matrix (should satisfy mass conservation and detailed balance).
     euler : np.array
         list of euler angles corresponding to each state in the exchange matrix.
+    L : Liouvillian
+        Provide L as the first positional argument instead of kex and euler. 
+        Then, kex and euler will be extracted from L
+    
 
     Returns
     -------
@@ -913,7 +919,7 @@ def kex2A(kex,euler):
     A : np.array
         Amplitudes.
 
-    """
+    """ 
     
     euler=np.array(euler)
     tci,v=np.linalg.eig(kex)
