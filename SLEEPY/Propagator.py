@@ -601,6 +601,7 @@ class PropCache():
             sm.unlink()
         self._sm0=[]
         self._sm1=[]
+        self.cache_count=0
         self.cache=Defaults['cache']
         return self
         

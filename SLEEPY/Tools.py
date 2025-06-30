@@ -511,30 +511,55 @@ def twoSite_S_eta(theta:float,p:float=0.5):
     
     return S[0],eta[0]
 
-def SetupTumbling(expsys,tc:float,q:int=3,returnL:bool=True,incl_alpha:bool=False,incl_gamma:bool=True,edit_vr=True):
+def SetupTumbling(expsys,tc:float,q:int=3,returnL:bool=True,incl_alpha:bool=False,incl_gamma:bool=True,solid:bool=False):
     """
     Takes an expsys and adds a simulated tumbling to it, returning a list
     of expsys's and an exchange matrix to use to set up a Liouvillian, or can
     return the Liouvillian directly (default behavior).
+
     
-    e.g.
-    L=sl.Liouvillian(ex_list,kex=kex)
+    Returns
+    -------
+
 
     Parameters
     ----------
     expsys : TYPE
         SLEEPY expsys
     tc : float
+        DESCRIPTION.
+    tc : float
         Desired correlation of the tumbling
     q : int
         Quality of tumbling powder average. 
-        0 returns angles along x,y,z,
-        1 returns tetrahedral hopping
-        2-12 returns a repulsion powder average
-    beta_only : bool
-        Returns diffusion only along the beta angle 
-        (use for a single symmetric tensor)
-        In this case, the number of beta angles between 0 and 2pi is q*10
+        
+        1-angle tumbling:
+            Returns 10*q beta angles
+
+        2-angle tumbling:
+            0 returns angles along x,y,z,
+            1 returns tetrahedral hopping
+            2-12 returns a repulsion powder average
+            
+        3-angle tumbling
+            2 returns 49 angles
+            3 returns 99 angles
+            4 returns 143 angles
+            5 returns 199 angles
+            6 returns 299 angles
+            ...these are sizes of the JCP59 powder average
+            
+    returnL : bool, optional
+        Returns a constructed Liouvillian if True. Otherwise returns the 
+        exchange matrix and euler angles. The default is True.
+    incl_alpha : bool, optional
+        Include alpha tumbling. The default is False.
+    incl_gamma : bool, optional
+        Include gamma tumbling. The default is True.
+    solid : bool, optional
+        Will leave rotor angle, MAS, and powder average in place. Otherwise,
+        these default to 0,0, and alpha0beta0 for mimicing solution-state
+        behavior. The default is False.
 
     Returns
     -------
@@ -546,6 +571,7 @@ def SetupTumbling(expsys,tc:float,q:int=3,returnL:bool=True,incl_alpha:bool=Fals
         list of expsys
     kex : np.array
         Exchange matrix
+
     """
     
     
@@ -566,7 +592,7 @@ def SetupTumbling(expsys,tc:float,q:int=3,returnL:bool=True,incl_alpha:bool=Fals
                 
                 ex_list[-1].set_inter(**kwargs)
     
-    if edit_vr:
+    if not(solid):
         for ex in ex_list:
             ex.vr=0
             ex._rotor_angle=0
@@ -579,7 +605,14 @@ def SetupTumbling(expsys,tc:float,q:int=3,returnL:bool=True,incl_alpha:bool=Fals
 
 def SetupTetraHop(expsys,tc:float,n:int=4,returnL:bool=True):
     """
-    Sets up a system undergoing tetrahedral hopping with from 2-4 sites
+    Sets up a system undergoing tetrahedral hopping with from 2-4 sites. Note
+    that we do NOT assume solution-state conditions automatically with 
+    SetupTetraHop. This means that spinning and the powder average will remain
+    in place. Use SetupTumbling with two angles and q=1 to have these conditions
+    removed.
+    
+    Note that SetupTetraHop adds hopping on the beta and gamma angles, and not
+    to the alpha angle.
 
     Parameters
     ----------
@@ -603,7 +636,7 @@ def SetupTetraHop(expsys,tc:float,n:int=4,returnL:bool=True):
         Exchange matrix
     """
             
-    ex_list,kex=SetupTumbling(expsys, tc,q=1,returnL=False,edit_vr=False)
+    ex_list,kex=SetupTumbling(expsys, tc,q=1,returnL=False,solid=True)
     
     if n<4:
         ex_list=ex_list[4-n:]
