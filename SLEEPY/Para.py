@@ -8,7 +8,7 @@ Created on Wed Feb  7 11:10:03 2024
 
 import numpy as np
 from scipy.linalg import expm
-import multiprocessing as mp
+import multiprocess as mp
 from . import Defaults
 from copy import copy
 

@@ -561,7 +561,7 @@ class Propagator():
     
 
 try:
-    from multiprocessing.shared_memory import SharedMemory
+    from multiprocess.shared_memory import SharedMemory
     SM=True
 except:
     SM=False
