@@ -6,8 +6,14 @@ Created on Thu Feb  6 08:11:06 2025
 @author: albertsmith
 """
 
-from ipywidgets import interactive_output, HBox, VBox
-import ipywidgets as widgets
+
+import sys
+if 'ipywidgets' in sys.modules:
+    from ipywidgets import interactive_output, HBox, VBox
+    import ipywidgets as widgets
+else:
+    widgets=None
+    
 from IPython.display import display
 import matplotlib.pyplot as plt
 from . import Defaults
@@ -162,14 +168,18 @@ def use_zoom(plot):
     def setup(*args,**kwargs):
         ax=plot(*args,**kwargs)
         
+        
         # Instances where we don't use zoom
         if not(Defaults['zoom']):  #Turned off
+            return ax
+        if widgets is None:
             return ax
         if 'ax' in kwargs and kwargs['ax'] is not None:  #Axis provided
             return ax
         for arg in args:
             if arg.__class__.__name__=='AxesSubplot':    #Axis provided
                 return ax
+        
 
         if Defaults['Colab']:
             if ax.name=='3d':return ax

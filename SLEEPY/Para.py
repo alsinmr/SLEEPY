@@ -8,7 +8,12 @@ Created on Wed Feb  7 11:10:03 2024
 
 import numpy as np
 from scipy.linalg import expm
-import multiprocess as mp
+import sys
+try:
+    import multiprocess as mp
+except:
+    import multiprocessing as mp
+    
 from . import Defaults
 from copy import copy
 

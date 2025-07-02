@@ -1124,7 +1124,9 @@ class Liouvillian():
         else:
             assert 0,'Unknown plotting mode (Try "abs", "re", "im", "spy", or "log")'
         
-        if block is not None:
+        if what=='kex':
+            bi=np.ones(len(x),dtype=bool)
+        elif block is not None:
             assert isinstance(block,int),'block must be an integer'
             bi=BlockDiagonal(self[len(self)//2].L(0))
             assert block<len(bi),f"block must be less than the number of independent blocks in the Liouville matrix ({len(bi)})"
@@ -1178,7 +1180,7 @@ class Liouvillian():
                 elif value<0:return ''
                 return label0[value]
 
-            ax.set_xticklabels('',rotation=-90)
+            ax.set_xticklabels('',rotation=0 if what=='kex' else -90)
             ax.xaxis.set_major_formatter(plt.FuncFormatter(format_func))
             
             if what.lower()=='kex':

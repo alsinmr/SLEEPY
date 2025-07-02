@@ -557,14 +557,18 @@ class Propagator():
         out+='\n'+super().__repr__()
         
         return out
-                
-    
-
+           
 try:
-    from multiprocess.shared_memory import SharedMemory
-    SM=True
+    import multiprocess as mp
 except:
+    import multiprocessing as mp
+    
+if hasattr(mp,'shared_memory'):
+    SharedMemory=mp.shared_memory
+    SM=True
+else:
     SM=False
+
     
 class PropCache():
     def __init__(self,L):
