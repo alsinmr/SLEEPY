@@ -8,10 +8,10 @@ Created on Thu Feb  6 08:11:06 2025
 
 
 import sys
-if 'ipywidgets' in sys.modules:
+try:
     from ipywidgets import interactive_output, HBox, VBox
     import ipywidgets as widgets
-else:
+except:
     widgets=None
     
 from IPython.display import display

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sleepy-nmr"
-version = "0.1.2"
+version = "0.1.3"
 authors = [
     {name = "Kai Zumpfe"},
     {name = "Albert Smith-Penzel"},
@@ -19,6 +19,7 @@ classifiers = [
     "Operating System :: OS Independent",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"
 ]
+keywords = ["NMR", "relaxation", "exchange", "Liouville"]
 
 dependencies = [
     "numpy",
