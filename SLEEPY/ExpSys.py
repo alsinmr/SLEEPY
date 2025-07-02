@@ -131,6 +131,10 @@ class ExpSys():
             pwdavg=PowderAvg(pwdavg)
         elif isinstance(pwdavg,int):
             pwdavg=PowderAvg(q=pwdavg)
+        
+        if hasattr(self,'_n_gamma'):
+            pwdavg.n_gamma=self.n_gamma
+        
         self._pwdavg=pwdavg
         
     

@@ -597,6 +597,7 @@ def SetupTumbling(expsys,tc:float,q:int=3,returnL:bool=True,incl_alpha:bool=Fals
             ex.vr=0
             ex._rotor_angle=0
             ex.pwdavg='alpha0beta0'
+            ex.n_gamma=1
     if returnL:
         from .Liouvillian import Liouvillian
         L=Liouvillian(ex_list,kex=kex)

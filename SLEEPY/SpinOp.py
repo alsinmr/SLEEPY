@@ -329,9 +329,9 @@ class SphericalTensor():
                             -1/2*(Op0.p@Op1.z-Op0.z@Op1.p)]
                 
                 self._T[2]=[1/2*Op0.m@Op1.m,
-                            1/2*(Op0.m@Op1.z+Op0.z@Op1.m),             #Changed sign, 24.06.25
+                            1/2*(Op0.m@Op1.z+Op0.z@Op1.m),             #Swapped, 24.06.25
                             1/np.sqrt(6)*(2*Op0.z@Op1.z-(Op0.x@Op1.x+Op0.y@Op1.y)),
-                            -1/2*(Op0.p@Op1.z+Op0.z@Op1.p),             #Changed sign, 24.06.25
+                            -1/2*(Op0.p@Op1.z+Op0.z@Op1.p),             #Swapped, 24.06.25
                             1/2*Op0.p@Op1.p]
             elif mode=='LF_RF':
                 zero=np.zeros(Op0.eye.shape)
@@ -342,9 +342,9 @@ class SphericalTensor():
                             -1/2*(Op0.p@Op1.z)]
                 
                 self._T[2]=[zero,
-                            1/2*(Op0.m@Op1.z),             #Changed sign, 24.06.25
+                            1/2*(Op0.m@Op1.z),             #Swapped, 24.06.25
                             1/np.sqrt(6)*(2*Op0.z@Op1.z),
-                            -1/2*(Op0.p@Op1.z),             #Changed sign, 24.06.25
+                            -1/2*(Op0.p@Op1.z),             #Swapped, 24.06.25
                             zero]
             elif mode=='RF_LF':
                 zero=np.zeros(Op0.eye.shape)
@@ -355,9 +355,9 @@ class SphericalTensor():
                             -1/2*(-Op0.z@Op1.p)]
                 
                 self._T[2]=[zero,
-                            1/2*(Op0.z@Op1.m),             #Changed sign, 24.06.25
+                            1/2*(Op0.z@Op1.m),             #Swapped, 24.06.25
                             1/np.sqrt(6)*(2*Op0.z@Op1.z),
-                            -1/2*(Op0.z@Op1.p),             #Changed sign, 24.06.25
+                            -1/2*(Op0.z@Op1.p),             #Swapped, 24.06.25
                             zero]
             elif mode=='het':
                 zero=np.zeros(Op0.eye.shape)
