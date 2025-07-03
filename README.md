@@ -5,9 +5,15 @@ Spins in Liouville space for rElaxation and Exchange in PYthon
 
 SLEEPY is software intended for the simulation of NMR spin-systems including exchange processes and relaxation. Includes easy setup of the spin system, and allows application of arbitrary pulse sequences in both the rotating- and lab-frames.
 
-Requires standard python packages plus numpy/scipy/matplotlib.
+Requires standard python packages plus numpy/scipy/matplotlib. Multiprocess is recommended, and ipywidgets are used for creating zoomable plots, e.g. Google Colab, although is not required. Note that we highly recommend using the Intel MKL libraries with numpy/scipy at least if you're using an Intel CPU. Anaconda installs these by default on Intel machines (Miniconda does not!). Note that we have not been able to run MKL with Python 12 or 13.
 
-Tested versions:
+Benchmarked version
+* Python: 3.11.13
+* Numpy: 1.24.3
+* Scipy: 1.10.1
+* Multiprocessing: 0.70.15
+
+Other tested versions (speed may vary):
 * Python: 3.8.8, 3.9.3, 3.11.11, 3.13.2
 * numpy: 1.20.1, 2.0.2, 2.2.3
 * scipy: 1.6.2, 1.14.1, 1.15.2
