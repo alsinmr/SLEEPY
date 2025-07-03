@@ -441,9 +441,9 @@ ax.plot_surface(-x0,-y0,-z0,color="#0093AF")
 
 # ax.plot_surface(x[~i],y[~i],z[~i])
 for q in ['x','y','z']:
-    getattr(ax,f'set_{q}lim')([-400,400])
+    getattr(ax,f'set_{q}lim')([-1000,1000])
     getattr(ax,f'set_{q}label')(r'$\delta_{PCS} / Hz$')
-    getattr(ax,f'set_{q}ticks')([-400,0,400])
+    getattr(ax,f'set_{q}ticks')([-1000,0,1000])
 ax.figure.set_size_inches([4,4])
 ax.figure.tight_layout()
 ax.figure.savefig(os.path.join(directory,'PCS_orient_depend.png'),transparent=True)
