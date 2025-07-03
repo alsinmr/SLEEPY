@@ -152,7 +152,7 @@ print(f'CEST time: {time()-t0:.0f} s')
 # By default, we get a powder average when including anisotropic terms.
 # so we set it explicitly to a 1-element powder average
 t0=time()
-ex0=sl.ExpSys(v0H=400,Nucs=['15N','1H'],vr=0,LF=True,pwdavg='alpha0beta0')
+ex0=sl.ExpSys(v0H=400,Nucs=['15N','1H'],LF=True)
 delta=sl.Tools.dipole_coupling(.102,'1H','15N')
 ex0.set_inter('dipole',i0=0,i1=1,delta=delta)
 
@@ -340,8 +340,8 @@ bins,ax=histogram(R1_static,A_static)
 
 R1_avg_static=(R1_static*A_static).sum()/A_static.sum()
 
-ax.text(bins[1],1.e-7,fr'$\langle R_1\rangle_{{static}}$: {R1_avg_static:.2f} $s^{{-1}}$')
-
+ax.text(bins[0]-.2,1.e-7,fr'$\langle R_1\rangle_{{static}}$: {R1_avg_static:.2f} $s^{{-1}}$')
+ax.figure.tight_layout()
 ax.figure.savefig(os.path.join(directory,'T1hist.png'),transparent=True)
 
 print(f'T1 histogram time: {time()-t0:.0f} s')
@@ -453,14 +453,14 @@ print(f'PCS liquids time: {time()-t0:.0f} s')
 #%% Part I: Pseudocontact shift in solids (rank-4 tensor)
 t0=time()
 delta=sl.Tools.dipole_coupling(1,'e-','13C')    #10 Angstroms from electron
-ex=sl.ExpSys(v0H=600,Nucs=['13C','e-'],vr=6000,LF=True,T_K=200,pwdavg=4,n_gamma=30)  #Electron-nuclear system
+ex=sl.ExpSys(v0H=600,Nucs=['13C','e-'],vr=6000,LF=True,T_K=200,pwdavg=6,n_gamma=30)  #Electron-nuclear system
 ex.set_inter('hyperfine',i0=0,i1=1,Axx=-delta/2,Ayy=-delta/2,Azz=delta)
 ex.set_inter('g',i=1,gxx=1,gyy=1,gzz=4)
     
 L=sl.Liouvillian(ex)        #Generate a Liouvillian
 
-L.add_relax('T1',i=1,T1=1e-7,OS=True,Thermal=True)  
-L.add_relax('T2',i=1,T2=1e-7,OS=True)
+L.add_relax('T1',i=1,T1=2e-8,OS=True,Thermal=True)  
+L.add_relax('T2',i=1,T2=2e-8,OS=True)
 
 seq=L.Sequence() #Generate an empty sequence
 

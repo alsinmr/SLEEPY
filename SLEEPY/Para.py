@@ -173,7 +173,7 @@ class ParallelManager():
             fun=prop
         
         X=self.setup
-        if Defaults['parallel'] and X[0][2] is None:
+        if Defaults['parallel'] and (len(X[0])==2 or X[0][2] is None):
             with mp.Pool(processes=self.cpu_count) as pool:
                 U=pool.map(fun,X,chunksize = self.chunk_size)
         else:
