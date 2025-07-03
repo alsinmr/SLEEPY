@@ -194,7 +194,7 @@ def prop(X):
     elif hasattr(sm0,'buf'):
         ci=np.ndarray(SZ[:2],dtype=bool,buffer=sm0.buf)
         Ucache=np.ndarray(SZ,dtype=Defaults['ctype'],buffer=sm1.buf)
-        cache_count=np.ndarray(2,dtype='int16',buffer=sm2.buf)
+        cache_count=np.ndarray(2,dtype='uint64',buffer=sm2.buf)
     else:
         ci=sm0
         Ucache=sm1
@@ -232,6 +232,7 @@ def prop(X):
         ph=np.exp(1j*2*np.pi*nf/n_gamma)
         L=np.sum([Ln0[m+2]*(ph**(-m)) for m in range(-2,3)],axis=0)+Lrf+LrelaxOS(nf)
         U=expm(L*tp1)@U
+        cache_count[0]+=1
     
     return U
 

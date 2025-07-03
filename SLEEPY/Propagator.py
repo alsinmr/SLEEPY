@@ -560,14 +560,19 @@ class Propagator():
            
 try:
     import multiprocess as mp
+    try:
+        from multiprocess.shared_memory import SharedMemory
+        SM=True
+    except:
+        SM=False
 except:
     import multiprocessing as mp
+    try:
+        from multiprocessing.shared_memory import SharedMemory
+        SM=True
+    except:
+        SM=False
     
-if hasattr(mp,'shared_memory'):
-    SharedMemory=mp.shared_memory
-    SM=True
-else:
-    SM=False
 
     
 class PropCache():
@@ -593,6 +598,16 @@ class PropCache():
         self.L=L
         self._sm0=[]
         self._sm1=[]
+        
+        
+        if Defaults['parallel'] and self.shared_memory:
+            self.sm2=SharedMemory(create=True,size=16)
+            self.cache_count=np.ndarray(shape=2,dtype='uint64',buffer=self.sm2.buf)
+        else:
+            self.sm2=None
+            self.cache_count=np.ndarray(shape=2,dtype='uint64')
+        self.cache_count[:]=0
+        
         self.reset()
         
         
@@ -605,7 +620,7 @@ class PropCache():
             sm.unlink()
         self._sm0=[]
         self._sm1=[]
-        self.cache_count=0
+        self.cache_count[:]=0
         self.cache=Defaults['cache']
         return self
         
@@ -688,17 +703,14 @@ class PropCache():
             if Defaults['parallel'] and self.shared_memory:
                 self.sm0=SharedMemory(create=True,size=np.prod(self.SZ[:2]))
                 self.sm1=SharedMemory(create=True,size=self.nbytes)
-                self.sm2=SharedMemory(create=True,size=4)
                 self.calc_index=np.ndarray(shape=self.SZ[:2],dtype=bool,buffer=self.sm0.buf)
                 self.U=np.ndarray(shape=self.SZ,dtype=Defaults['ctype'],buffer=self.sm1.buf)
-                self.cache_count=np.ndarray(shape=2,dtype='int16',buffer=self.sm2.buf)
             else:
                 self.sm0=None
                 self.sm1=None
-                self.sm2=None
                 self.calc_index=np.zeros(self.SZ[:2],dtype=bool)
                 self.U=np.zeros(self.SZ,dtype=Defaults['ctype'])    
-                self.cache_count=np.ndarray(shape=2,dtype='int16')
+                
         return self
     
     def __del__(self,*args):
