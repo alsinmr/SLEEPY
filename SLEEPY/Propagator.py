@@ -572,15 +572,6 @@ except:
         SM=True
     except:
         SM=False
-    
-<<<<<<< Updated upstream
-=======
-# if hasattr(mp,'shared_memory'):
-#     SharedMemory=mp.shared_memory
-#     SM=True
-# else:
-#     SM=False
->>>>>>> Stashed changes
 
     
 class PropCache():
