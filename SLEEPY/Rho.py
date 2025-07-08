@@ -439,8 +439,8 @@ class Rho():
                     ph_acc+=self.expsys.v0[i]*2*np.pi*(self.t_axis-t0)
                 if np.unique(co0[detect]).__len__()==1:
                     q*=np.exp(1j*ph_acc*co0[detect][0])
-                elif np.unique(np.abs(co0[detect])).__len__()==1:
-                    q*=np.exp(1j*ph_acc*np.abs(co0[detect][0]))
+                # elif np.unique(np.abs(co0[detect])).__len__()==1:
+                #     q*=np.exp(1j*ph_acc*np.abs(co0[detect][0]))
                 else:
                     warnings.warn(f'Inconsistent coherence orders in detection matrix {k}, downmixing aborted for this matrix')
                     break
@@ -1224,7 +1224,7 @@ class Rho():
             Op=Op.T.conj()
             # Op/=np.abs(np.trace(Op.T.conj()@Op))*self.expsys.Op.Mult.prod()/2
             Op/=np.abs(np.trace(Op.T.conj()@Op))
-            if (self.L.Peq or self.rho0=='Thermal'):Op*=self.expsys.Op.Mult.prod()/2
+            if (self.L.Peq or (isinstance(self.rho0,str) and self.rho0=='Thermal')):Op*=self.expsys.Op.Mult.prod()/2
             return np.tile(Op.reshape(Op.size),nHam)
         else:
             # Op/=np.abs(np.trace(Op.T.conj()@Op))
