@@ -133,10 +133,10 @@ class LFrf():
             t=np.arange(self.n_steps+1)*self.Dt0
             for k,v_index in enumerate(self.v_index):
                 if v_index:
-                    if self.n_steps==2 and self.phase[k]==0:
+                    if self.n_steps==2:
                         v1=2*self.v1[k]*np.cos(2*np.pi*t*self.v[k])
                         v1*=np.pi/4
-                        phase=np.pi*(v1<0)+np.pi/2
+                        phase=np.pi*(v1<0)+np.pi/2+self.phase
                         v1=np.abs(v1)
                         seq.add_channel(k,t=t,v1=v1,phase=phase)
                     else:
@@ -200,8 +200,8 @@ class LFrf():
     
     def FT(self,v1=None,nreps=100):
         if v1 is None:
-            I=self.seq.v1[self.v_index,:-2]
-            I[self.seq.phase[self.v_index,:-2]>3]*=-1
+            I=self.seq.v1[self.v_index,:-2]*np.exp(1j*self.seq.phase[self.v_index,:-2])
+            # I[self.seq.phase[self.v_index,:-2]>3]*=-1
         else:
             I=np.atleast_2d(v1[:-1])
         I=np.tile(np.repeat(I,nreps,axis=-1),reps=nreps)
