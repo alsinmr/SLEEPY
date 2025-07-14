@@ -537,10 +537,16 @@ class Rho():
             
         return np.fft.fftshift(np.fft.fft(I,n=ZF,axis=1),axes=[1])
     
-    @property
-    def FTpwd(self):
+    def FTpwd(self,pwd_index:int):
         """
-        Fourier transform of the time-dependent signal
+        Fourier transform of the time-dependent signal for a specific element
+        of the powder average
+        
+          
+        Parameters
+        ----------
+        pwd_index : int, optional
+            Specific element of the powder average to plot.
 
         Returns
         -------
@@ -549,44 +555,57 @@ class Rho():
 
         """
         
-        if self._FTpwd is None:
-            if self._tstatus!=1:
-                warnings.warn('Time points are not equally spaced. FT will be incorrect')
+        # if self._FTpwd is None:
+        #     if self._tstatus!=1:
+        #         warnings.warn('Time points are not equally spaced. FT will be incorrect')
     
-            I=np.concatenate((self.Ipwd[:,:,:1]/2,self.Ipwd[:,:,1:]),axis=-1)
-            if self.apodize:
-                ap=self.apod_pars
-                wdw=ap['WDW'].lower()
-                t=self.t_axis
-                LB=ap['LB'] if ap['LB'] is not None else 5/t[-1]/np.pi
+        #     I=np.concatenate((self.Ipwd[:,:,:1]/2,self.Ipwd[:,:,1:]),axis=-1)
+        #     if self.apodize:
+        #         ap=self.apod_pars
+        #         wdw=ap['WDW'].lower()
+        #         t=self.t_axis
+        #         LB=ap['LB'] if ap['LB'] is not None else 5/t[-1]/np.pi
                 
-                if wdw=='em':
-                    apod=np.exp(-t*LB*np.pi)
-                elif wdw=='gm':
-                    apod=np.exp(-np.pi*LB*t+(np.pi*LB*t**2)/(2*ap['GB']*t[-1]))
-                elif wdw=='sine':
-                    if ap['SSB']>=2:
-                        apod=np.sin(np.pi*(1-1/ap['SSB'])*t/t[-1]+np.pi/ap['SSB'])
-                    else:
-                        apod=np.sin(np.pi*t/t[-1])
-                elif wdw=='qsine':
-                    if ap['SSB']>=2:
-                        apod=np.sin(np.pi*(1-1/ap['SSB'])*t/t[-1]+np.pi/ap['SSB'])**2
-                    else:
-                        apod=np.sin(np.pi*t/t[-1])**2
-                elif wdw=='sinc':
-                    apod=np.sin(2*np.pi*ap['SSB']*(t/t[-1]-ap['GB']))
-                elif wdw=='qsinc':
-                    apod=np.sin(2*np.pi*ap['SSB']*(t/t[-1]-ap['GB']))**2
-                else:
-                    warnings.warn(f'Unrecognized apodization function: "{wdw}"')
-                    apod=np.ones(t.shape)
-                I*=apod
+        #         if wdw=='em':
+        #             apod=np.exp(-t*LB*np.pi)
+        #         elif wdw=='gm':
+        #             apod=np.exp(-np.pi*LB*t+(np.pi*LB*t**2)/(2*ap['GB']*t[-1]))
+        #         elif wdw=='sine':
+        #             if ap['SSB']>=2:
+        #                 apod=np.sin(np.pi*(1-1/ap['SSB'])*t/t[-1]+np.pi/ap['SSB'])
+        #             else:
+        #                 apod=np.sin(np.pi*t/t[-1])
+        #         elif wdw=='qsine':
+        #             if ap['SSB']>=2:
+        #                 apod=np.sin(np.pi*(1-1/ap['SSB'])*t/t[-1]+np.pi/ap['SSB'])**2
+        #             else:
+        #                 apod=np.sin(np.pi*t/t[-1])**2
+        #         elif wdw=='sinc':
+        #             apod=np.sin(2*np.pi*ap['SSB']*(t/t[-1]-ap['GB']))
+        #         elif wdw=='qsinc':
+        #             apod=np.sin(2*np.pi*ap['SSB']*(t/t[-1]-ap['GB']))**2
+        #         else:
+        #             warnings.warn(f'Unrecognized apodization function: "{wdw}"')
+        #             apod=np.ones(t.shape)
+        #         I*=apod
     
                 
-            self._FTpwd=np.fft.fftshift(np.fft.fft(I,n=I.shape[-1]*2,axis=-1),axes=[-1])
+        #     self._FTpwd=np.fft.fftshift(np.fft.fft(I,n=I.shape[-1]*2,axis=-1),axes=[-1])
         
-        return self._FTpwd
+        # return self._FTpwd
+        
+        if self._tstatus!=1:
+            warnings.warn('Time points are not equally spaced. FT will be incorrect')
+            
+
+        I=np.concatenate((self.Ipwd[pwd_index,:,:1]/2,self.Ipwd[pwd_index,:,1:]),axis=1)
+        if self.apodize:
+            apod=ApodizationFun(self.t_axis,**self.apod_pars)
+            I*=apod
+
+        ZF=I.shape[1]*2 if self.apod_pars['SI'] is None else int(self.apod_pars['SI'])
+            
+        return np.fft.fftshift(np.fft.fft(I,n=ZF,axis=1),axes=[1])
     
     def _Setup(self):
         """
@@ -603,7 +622,7 @@ class Rho():
         
         self._Ipwd=[[list() for _ in range(self.n_det)] for _ in range(self.pwdavg.N)]
         self._Ipwd_DM=None #Downmixed signal
-        self._FTpwd=None
+        # self._FTpwd=None
         self._taxis=list()
         self._phase_accum=list()
         
@@ -1247,6 +1266,8 @@ class Rho():
         ----------
         det_num : int, optional
             Which detection operator to plot. The default is None (all detectors).
+        pwd_index : int, optional
+            Specific element of the powder average to plot.
         ax : plt.axis, optional
             Specify the axis to plot into. The default is None.
         FT : bool, optional
@@ -1382,8 +1403,8 @@ class Rho():
                 Re=self.FT[det_num].real
                 Im=self.FT[det_num].imag
             else:
-                Re=self.FTpwd[pwd_index][det_num].real
-                Im=self.FTpwd[pwd_index][det_num].imag
+                Re=self.FTpwd(pwd_index=pwd_index)[det_num].real
+                Im=self.FTpwd(pwd_index=pwd_index)[det_num].imag
             
             if mode.lower()=='reim':
                 ax.plot(v_axis,Re,label=f'Re[{label}]',**kwargs)

@@ -136,7 +136,7 @@ class LFrf():
                     if self.n_steps==2:
                         v1=2*self.v1[k]*np.cos(2*np.pi*t*self.v[k])
                         v1*=np.pi/4
-                        phase=np.pi*(v1<0)+np.pi/2+self.phase
+                        phase=np.pi*(v1<0)+np.pi/2+self.phase[k]
                         v1=np.abs(v1)
                         seq.add_channel(k,t=t,v1=v1,phase=phase)
                     else:
