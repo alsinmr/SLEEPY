@@ -618,7 +618,7 @@ class RotInter():
         if self._A is None or len(self._A)!=self.pwdavg.N:self.MOL2LAB_A()
         return self._A.copy()
     
-    def MOL2LAB_Afull(self,pwdavg=None,rotor_angle=np.arccos(np.sqrt(1/3))):
+    def MOL2LAB_Afull(self):
         """
         Applies the powder average to the tensor stored in the molecular frame.
         One may provide the powder average, although usually this will already

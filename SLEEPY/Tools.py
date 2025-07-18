@@ -17,7 +17,7 @@ from . import Constants
 from .PwdAvgFuns import pwd_JCP59
 import warnings
 import matplotlib.pyplot as plt
-from .plot_tools import use_zoom,zoom
+from .plot_tools import use_zoom
 
 #%% Some useful tools (Gyromagnetic ratios, spins, dipole couplings)
 class NucInfo(Info):
@@ -285,6 +285,26 @@ def D2(ca=0,sa=0,cb=0,sb=None,cg=None,sg=None,m=None,mp=0):
     return (d2(cb,sb,m,mp)*phase).T
 
 def djmmp(beta,m:int=0,mp:int=0,j:int=2):
+    """
+    Calculates components of the Wigner (small) d matrix for arbitrary rank.
+
+    Parameters
+    ----------
+    beta : float, Rotation angle
+        Second euler angle, given in radians.
+    m : int, optional
+        Final component. The default is 0.
+    mp : int, optional
+        Initial component. The default is 0.
+    j : int, optional
+        Tensor rank. The default is 2.
+
+    Returns
+    -------
+    out : float
+        Value of the specific rotation matrix element
+
+    """
     # fc=np.math.factorial
     lfc=lambda n:np.math.lgamma(n+1)
     smin=max(0,m-mp)
@@ -302,6 +322,30 @@ def djmmp(beta,m:int=0,mp:int=0,j:int=2):
     return out
 
 def Djmmp(alpha,beta,gamma,m:int=0,mp:int=0,j:int=2):
+    """
+    Calculates components of the Wigner (large) D matrix for arbitrary rank.
+
+    Parameters
+    ----------
+    alpha : float, Rotation angle
+        First euler angle, given in radians.
+    beta : float, Rotation angle
+        Second euler angle, given in radians.
+    gamma : float, Rotation angle
+        Third euler angle, given in radians.
+    m : int, optional
+        Final component. The default is 0.
+    mp : int, optional
+        Initial component. The default is 0.
+    j : int, optional
+        Tensor rank. The default is 2.
+
+    Returns
+    -------
+    out : float
+        Value of the specific rotation matrix element
+
+    """
     return np.exp(-1j*alpha*mp)*np.exp(-1j*gamma*m)*djmmp(beta,m=m,mp=mp,j=j)
         
 
