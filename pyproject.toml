@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sleepy-nmr"
-version = "0.1.4"
+version = "0.1.5"
 authors = [
     {name = "Kai Zumpfe"},
     {name = "Albert Smith-Penzel"},
@@ -39,3 +39,7 @@ packages = ["SLEEPY"]
 Homepage = "https://alsinmr.github.io/SLEEPY"
 Repository = "https://github.com/alsinmr/SLEEPY.git"
 Issues = "https://github.com/alsinmr/SLEEPY/issues"
+
+
+
+#twine upload -r pypi dist/sleepy_nmr-0.1.5* --verbose

@@ -18,6 +18,7 @@ Constants={'h':_h,  #Planck constant, Js
            }
 
 
+
 from . import Tools
 from .PowderAvg import PowderAvg
 from .SpinOp import SpinOp
@@ -61,3 +62,6 @@ if 'USER' in _os.environ and _os.environ['USER']=='jovyan':
     Defaults['Binder']=True
     Defaults['zoom']=True
     
+
+
+__version__='0.1.5'
