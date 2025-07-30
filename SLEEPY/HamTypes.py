@@ -462,7 +462,7 @@ def hyperfine(es,i0:int,i1:int,Axx:float=0,Ayy:float=0,Azz:float=0,euler=[0,0,0]
         else:
             return Ham1inter(H=H,avg=avg,isotropic=True,info=info,es=es)
 
-def quadrupole(es,i:int,delta:float=None,DelPP:float=None,eta:float=0,euler=[0,0,0]):
+def quadrupole(es,i:int,Cq:float=None,delta:float=None,DelPP:float=None,eta:float=0,euler=[0,0,0]):
     """
     Quadrupole coupling defined by its anisotropy (delta) and asymmetry (eta). 
     One may alternatively define the peak-to-peak separation(DelPP). For half integer
@@ -475,6 +475,8 @@ def quadrupole(es,i:int,delta:float=None,DelPP:float=None,eta:float=0,euler=[0,0
         Experimental system object.
     i : int
         index of the spin.
+    Cq : float
+        Quadrupole coupling constant
     delta : float
         anisotropy of the quadrupole coupling. 
         Default is None (provide DelPP or delta)
@@ -493,12 +495,17 @@ def quadrupole(es,i:int,delta:float=None,DelPP:float=None,eta:float=0,euler=[0,0
 
     """
     
-    assert delta is not None or DelPP is not None,"delta or DelPP must be provided"
-    if delta is None:
+    assert delta is not None or DelPP is not None or Cq is not None,"Cq, delta, or DelPP must be provided"
+    if Cq is not None:
+        info={'Type':'quadrupole','i':i,'Cq':Cq,'eta':eta,'euler':euler}
+        I=es.S[i]
+        delta=Cq/(2*I*(2*I-1))
+    elif delta is not None:
+        info={'Type':'quadrupole','i':i,'delta':delta,'eta':eta,'euler':euler}
+    else:
         info={'Type':'quadrupole','i':i,'DelPP':DelPP,'eta':eta,'euler':euler}
         delta=DelPP*2/3
-    else:
-        info={'Type':'quadrupole','i':i,'delta':delta,'eta':eta,'euler':euler}
+
     
     S=es.Op[i]
 

@@ -18,6 +18,7 @@ from .PwdAvgFuns import pwd_JCP59
 import warnings
 import matplotlib.pyplot as plt
 from .plot_tools import use_zoom
+from .BrukerLoad import BrukerSpec
 
 #%% Some useful tools (Gyromagnetic ratios, spins, dipole couplings)
 class NucInfo(Info):
