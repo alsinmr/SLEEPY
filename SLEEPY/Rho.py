@@ -1012,9 +1012,13 @@ class Rho():
                                         
                 else:
                     for k in range(1,n):
+                        #26.09.25 I had the seq.taur and seq.Dt swapped in the code
+                        # I'm surprised to find this mistake, so we should
+                        # watch out that it does not pose some other problem
+                        # to have it this way around
                         nsteps=np.round(k*seq.Dt/seq.taur,0).astype(int)
-                        if nsteps*seq.Dt%seq.taur < tol:break
-                        if seq.taur-(nsteps*seq.Dt%seq.taur) < tol:break
+                        if nsteps*seq.taur%seq.Dt < tol:break
+                        if seq.Dt-(nsteps*seq.taur%seq.Dt) < tol:break
                     else:
                         nsteps=n
                     k,nsteps=nsteps,k
