@@ -622,6 +622,7 @@ class Rho():
         
         self._Ipwd=[[list() for _ in range(self.n_det)] for _ in range(self.pwdavg.N)]
         self._Ipwd_DM=None #Downmixed signal
+        self._I_DM=None # Downmixed signal (summed over powder average)
         # self._FTpwd=None
         self._taxis=list()
         self._phase_accum=list()
@@ -1091,6 +1092,8 @@ class Rho():
             (Nuc,optype)
 
         """
+        
+        if not(isinstance(OpName,str)):return None
             
         
         if OpName.lower()=='zero':
@@ -1112,6 +1115,32 @@ class Rho():
             return None
         if Nuc=='e':Nuc='e-'
         return Nuc,a
+    
+    def getOpNuc(self,OpName):
+        """
+        Returns the name of the nucleus for a given operator. If the nucleus
+        if not clearly defined, then this will return None
+
+        Parameters
+        ----------
+        OpName : String defining the operator
+            DESCRIPTION.
+
+        Returns
+        -------
+        str (or None)
+
+        """
+        if not(isinstance(OpName,str)):return None
+        if '+' in OpName:return None
+        
+        OpName,_=self.OpScaling(OpName)
+        
+        if OpName[0]=='S':
+            i=int(OpName[1]) #We're assuming there aren't 11 spins
+            return self.expsys.Nucs[i]
+        
+        return self.parseOp(OpName)[0]
     
     def OpScaling(self,OpName):
         """
@@ -1380,27 +1409,36 @@ class Rho():
         label=kwargs.pop('label') if 'label' in kwargs else det2label(self.detect[det_num])
         
         if FT:
-            if axis.lower()=='ppm' and self.parseOp(self.detect[det_num]) is not None:
-                Nuc,_=self.parseOp(self.detect[det_num]) 
+            if (Defaults['Hz_gyro_sign_depend'] or axis.lower()=='ppm')\
+                and self.getOpNuc(self.detect[det_num]) is not None:
+                Nuc=self.getOpNuc(self.detect[det_num])
                 v0=NucInfo(Nuc)*self.expsys.B0
-                v_axis=self.v_axis/v0*1e6
                 mass,name=''.join(re.findall(r'\d',Nuc)),''.join(re.findall('[A-Z]',Nuc.upper()))
-                xlabel=r"$\delta$($^{"+mass+r"}$"+name+") / ppm"
+                xlabel0=r"$\delta$($^{"+mass+r"}$"+name+")"
+                sign=np.sign(v0)
+            else:
+                sign=np.array(1)
+                Nuc=None
+                xlabel0=r"$\nu$"
+            
+            if axis.lower()=='ppm' and Nuc is not None:
+                v_axis=self.v_axis/v0*1e6
+                xlabel=xlabel0 + " / ppm"
             elif axis.lower()=='ghz':
-                v_axis=self.v_axis/1e9
-                xlabel=r'$\nu$ / GHz'
+                v_axis=self.v_axis/1e9*sign
+                xlabel=xlabel0 + " / GHz"
             elif axis.lower()=='mhz':
-                v_axis=self.v_axis/1e6
-                xlabel=r'$\nu$ / MHz'
+                v_axis=self.v_axis/1e6*sign
+                xlabel=xlabel0 + " / MHz"
             elif axis.lower()=='khz':
-                v_axis=self.v_axis/1e3
-                xlabel=r'$\nu$ / kHz'
+                v_axis=self.v_axis/1e3*sign
+                xlabel=xlabel0 + " / kHz"
             elif axis.lower()=='points':
                 v_axis=np.arange(len(self.v_axis))
                 xlabel='points'
             else:
-                v_axis=self.v_axis
-                xlabel=r'$\nu$ / Hz'
+                v_axis=self.v_axis*sign
+                xlabel=xlabel0 + " / Hz"
             
             
             if pwd_index is None:

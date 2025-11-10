@@ -6,7 +6,10 @@ from numpy import float64 as _rtype       #Not much gain if we reduced precision
 from numpy import complex128 as _ctype    #Also, overflow errors become common at lower precision
 Defaults.update({'rtype':_rtype,'ctype':_ctype,'parallel':False,'cache':True,'MaxPropCache':10,
                  'ncores':None,'verbose':True,'zoom':False,
-                 'Colab':False,'Binder':False,'parallel_chunk_size':None})
+                 'Colab':False,'Binder':False,'parallel_chunk_size':None,
+                 'Hz_gyro_sign_depend':True})
+
+import os as _os
 
 _h=6.62607015e-34
 Constants={'h':_h,  #Planck constant, Js
@@ -16,6 +19,30 @@ Constants={'h':_h,  #Planck constant, Js
            'mun':5.05078369931e-27/6.62607015e-34, #Nuclear magneton, Hz/T
            'mu0':1.256637e-6  #Permeability of vacuum [T^2m^3/J]
            }
+
+#%% Load version info
+version_info=''
+previous_version_info={}
+__version__=None
+key=None
+
+file=_os.path.join(_os.path.split(__file__)[0],'version_info.txt')
+if _os.path.exists(file):
+    with open(file,'r') as f:
+        for line in f:
+            if 'VERSION' in line:
+                if __version__ is None:
+                    __version__=line.strip().split('VERSION ')[1]
+                    continue
+                else:
+                    key=line.strip().split('VERSION ')[1]
+                    previous_version_info[key]=''
+            if key is None and __version__ is not None:
+                version_info=version_info+'\n'+line.strip()
+            elif __version__ is not None:
+                previous_version_info[key]=previous_version_info[key]+'\n'+line.strip()
+    
+
 
 
 
@@ -57,11 +84,32 @@ if 'google.colab' in _sys.modules:
     if is_dark:set_dark()
 
         
-import os as _os
+
 if 'USER' in _os.environ and _os.environ['USER']=='jovyan':
     Defaults['Binder']=True
     Defaults['zoom']=True
     
 
+def saveDefaults():
+    file=_os.path.join(_os.path.split(__file__)[0],'Defaults.txt')
+    with open(file,'w') as f:
+        for key,value in Defaults.items():
+            if key in ['rtype','ctype']:continue  #Don't save the data types
+            f.write(f'{key} : {str(value)}\n')
+            
+def loadDefaults():
+    file=_os.path.join(_os.path.split(__file__)[0],'Defaults.txt')
+    if not(_os.path.exists(file)):return
+    
+    with open(file,'r') as f:
+        for line in f:
+            if ' : ' in line:
+                key,value=line.strip().split(' : ')
+                if value.isdigit():value=int(value)
+                if value=='True':value=True
+                if value=='False':value=False
+                Defaults[key]=value
+                
 
-__version__='0.1.5'
+    
+    

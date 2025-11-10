@@ -321,8 +321,9 @@ def CS(es,i:int,ppm:float=None,Hz:float=None):
         avg=ppm*es.v0[i]/1e6
         info={'Type':'CS','i':i,'ppm':ppm}
     else:
-        H=Hz*S.z
-        avg=Hz
+        sign=np.sign(es.v0[i]) if Defaults['Hz_gyro_sign_depend'] else np.array(1)
+        H=sign*Hz*S.z
+        avg=sign*Hz
         info={'Type':'CS','i':i,'Hz':Hz}
         
     return Ham1inter(H=H,avg=avg,isotropic=True,info=info,es=es)
@@ -357,7 +358,9 @@ def CSA(es,i:int,delta:float=None,deltaHz:float=None,eta:float=0,euler=[0,0,0]):
     if delta is not None:
         info={'Type':'CSA','i':i,'delta':delta,'eta':eta,'euler':euler}
         deltaHz=delta*es.v0[i]/1e6
+        sign=np.array(1)
     else:
+        sign=np.sign(es.v0[i]) if Defaults['Hz_gyro_sign_depend'] else np.array(1)
         info={'Type':'CSA','i':i,'deltaHz':deltaHz,'eta':eta,'euler':euler}
     
     
@@ -366,12 +369,12 @@ def CSA(es,i:int,delta:float=None,deltaHz:float=None,eta:float=0,euler=[0,0,0]):
         T=es.Op[i].T
         T.set_mode('B0_LF')
        
-        return Ham1inter(T=T,isotropic=False,delta=deltaHz,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
+        return Ham1inter(T=T,isotropic=False,delta=deltaHz*sign,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
     else:
         S=es.Op[i]
         M=np.sqrt(2/3)*S.z    
     
-    return Ham1inter(M=M,isotropic=False,delta=deltaHz,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
+    return Ham1inter(M=M,isotropic=False,delta=deltaHz*sign,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
  
 
 def hyperfine(es,i0:int,i1:int,Axx:float=0,Ayy:float=0,Azz:float=0,euler=[0,0,0]):

@@ -116,4 +116,6 @@ dmypy.json
 */.DS_Store
 examples/ShortExampleFigs/*.png
 examples/Figure3Figs/*.png
+SLEEPY/Defaults.txt
+
 

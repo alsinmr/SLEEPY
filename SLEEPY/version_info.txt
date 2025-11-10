@@ -1,0 +1,28 @@
+VERSION 1.0.2
+SLEEPY 1.0.2 adds a few features and changes:
+    Defaults can be saved. Execute sl.saveDefaults() to save your defaults for
+    the next session.
+    
+    Version info stored in SLEEPY: Check sl.version_info
+    Version should be printed with the first run of updated SLEEPY
+    
+    Definition of the Hz axes is redefined to be consistent with SIMPSON
+    behavior. This only affects nuclei with negative gyromagnetic ratio.
+    In previous versions, if the gyromagnetic ratio was negative, then the 
+    ppm and Hz axes would be reversed relative to each other. This is no longer 
+    the default behavior (change Defaults['Hz_gyro_sign_depend']=False to 
+    recover the previous behavior). CSA and CS Hamiltonians have also been 
+    updated to swap the sign when input is in Hz, and the gyromagnetic ratio is
+    negative. This is so that an input of 500 Hz CS will remain at 500 Hz on 
+    the Hz axis (but will appear as a positive shift on the ppm axis, whereas
+    previously this would have appeared as a negative shift on the ppm axis).
+    
+    Note that this can create some confusion: suppose we detect with '15Np', 
+    which is the first spin in the system, and define a chemical shift with 500
+    Hz. Then, for a standard direct-pulse experiment, we'll get a peak at 500Hz.
+    On the other hand, if the detector is defined with a matrix, e.g.
+    detect=ex.Op[0].p, which is in principle the '15Np' operator, the axis
+    will run the opposite direction and the peak will appear at -500 Hz. This
+    is because SLEEPY doesn't know what nucleus the detector corresponds to and
+    so can't switch the sign accordingly.
+    

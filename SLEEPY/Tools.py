@@ -113,7 +113,7 @@ class NucInfo(Info):
             mass=re.findall(r'\d+',index)
             Nuc=re.findall(r'[A-Z]',index.upper())
             if len(mass) and len(Nuc):
-                Nuc=Nuc[0].capitalize()
+                Nuc=''.join(Nuc).capitalize()
                 i=np.logical_and(self['Nuc']==Nuc,self['mass']==int(mass[0]))
                 assert np.any(i),'Unknown nucleus'
                 i=np.argmax(i)
