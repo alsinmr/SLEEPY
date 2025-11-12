@@ -90,7 +90,7 @@ class ParallelManager():
             
     @property
     def Ln(self):
-        return [self.L.Ln(k) for k in range(-2,3)]
+        return [self.L.Ln(k) for k in self.L.components]
     
     @property
     def parallel(self):
@@ -184,6 +184,7 @@ class ParallelManager():
 #%% Parallel functions
 def prop(X):
     Ln0,Lrf,LrelaxOS,n0,nf,tm1,tp1,dt,n_gamma,sm0,sm1,sm2,index,step_index,SZ=X
+    l=(len(Ln0)-1)//2
     
     if LrelaxOS is None:LrelaxOS=lambda n:0
     
@@ -206,7 +207,7 @@ def prop(X):
         cache_count[1]+=1
     else:
         ph=np.exp(1j*2*np.pi*n0/n_gamma)
-        L=np.sum([Ln0[m+2]*(ph**(-m)) for m in range(-2,3)],axis=0)+Lrf+LrelaxOS(n0)
+        L=np.sum([Ln0[m+l]*(ph**(-m)) for m in range(-l,l+1)],axis=0)+Lrf+LrelaxOS(n0)
         U=expm(L*tm1)
         cache_count[0]+=1
         if tm1==dt and ci is not None:
@@ -217,7 +218,7 @@ def prop(X):
         i,si=index[n%n_gamma],step_index[n%n_gamma]
         if ci is None or not(ci[i,si]): #Not cached
             ph=np.exp(1j*2*np.pi*n/n_gamma)
-            L=np.sum([Ln0[m+2]*(ph**(-m)) for m in range(-2,3)],axis=0)+Lrf+LrelaxOS(n)
+            L=np.sum([Ln0[m+l]*(ph**(-m)) for m in range(-l,l+1)],axis=0)+Lrf+LrelaxOS(n)
             U0=expm(L*dt)
             cache_count[0]+=1
             if ci is not None:
@@ -230,7 +231,7 @@ def prop(X):
             
     if tp1>1e-10: #Last propagator
         ph=np.exp(1j*2*np.pi*nf/n_gamma)
-        L=np.sum([Ln0[m+2]*(ph**(-m)) for m in range(-2,3)],axis=0)+Lrf+LrelaxOS(nf)
+        L=np.sum([Ln0[m+l]*(ph**(-m)) for m in range(-l,l+1)],axis=0)+Lrf+LrelaxOS(nf)
         U=expm(L*tp1)@U
         cache_count[0]+=1
     

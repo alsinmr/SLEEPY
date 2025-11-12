@@ -88,6 +88,13 @@ class Liouvillian():
         self.relax_info=[]  #Keeps a short record of what kind of relaxation is used
         
         for H in self.H:H.expsys._children.append(self)
+        
+        # Define how many rotating components in this Liouvillian
+        self.components=[-2,-1,0,1,2]
+        for H in self.H:
+            if H.components[-1]==4:self.components=[l0 for l0 in range(-4,5)]
+        self.l=self.components[-1]
+        
     
     @property
     def kex(self):
@@ -602,10 +609,10 @@ class Liouvillian():
         assert self.sub,"Calling Ln requires indexing to a specific element of the powder average"
         
         if self._Ln is None:
-            self._Ln=[self.Ln_H(n) for n in range(-2,3)]
-            self._Ln[2]+=self.Lex+self.Lrelax
+            self._Ln=[self.Ln_H(n) for n in self.components]
+            self._Ln[self.l]+=self.Lex+self.Lrelax
             
-        return self._Ln[n+2]
+        return self._Ln[n+self.l]
     
     @property
     def Lrf(self):
@@ -648,7 +655,7 @@ class Liouvillian():
         """
 
         ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
-        return np.sum([self.Ln(m)*(ph**(-m)) for m in range(-2,3)],axis=0)+self.Lrf+self.LrelaxOS(step)    
+        return np.sum([self.Ln(m)*(ph**(-m)) for m in self.components],axis=0)+self.Lrf+self.LrelaxOS(step)    
     
     def Lcoh(self,step:int):
         """
@@ -666,7 +673,7 @@ class Liouvillian():
         """
     
         ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
-        out=np.sum([self.Ln_H(m)*(ph**(-m)) for m in range(-2,3)],axis=0)   
+        out=np.sum([self.Ln_H(m)*(ph**(-m)) for m in self.components],axis=0)   
         return out
     
     def U(self,Dt:float=None,t0:float=None,calc_now:bool=False):
