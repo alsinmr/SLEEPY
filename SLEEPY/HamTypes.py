@@ -238,6 +238,7 @@ class Ham2quad(Ham1inter):
         if self.rotInter is None:
             self.rotInter=RotInter(self.expsys,delta=self.delta,eta=self.eta,euler=self.euler,rotor_angle=self.rotor_angle)
         out=copy(self)
+        out._Hn=None
         out.A=self.rotInter.Afull[i]
         return out
         
@@ -280,11 +281,10 @@ class Ham2quad(Ham1inter):
             self._Hn[p+4]+=self.A[p+2][2]*H0    #First order correction
             
 # TODO Add back in the second order terms, once we figure out why the first order terms fail  
-            # self._Hn[p+4]+=self.A[p+2]*H0
-            # for q in range(-2,3):
-            #     i=(p+q)+4
-            #     self._Hn[i]+=self.A[p+2][1]*self.A[q+2][3]*H1+\
-            #         self.A[p+2][0]*self.A[q+2][4]*H2            #Second order correction
+            for q in range(-2,3):
+                i=(p+q)+4
+                self._Hn[i]+=self.A[p+2][1]*self.A[q+2][3]*H1+\
+                    self.A[p+2][0]*self.A[q+2][4]*H2            #Second order correction
 
         return self._Hn[n+4]
     
