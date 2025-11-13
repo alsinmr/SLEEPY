@@ -43,6 +43,16 @@ if _os.path.exists(file):
                 previous_version_info[key]=previous_version_info[key]+'\n'+line.strip()
     
 
+#%% Print version info
+file=_os.path.join(_os.path.split(__file__)[0],'first_run.txt')
+if not(_os.path.exists(file)):
+    print(f'You are running SLEEPY version {__version__}\n')
+    print('Please read the version notes (also found in SLEEPY.version_info):')
+    print(version_info)
+    print('\nPrevious version info is found in SLEEPY.previous_version_info')
+    with open(file,'w') as f:
+        f.write('Version info displayed')
+    
 
 
 
@@ -101,6 +111,8 @@ def loadDefaults():
     file=_os.path.join(_os.path.split(__file__)[0],'Defaults.txt')
     if not(_os.path.exists(file)):return
     
+    print('Loading Defaults from file')
+    
     with open(file,'r') as f:
         for line in f:
             if ' : ' in line:
@@ -108,8 +120,10 @@ def loadDefaults():
                 if value.isdigit():value=int(value)
                 if value=='True':value=True
                 if value=='False':value=False
+                if value=='None':value=None
                 Defaults[key]=value
                 
+loadDefaults()
 
     
     

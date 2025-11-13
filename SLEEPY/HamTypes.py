@@ -279,8 +279,6 @@ class Ham2quad(Ham1inter):
 
         for p in range(-2,3):
             self._Hn[p+4]+=self.A[p+2][2]*H0    #First order correction
-            
-# TODO Add back in the second order terms, once we figure out why the first order terms fail  
             for q in range(-2,3):
                 i=(p+q)+4
                 self._Hn[i]+=self.A[p+2][1]*self.A[q+2][3]*H1+\
@@ -574,7 +572,7 @@ def hyperfine(es,i0:int,i1:int,Axx:float=0,Ayy:float=0,Azz:float=0,euler=[0,0,0]
         else:
             return Ham1inter(H=H,avg=avg,isotropic=True,info=info,es=es)
 
-def quadrupole(es,i:int,order:int=1,Cq:float=None,delta:float=None,DelPP:float=None,eta:float=0,euler=[0,0,0]):
+def quadrupole(es,i:int,order:int=2,Cq:float=None,delta:float=None,DelPP:float=None,eta:float=0,euler=[0,0,0]):
     """
     Quadrupole coupling defined by its anisotropy (delta) and asymmetry (eta). 
     One may alternatively define the peak-to-peak separation(DelPP). For half integer
