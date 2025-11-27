@@ -6,6 +6,15 @@ SLEEPY 1.0.2 adds a few features and changes:
     Version info stored in SLEEPY: Check sl.version_info
     Version should be printed with the first run of updated SLEEPY
     
+    The second order quadrupole coupling has been added in the rotating frame.
+    This is now the default behavior (set order=1 to only include the first-
+    order term when setting the quadrupole interaction). To implement this,
+    we now have variable number of components in the Hamiltonians and 
+    Liouvillian. Previously, we always had 5 rotating components, now this is
+    variable, and will switch to 9 rotating components if a second-order
+    quadrupole interaction is included (since the second-order quadrupole
+    interaction is a rank-4 interaction).
+    
     Definition of the Hz axes is redefined to be consistent with SIMPSON
     behavior. This only affects nuclei with negative gyromagnetic ratio.
     In previous versions, if the gyromagnetic ratio was negative, then the 

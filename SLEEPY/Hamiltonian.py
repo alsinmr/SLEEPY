@@ -29,6 +29,8 @@ class Hamiltonian():
     def __init__(self,expsys):
         
         self._expsys=expsys
+        
+        l=2 #Max spinning component
 
         #Attach Hamiltonians for each interaction
         self.Hinter=list()
@@ -36,6 +38,7 @@ class Hamiltonian():
         for i in self.expsys:
             dct=i.copy()
             Ham=getattr(HamTypes,dct.pop('Type'))(expsys,**dct)
+            if hasattr(Ham,'_Hn'):l=4
             isotropic&=Ham.isotropic
             self.Hinter.append(Ham)
         for k,b in enumerate(self.expsys.LF):
@@ -55,7 +58,11 @@ class Hamiltonian():
         # self.sub=False
         self._index=-1
         
+        self.components=[l0 for l0 in range(-l,l+1)]
+        
         self._initialized=True
+        
+        
     
     @property
     def _ctype(self):
@@ -190,7 +197,7 @@ class Hamiltonian():
 
         """
         ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
-        return np.sum([self.Hn(m)*(ph**(-m)) for m in range(-2,3)],axis=0) 
+        return np.sum([self.Hn(m)*(ph**(-m)) for m in self.components],axis=0) 
     
     def eig2L(self,step:int):
         """

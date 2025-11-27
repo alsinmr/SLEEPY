@@ -117,5 +117,5 @@ dmypy.json
 examples/ShortExampleFigs/*.png
 examples/Figure3Figs/*.png
 SLEEPY/Defaults.txt
-
+SLEEPY/first_run.txt
 

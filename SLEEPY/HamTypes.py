@@ -18,6 +18,8 @@ from . import Constants
 from .plot_tools import use_zoom
 
 class Ham1inter():
+    components=[-2,-1,0,1,2]
+    
     def __init__(self,M=None,H=None,T=None,isotropic=False,delta=0,eta=0,euler=[0,0,0],avg=0,
                  rotor_angle=np.arccos(np.sqrt(1/3)),info={},es=None):
         
@@ -111,7 +113,8 @@ class Ham1inter():
             Hamiltonian for the nth rotation component
         """
 
-        assert n in [-2,-1,0,1,2],'n must be in [-2,-1,0,1,2]'
+        if n not in [-2,-1,0,1,2]:return 0
+        # assert n in [-2,-1,0,1,2],'n must be in [-2,-1,0,1,2]'
 
         if self.isotropic:
             if n==0:
@@ -128,6 +131,26 @@ class Ham1inter():
             out+=self.H
 
         return out
+    
+    def H(self,step:int=0):
+        """
+        Constructs the Hamiltonian for the requested step of the rotor period
+        for the single interaction.
+        Not used for simulation- just provided for completeness
+
+        Parameters
+        ----------
+        step : int, optional
+            Step of the rotor period (0->n_gamma-1). The default is 0.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        """
+        ph=np.exp(1j*2*np.pi*step/self.expsys.n_gamma)
+        return np.sum([self.Hn(m)*(ph**(-m)) for m in self.components],axis=0) 
     
     @use_zoom
     def plot(self,what:str='H',cmap:str=None,mode:str='abs',colorbar:bool=True,
@@ -180,6 +203,90 @@ class Ham1inter():
 
         return HamPlot(self,what=what,cmap=cmap,mode=mode,colorbar=colorbar,
                                 step=step,ax=ax)
+    
+class Ham2quad(Ham1inter):
+    """
+    Subclass of Ham1inter designed to handle the 9 rotating components of the
+    second order quadrupole coupling (also contains the first order coupling)
+    
+    This is a special case because we need the full set of tensor components,
+    but we are not in the lab frame, so we use a subclass instead of trying
+    to work within the existing Ham1inter. We also need to be able to call
+    all 9 rotating components, instead of only 5.
+    """
+    components=[-4,-3,-2,-1,0,1,2,3,4]
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        self._Hn=None
+        
+    def __getitem__(self,i:int):
+        """
+        Get the ith element of the powder average
+
+        Parameters
+        ----------
+        i : int
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        """
+
+        assert self.pwdavg is not None,'pwdavg must be assigned before extracting components of anisotropic Hamiltonians'
+        if self.rotInter is None:
+            self.rotInter=RotInter(self.expsys,delta=self.delta,eta=self.eta,euler=self.euler,rotor_angle=self.rotor_angle)
+        out=copy(self)
+        out._Hn=None
+        out.A=self.rotInter.Afull[i]
+        return out
+        
+    def Hn(self,n=0,t=None):
+        """
+        Returns components of the Hamiltonian for a given orientation of the 
+        powder average. Only works if the orientation has been set by indexing,
+        i.e., use
+        
+        H[k].Hn(0)
+        
+        to extract these terms.
+        
+        Parameters
+        ----------
+        n : int
+            Component rotating at n times the rotor frequency [-4,-3,-2,-1,0,1,2,3,4]
+
+        Returns
+        -------
+        np.array
+            Hamiltonian for the nth rotation component
+        """
+
+        assert n in [-4,-3,-2,-1,0,1,2,3,4],'n must be in [-4,-3,-2,-1,0,1,2,3,4]'
+        
+        
+        if self._Hn is not None:
+            return self._Hn[n+4]
+
+        S=self.expsys.Op[self.info['i']]
+        v0=self.expsys.v0[self.info['i']]
+        I=S.S
+        H0=np.sqrt(1/6)*(3*S.z**2-I*(I+1)*S.eye)
+        H1=0.5/v0*((4*I*(I+1)-1)*S.eye-8*S.z**2)*S.z
+        H2=0.5/v0*((2*I*(I+1)-1)*S.eye-2*S.z**2)*S.z
+        self._Hn=[np.zeros(S.eye.shape,dtype=S.eye.dtype) for _ in range(9)]
+
+        for p in range(-2,3):
+            self._Hn[p+4]+=self.A[p+2][2]*H0    #First order correction
+            for q in range(-2,3):
+                i=(p+q)+4
+                self._Hn[i]+=self.A[p+2][1]*self.A[q+2][3]*H1+\
+                    self.A[p+2][0]*self.A[q+2][4]*H2            #Second order correction
+
+        return self._Hn[n+4]
+    
+    
     
 
 def _larmor(es,i:int):
@@ -465,7 +572,7 @@ def hyperfine(es,i0:int,i1:int,Axx:float=0,Ayy:float=0,Azz:float=0,euler=[0,0,0]
         else:
             return Ham1inter(H=H,avg=avg,isotropic=True,info=info,es=es)
 
-def quadrupole(es,i:int,Cq:float=None,delta:float=None,DelPP:float=None,eta:float=0,euler=[0,0,0]):
+def quadrupole(es,i:int,order:int=2,Cq:float=None,delta:float=None,DelPP:float=None,eta:float=0,euler=[0,0,0]):
     """
     Quadrupole coupling defined by its anisotropy (delta) and asymmetry (eta). 
     One may alternatively define the peak-to-peak separation(DelPP). For half integer
@@ -478,6 +585,10 @@ def quadrupole(es,i:int,Cq:float=None,delta:float=None,DelPP:float=None,eta:floa
         Experimental system object.
     i : int
         index of the spin.
+    order : int
+        1 or 2 for first or second order quadrupole interaction. Has no effect
+        if the spin is in the lab frame. Default is 2
+        NOT YET IMPLEMENTED! First order only
     Cq : float
         Quadrupole coupling constant
     delta : float
@@ -517,11 +628,15 @@ def quadrupole(es,i:int,Cq:float=None,delta:float=None,DelPP:float=None,eta:floa
         T=T*T
         return Ham1inter(T=T,isotropic=False,delta=delta,eta=eta,euler=euler,rotor_angle=es.rotor_angle,info=info,es=es)
     else:
-        I=es.S[i]
-        M=np.sqrt(2/3)*1/2*(3*S.z@S.z-I*(I+1)*S.eye)  
-        
-        return Ham1inter(M=M,isotropic=False,delta=delta,eta=eta,euler=euler,
-                          rotor_angle=es.rotor_angle,info=info,es=es)
+        if order == 1:
+            I=es.S[i]
+            M=np.sqrt(2/3)*1/2*(3*S.z@S.z-I*(I+1)*S.eye)  
+            
+            return Ham1inter(M=M,isotropic=False,delta=delta,eta=eta,euler=euler,
+                              rotor_angle=es.rotor_angle,info=info,es=es)
+        else:
+            return Ham2quad(M=None,isotropic=False,delta=delta,eta=eta,euler=euler,
+                     rotor_angle=es.rotor_angle,info=info,es=es)
 
 def g(es,i:int,gxx:float=2.0023193,gyy:float=2.0023193,gzz:float=2.0023193,euler=[0,0,0]):
     """
