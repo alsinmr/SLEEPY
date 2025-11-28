@@ -1,5 +1,5 @@
-VERSION 1.0.2
-SLEEPY 1.0.2 adds a few features and changes:
+VERSION 1.1.0
+SLEEPY 1.1.0 adds a few features and changes:
     Defaults can be saved. Execute sl.saveDefaults() to save your defaults for
     the next session.
     

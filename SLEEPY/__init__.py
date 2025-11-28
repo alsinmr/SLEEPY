@@ -44,14 +44,22 @@ if _os.path.exists(file):
     
 
 #%% Print version info
-file=_os.path.join(_os.path.split(__file__)[0],'first_run.txt')
-if not(_os.path.exists(file)):
+
+def print_version_info():
+    file=_os.path.join(_os.path.split(__file__)[0],'first_run.txt')
+    if _os.path.exists(file):
+        with open(file,'r') as f:
+            if __version__ == f.readline().strip():
+                return
+            
     print(f'You are running SLEEPY version {__version__}\n')
     print('Please read the version notes (also found in SLEEPY.version_info):')
     print(version_info)
     print('\nPrevious version info is found in SLEEPY.previous_version_info')
     with open(file,'w') as f:
-        f.write('Version info displayed')
+        f.write(__version__)
+        
+print_version_info()
     
 
 
@@ -124,6 +132,8 @@ def loadDefaults():
                 Defaults[key]=value
                 
 loadDefaults()
+
+del(f,line,file)
 
     
     
