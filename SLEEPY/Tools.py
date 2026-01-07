@@ -864,9 +864,9 @@ def tumbling(tc:float,q:int=3,incl_alpha=False,incl_gamma=True):
         c0[c0>1]=1
         c0[c0<-1]=-1
         c1[c1>1]=1
-        c1[c1<1]=1
+        c1[c1<-1]=-1
         c2[c2>1]=1
-        c2[c2<1]=1
+        c2[c2<-1]=-1
         d2=np.arccos(c0)**2+np.arccos(c1)**2+np.arccos(c2)**2
         if not(incl_alpha) and not(incl_gamma) and (k==0 or k==n-1):
             i=np.argsort(d2)[1:2]

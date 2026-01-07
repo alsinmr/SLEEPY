@@ -19,7 +19,7 @@ Other tested versions (speed may vary):
 * scipy: 1.6.2, 1.14.1, 1.15.2
 * matplotlib: 3.3.4, 3.10.0
 
-Testing has been performed on the various notebooks found at [https://github.com/alsinmr/SLEEPY_tutoria/](https://github.com/alsinmr/SLEEPY_tutoria/) using Jupyter Notebooks on MacOS and on myBinder.org, and also on Google Colab.
+Testing has been performed on the various notebooks found at [https://github.com/alsinmr/SLEEPY_tutoria/](https://github.com/alsinmr/SLEEPY_tutorial/) using Jupyter Notebooks on MacOS and on myBinder.org, and also on Google Colab.
 
 Installation is possible via pip. Please run
 ```

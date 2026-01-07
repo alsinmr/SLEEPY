@@ -1,3 +1,21 @@
+VERSION 1.1.1
+SLEEPY 1.1.1 is a minor update to version 1.1.0:
+    We correct the "tumbling" function in sl.Tools. The tumbling function
+    evaluates proximity of orientations in a powder average by taking the 
+    sum of squared arc lengths of vectors starting on the x,y, and z axes 
+    between pairs of orientations. This value is used to scale the rate of
+    exchange between orientations (see eq. 17 in paper,
+    https://doi.org/10.1038/s41467-025-65091-6).
+    
+    In version 1.1.0 (and prior versions), the arc length between the x and y 
+    vectors was inadvertently set to zero (Thanks to Wanli Zhang for the bug 
+    report). This should not impact simulations where alpha tumbling is not 
+    included,  but may otherwise induce minor changes. If you observe major 
+    changes in a simulation, I would be happy if it could be reported 
+    (albert.smith-penzel@uni-leipzig.de)
+    
+    
+
 VERSION 1.1.0
 SLEEPY 1.1.0 adds a few features and changes:
     Defaults can be saved. Execute sl.saveDefaults() to save your defaults for
