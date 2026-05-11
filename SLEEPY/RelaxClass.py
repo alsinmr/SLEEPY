@@ -398,6 +398,122 @@ class RelaxClass():
         return Lrelax
         
     
+    
+    
+    def RandomFieldSD(self,i:int,tc:list,A:list,Thermal:bool=False,state:int=None,step:int=None):
+        """
+        Adds a random field on spin i, with relative spectral densities determined
+        according to an input correlation time (or a list of correlation times),
+        and corresponding amplitudes. The spectral density is normalized such
+        that A, gives the spectral density at J(0) for spin 1/2
+        
+        Note that for spin systems with mixing, this approach will induce 
+        relaxation on other spins.
+
+
+        Parameters
+        ----------
+        i : int
+            Which spin to apply the random field to
+        tc : float/list
+            Correlation time or times for the spectral density.
+        A : float/list
+            Amplitude of list of amplitudes to weight the contribution of the 
+            individual correlation times
+        Thermal : bool, optional
+           Flag to thermalize the system. The default is False.    
+        state : int, optional
+            For states in exchange, this index allows us to specify relaxation 
+            for each state separately. The default is None.
+        step : int, optional
+            The default is None, which runs setup for this method, and returns 
+            self. Providing a value for step will return a relaxation matrix
+
+        Returns
+        -------
+        self/np.array
+
+        """
+        
+        if step is None:
+            # Check to see if method is already here for this spin
+            for k,m in enumerate(self.methods):
+                if m['method']=='RandomFieldSD' and m['i']==i:
+                    self.methods.pop(k)
+                    break
+                
+            self.methods.append({'method':'RandomFieldSD','i':i,'tc':tc,'A':A,
+                                 'Thermal':Thermal,'state':state})
+            if Thermal:self.Peq=True
+            return self.clear_cache()
+        
+        L=self.L
+        
+        Lx,Ly,Lz=[Ham2Super(getattr(self.Op[i],q)) for q in ['x','y','z']]
+        
+        M=Lx@Lx+Ly@Ly+Lz@Lz #This is isotropic (will not transform for 1 spin)
+        
+        N=len(L.H)      #Number of Hamiltonians
+        n=L.H[0].shape[0]  #Dimension of Hamiltonians
+        
+        Lrelax=np.zeros([n**2*N,n**2*N],dtype=Defaults['ctype'])
+        
+        def J(tc,A,v):
+            tc=np.atleast_2d(tc)
+            A=np.atleast_2d(A)
+            return np.array([A0/(1+(2*np.pi*v*tc0)**2) for A0,tc0 in zip(A,tc)]).sum(0)
+                
+        
+        loop=[(k,H) for k,H in enumerate(L.H)] if state is None else [(state,L.H[state])]
+        
+        for k,H in loop:
+            U,Ui,v=H.eig2L(step)
+            Mp=U@M@Ui
+            
+            M0=np.diag(np.diag(Mp)) #Diagonal part
+            M1=Mp-M0  #Non-diagonal part
+            
+            # We're going to take this part away from M1
+            M0+=np.diag(M1.sum(axis=0))
+
+            
+            M0*=np.sum(A)  #The purely diagonal part relaxes with J(0)
+            
+            #The off diagonal terms are scaled by spectral density
+            M1*=J(tc,A,v[:,None]-v[None,:]) 
+
+            
+            
+            # M1=-Ui@M1@U
+            
+            # M1-=np.diag(M1.sum(axis=0))
+            
+            # M1=U@M1@Ui
+            
+            # out=-(M0+M1)
+            
+            # out=-(M0+M1)
+            
+            # J0=J(tc,A,v[:,None]-v[None,:])
+            # Del=J0*Mp-np.diag(np.diag(J0*Mp))
+            # Mpnd=Mp-np.diag(np.diag(Mp))
+            
+            # out=-(np.diag(np.diag(Mp))+Del-np.diag(np.sum(Del-Mpnd,axis=0)))
+            
+            M1=-M1
+            
+            if Thermal:
+                M1+=self.Lindblad(M1, v*self.h)
+                
+                
+            out=U@(M1-M0)@Ui
+            
+            # out=Ui@out@U
+        
+            Lrelax[k*n**2:(k+1)*n**2][:,k*n**2:(k+1)*n**2]=out
+        
+        return Lrelax    
+    
     def DynamicThermal(self,step:int=None):
         """
         Thermalizes dynamic processes.
