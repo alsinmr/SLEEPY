@@ -17,6 +17,7 @@ from copy import copy
 from .Hamiltonian import RF,Hamiltonian
 from .Liouvillian import Liouvillian
 from .plot_tools import use_zoom
+from . import Constants
 import matplotlib.pyplot as plt
 
 
@@ -209,7 +210,7 @@ class ExpSys():
 
         """
 
-        return np.tanh(self.gamma*6.62607015e-34*self.B0/(2*1.380649e-23*self.T_K))
+        return np.tanh(self.gamma*Constants['h']*self.B0/(2*Constants['kB']*self.T_K))
     
     @property
     def current_time(self):
