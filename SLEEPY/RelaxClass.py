@@ -475,74 +475,47 @@ class RelaxClass():
             Mp=U@(-1*M)@Ui
             
             
+            M0=np.diag(np.diag(Mp))
+            M1=Mp-M0
+            # d=M1.sum(0)
+            # M1-=np.diag(d)
+            # M0+=np.diag(d)
             
-            M0=np.diag(np.diag(Mp)) #Diagonal terms
-            
-            M1=Mp-M0  #Off-diagonal terms (we know how to scale these)
-            
-            M1J=M1*J(tc,A,v[:,None]-v[None,:]) #Scaled off-diagonal terms
+            M1J=M1*J(tc,A,v[:,None]-v[None,:])
+            # If we don't scale with the spectral density, we get stable behavior
+            M1J=M1
+            # M1J-=np.diag(M1J.sum(0))
             
             if Thermal:
                 TC=self.Lindblad(M1J,v*self.h)
                 TC-=np.diag(np.diag(TC))
             else:
                 TC=0
+            
+            Del=np.diag((Ui@(M1-M1J-TC)@U).sum(0))*np.sum(A)  #Correct diagonal terms
+            X=Ui@(M0+M1J+TC)@U*np.sum(A)
+            
+            eye=np.eye(n).reshape(n**2)
+            
+            out=(X+Del)
+            out-=np.diag(eye)*(out@eye).sum()/n
+            
+            
+            # M0=np.diag(np.diag(Mp)) #Diagonal terms
+            
+            # M1=Mp-M0  #Off-diagonal terms (we know how to scale these)
+            
+            # M1J=M1*J(tc,A,v[:,None]-v[None,:]) #Scaled off-diagonal terms
+            # # M1J=M1
+            
+            
 
-            # M1J=M1
+            # # M1J=M1
             
-            # I'm trying to corre
-            Del=U@np.diag((Ui@(M1-M1J+TC)@U).sum(0))@Ui  #Correct diagonal terms
+            # # I'm trying to corre
+            # Del=U@np.diag((Ui@(M1-M1J-TC)@U).sum(0))@Ui  #Correct diagonal terms
             
-            # M0*=np.sum(A)
-            
-            
-                
-            
-            out=np.sum(A)*Ui@(M0+M1J+Del-TC)@U
-            
-            
-            
-            
-            # M0=np.diag(np.diag(Mp)) #Diagonal part
-            # M1=Mp-M0  #Non-diagonal part
-            
-            # # We're going to take this part away from M1
-            # M0+=np.diag(M1.sum(axis=0))
-
-            
-            # M0*=np.sum(A)  #The purely diagonal part relaxes with J(0)
-            
-            # #The off diagonal terms are scaled by spectral density
-            # M1*=J(tc,A,v[:,None]-v[None,:]) 
-
-            
-            
-            # # M1=-Ui@M1@U
-            
-            # # M1-=np.diag(M1.sum(axis=0))
-            
-            # # M1=U@M1@Ui
-            
-            # # out=-(M0+M1)
-            
-            # # out=-(M0+M1)
-            
-            # # J0=J(tc,A,v[:,None]-v[None,:])
-            # # Del=J0*Mp-np.diag(np.diag(J0*Mp))
-            # # Mpnd=Mp-np.diag(np.diag(Mp))
-            
-            # # out=-(np.diag(np.diag(Mp))+Del-np.diag(np.sum(Del-Mpnd,axis=0)))
-            
-            # M1=-M1
-            
-            # if Thermal:
-            #     M1+=self.Lindblad(M1, v*self.h)
-                
-                
-            # out=U@(M1-M0)@Ui
-            
-            # out=Ui@out@U
-            # out=-np.sum(A)*(Ui@Mp@U)
+            # out=np.sum(A)*Ui@(M0+M1J+Del-TC)@U
         
             Lrelax[k*n**2:(k+1)*n**2][:,k*n**2:(k+1)*n**2]=out
         
