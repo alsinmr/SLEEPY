@@ -40,10 +40,10 @@ def T1(expsys,i:int,T1:float):
 
     """
     
-    N=expsys.Op.Mult[i]
+    # N=expsys.Op.Mult[i]
     
     
-    sz=expsys.Op.Mult.prod()
+    # sz=expsys.Op.Mult.prod()
 
     Lp=Ham2Super(expsys.Op[i].p)
     Lm=Ham2Super(expsys.Op[i].m)

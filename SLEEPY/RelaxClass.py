@@ -469,7 +469,12 @@ class RelaxClass():
         
         for k,H in loop:
             U,Ui,v=H.eig2L(step)
+            nm=np.abs(U).sum(axis=0)
+            U/=nm
+            Ui=(Ui.T*nm).T
             Mp=U@(-1*M)@Ui
+            
+            
             
             M0=np.diag(np.diag(Mp)) #Diagonal terms
             
@@ -482,16 +487,19 @@ class RelaxClass():
                 TC-=np.diag(np.diag(TC))
             else:
                 TC=0
+
             # M1J=M1
             
-            Del=U@np.diag((Ui@(M1-M1J-TC)@U).sum(0))@Ui  #Correct diagonal terms
+            # I'm trying to corre
+            Del=U@np.diag((Ui@(M1-M1J+TC)@U).sum(0))@Ui  #Correct diagonal terms
             
             # M0*=np.sum(A)
             
             
                 
             
-            out=np.sum(A)*Ui@(M0+M1J+Del+TC)@U
+            out=np.sum(A)*Ui@(M0+M1J+Del-TC)@U
+            
             
             
             
