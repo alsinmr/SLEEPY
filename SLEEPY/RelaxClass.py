@@ -471,7 +471,7 @@ class RelaxClass():
             U,Ui,v=H.eig2L(step)
             nm=np.abs(U).sum(axis=0)
             U/=nm
-            Ui=(Ui.T*nm).T
+            Ui=(Ui.T/nm).T
             Mp=U@(-1*M)@Ui
             
             
@@ -493,6 +493,10 @@ class RelaxClass():
                 TC=0
             
             Del=np.diag((Ui@(M1-M1J-TC)@U).sum(0))*np.sum(A)  #Correct diagonal terms
+            
+            U*=nm**2
+            Ui=(Ui.T*nm**2).T
+            
             X=Ui@(M0+M1J+TC)@U*np.sum(A)
             
             eye=np.eye(n).reshape(n**2)
