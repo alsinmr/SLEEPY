@@ -483,7 +483,7 @@ class RelaxClass():
             
             M1J=M1*J(tc,A,v[:,None]-v[None,:])
             # If we don't scale with the spectral density, we get stable behavior
-            M1J=M1
+            # M1J=M1
             # M1J-=np.diag(M1J.sum(0))
             
             if Thermal:
@@ -499,10 +499,12 @@ class RelaxClass():
             
             X=Ui@(M0+M1J+TC)@U*np.sum(A)
             
-            eye=np.eye(n).reshape(n**2)
+            # eye=np.eye(n).reshape(n**2)
+            
+            
             
             out=(X+Del)
-            out-=np.diag(eye)*(out@eye).sum()/n
+            # out-=np.diag(eye)*(out@eye).sum()/n
             
             
             # M0=np.diag(np.diag(Mp)) #Diagonal terms
