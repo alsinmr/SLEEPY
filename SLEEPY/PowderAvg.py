@@ -453,7 +453,7 @@ class PowderAvg():
             
             return out
         
-        if isinstance(i,list) or isinstance(i,np.ndarray):
+        if hasattr(i,'__len__'):
             i=np.atleast_1d(i)
             out=copy(self)
             out._gamma_incl=True
