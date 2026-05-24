@@ -452,6 +452,17 @@ class PowderAvg():
             out.weight/=out.weight.sum()
             
             return out
+        
+        if isinstance(i,list) or isinstance(i,np.ndarray):
+            i=np.atleast_1d(i)
+            out=copy(self)
+            out._gamma_incl=True
+            out.alpha=self.alpha[i]
+            out.beta=self.beta[i]
+            out.gamma=self.gamma[i]
+            out.weight=self.weight[i]
+            return out
+            
         out=copy(self)
         out._gamma_incl=True
         out.n_gamma=1

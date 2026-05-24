@@ -560,7 +560,13 @@ class RelaxClass():
         
         L=self.L
         
+        # for k,m in enumerate(self.methods):
+        #     if m['method']=='DynamicThermal':
+        #         self.methods.pop(k)
+        
+        # L0=L.Lcoh(step)+L.Lex+L.Lrelax+L.LrelaxOS(step)
         L0=L.Lcoh(step)+L.Lex+L.Lrelax
+        # self.methods.append({'method':'DynamicThermal'})
 
         recovery=-L0@L.rho_eq(step=step)
         
