@@ -4,30 +4,7 @@ import numpy as np
 import warnings
 import matplotlib.pyplot as plt
 from .plot_tools import use_zoom
-from .ExpSys import ExpSys
-from .Liouvillian import Liouvillian
-from scipy.linalg import logm
 
-class LiouvillianAvg(Liouvillian):
-    """
-    Subclass of the Liouvillian that acts like the normal Liouvillian, but
-    just returns the average value when called
-    """
-    def __init__(self,*ex,Lavg):
-        super().__init__(*ex)
-        self._Lavg=Lavg
-        
-    def L(self,step:int=0):
-        if self._index is not None:
-            return self._Lavg[self._index]
-        
-    def Ln(self,n):
-        if n==0:
-            return self.L(0)
-        return np.zeros(self.L(0).shape,dtype=self.L(0).dtype)
-        
-            
-    
 class LFrf():
     def __init__(self,seq,min_steps:int=2):
         """
@@ -64,13 +41,8 @@ class LFrf():
         self.min_steps=min_steps
         
         self.seq0=seq
-        self._index=0     #Which step in the pulse sequence to operate on
-        self.current=0   #Which field to operate on
-        self._seq=[None for _ in range(self.L.expsys.nspins)]
-        self._L0=None
-        self._ex0=None
         
-        # assert len(np.unique(self.expsys.Nucs[self.v_index]))==1,"Currently, only one Lab Frame rf field supported"
+        assert len(np.unique(self.expsys.Nucs[self.v_index]))==1,"Currently, only one Lab Frame rf field supported"
         if not(self.L.static):
             assert self.Dt==self.taur,"Currently, only implemented for one rotor period (seq.Dt should equal taur)"
         
@@ -84,18 +56,17 @@ class LFrf():
         self._seq=None
         self._U=None
         self._seq0=seq0
-    
-    
+    z
     #%% Properties extracted from seq0
     @property
     def v1(self):
-        return self._seq0.v1[:,self._index]
+        return self._seq0.v1[:,0]
     @property
     def voff(self):
-        return self._seq0.voff[:,self._index]
+        return self._seq0.voff[:,0]
     @property
     def phase(self):
-        return self._seq0.phase[:,self._index]
+        return self._seq0.phase[:,0]
     @property
     def Dt(self):
         return self._seq0.Dt
@@ -124,58 +95,15 @@ class LFrf():
     @property
     def n_gamma(self):
         return self.expsys.n_gamma
-    
-    @property
-    def nspins(self):
-        return self.expsys.nspins
         
 #%% Other properties
-    @property
-    def ex0(self):
-        """
-        List of the input ex0
-
-        """
-        if self._ex0 is None:
-            self._ex0=[H.expsys for H in self.L.H]
-        return self._ex0
-
-    @property
-    def L0(self):
-        """
-        Gets updated with Lavg once a field has been calculated
-        """
-        if self._L0 is None:
-            self._L0=self.L
-        return self._L0
-    
-    @L0.setter
-    def L0(self,L):
-        self._L0=L
-
     @property
     def v(self):
         return self.v0+self.voff
     
     @property
     def v_index(self):
-        """
-        Here, we're looking for spins in the system where the field is 
-        exactly matching the field for the current set of parameters.
-
-        Returns
-        -------
-        i : np.array (boolean)
-
-        """
-        if self.v1[self.current]==0:return np.zeros(self.nspins,dtype=bool)
-        i=self.v0[self.current]==self.v0
-        i=np.logical_and(i,self.v1==self.v1[self.current])
-        i=np.logical_and(i,self.voff==self.voff[self.current])
-        i=np.logical_and(i,self.phase==self.phase[self.current])
-        i=np.logical_and(i,self.LF)
-        return i
-    
+        return np.logical_and(self.v1>0,self.LF)
     
     @property
     def n_steps(self):
@@ -187,7 +115,7 @@ class LFrf():
     @property
     def Dt0(self):
         """
-        Length of steps to change the RF amplitude for spin i
+        Length of steps to change the RF amplitude
 
         Returns
         -------
@@ -195,16 +123,14 @@ class LFrf():
             DESCRIPTION.
 
         """
-        return np.abs(1/(self.v[self.current]*self.n_steps))
+        return np.abs(1/(self.v[self.v_index][0]*self.n_steps))
 
 #%% Functions to generate short time step propagators
-    
     @property
     def seq(self):
-        if self._seq[self.current] is None:
-            seq=self.L0.Sequence(Dt=self.Dt0*2)
+        if self._seq is None:
+            seq=self.L.Sequence()
             t=np.arange(self.n_steps+1)*self.Dt0
-            first=self.current==np.argmax(np.logical_and(self.LF,self.v1))
             for k,v_index in enumerate(self.v_index):
                 if v_index:
                     if self.n_steps==2:
@@ -222,78 +148,16 @@ class LFrf():
                         phase=np.pi*(v1<0)+np.arctan2(FT[i].imag,FT[i].real)+self.phase[k]
                         v1=np.abs(v1)
                         seq.add_channel(k,t=t,v1=v1,phase=phase)
-                elif first and not(self.LF[k]):
-                    # We'll add the rotating frame fields at the first step
+                else:
                     seq.add_channel(k,t=t,v1=self.v1[k],phase=self.phase[k],voff=self.voff[k])
             
                     
-            self._seq[self.current]=seq
+            self._seq=seq
             
-        return self._seq[self.current]
-    
-    def U0(self,step:int=None):
-        """
-        Constructs the propagators for single RF cycles
-
-        Parameters
-        ----------
-        step : int, optional
-            DESCRIPTION. The default is None.
-
-        Returns
-        -------
-        TYPE
-            DESCRIPTION.
-
-        """
-
-        self.L0=None
-        s_index=np.logical_or(np.logical_not(self.LF),np.logical_not(self.v1))
+        return self._seq
         
-        if not(self.L.static):
-            assert step is not None,"step required except for static measurements"
-
-            t0=step*self.taur/self.n_gamma
-        else:
-            t0=0
-            
-        for k in range(self.nspins):  #Sweep over all remaining spins
-            if s_index[k]:continue
-            self.current=k
-            s_index+=self.v_index
-            print(s_index)
-            U0=self.seq.U(t0=t0)
-            if np.all(s_index):  #We're finished. Return propagator
-                return U0
-            
-            # Update L0 (this will update seq)
-            self.L0=self.Lavg(U0)  #Store averaged Liouvillian into L0
-            
-    
+        
     def Ustep(self,step:int=None):
-        self.current=np.argmin(np.logical_and(self.LF,self.v1))
-        self.L0=None
-        s_index=np.logical_or(self.v_index,np.logical_not(self.LF))
-        
-        if np.all(s_index):  #All fields already included. No need for logarithms
-            return self.Ustep0(step)  #Return first propagator
-        
-        self.L0=self.Lavg(step)  #Store averaged Liouvillian into L0
-        
-        for k in range(self.current+1,self.nspins):  #Sweep over all remaining spins
-            self.current=k
-            if s_index[k]:continue
-            s_index+=self.v_index
-            
-            if np.all(s_index):  #We're finished. Return propagator
-                return self.Ustep0(step)  
-            
-            # Update L0
-            self.L0=self.Lavg(step=step)  #Update L0 to Lavg
-            
-            
-        
-    def Ustep0(self,step:int=None):
         
         if not(self.L.static):
             assert step is not None,"step required except for static measurements"
@@ -318,30 +182,6 @@ class LFrf():
             message="Warning: non-integer powers may not accurately reflect state of propagator in the middle of a rotor period")
         
         return U
-
-    def Lavg(self,U):
-        """
-        Returns the average Liouvillian for one step, with the fields added
-        so far. That is, it returns the matrix Logarithm of Ustep0, divided 
-        by one cycle of the field, in a Liouvillian object.
-
-        Parameters
-        ----------
-        step : int, optional
-            Which step of the rotor cycle to use
-
-        Returns
-        -------
-        Liouvillian
-
-        """
-        
-        
-        Lavg=[]
-        for k,U0 in enumerate(U):
-            Lavg.append(logm(U0)/U.Dt)
-        return LiouvillianAvg(*self.ex0,Lavg=Lavg)
-        
     
     def U(self,progress:bool=True):
         
