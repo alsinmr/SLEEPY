@@ -257,8 +257,7 @@ class LFrf():
         else:
             t0=0
             
-        for k in np.argsort(self.expsys.v0)[::-1]:  #Sweep over all remaining spins
-            print(s_index)
+        for k in np.argsort(np.abs(self.expsys.v0))[::-1]:  #Sweep over all remaining spins
             if s_index[k]:continue
             self.current=k
             s_index+=self.v_index
@@ -270,40 +269,10 @@ class LFrf():
             
             # Update L0 (this will update seq)
             self.L0=self.Lavg(U0)  #Store averaged Liouvillian into L0
-            
-    
+        
     def Ustep(self,step:int=None):
-        self.current=np.argmin(np.logical_and(self.LF,self.v1))
-        self.L0=None
-        s_index=np.logical_or(self.v_index,np.logical_not(self.LF))
         
-        if np.all(s_index):  #All fields already included. No need for logarithms
-            return self.Ustep0(step)  #Return first propagator
-        
-        self.L0=self.Lavg(step)  #Store averaged Liouvillian into L0
-        
-        for k in range(self.current+1,self.nspins):  #Sweep over all remaining spins
-            self.current=k
-            if s_index[k]:continue
-            s_index+=self.v_index
-            
-            if np.all(s_index):  #We're finished. Return propagator
-                return self.Ustep0(step)  
-            
-            # Update L0
-            self.L0=self.Lavg(step=step)  #Update L0 to Lavg
-            
-            
-        
-    def Ustep0(self,step:int=None):
-        
-        if not(self.L.static):
-            assert step is not None,"step required except for static measurements"
-
-            t0=step*self.taur/self.n_gamma
-            U0=self.seq.U(t0=t0)
-        else:
-            U0=self.seq.U()
+        U0=self.U0(step)
             
         p=self.Dt/U0.Dt if self.L.static else self.taur/self.n_gamma/U0.Dt
         
