@@ -19,7 +19,7 @@ class LiouvillianAvg(Liouvillian):
         
     def L(self,step:int=0):
         if self._index is not None:
-            return self._Lavg[self._index]
+            return self._Lavg[self._index]+self.Lrf
         
     def Ln(self,n):
         if n==0:
@@ -257,12 +257,14 @@ class LFrf():
         else:
             t0=0
             
-        for k in range(self.nspins):  #Sweep over all remaining spins
+        for k in np.argsort(self.expsys.v0)[::-1]:  #Sweep over all remaining spins
+            print(s_index)
             if s_index[k]:continue
             self.current=k
             s_index+=self.v_index
-            print(s_index)
+            
             U0=self.seq.U(t0=t0)
+            # return U0
             if np.all(s_index):  #We're finished. Return propagator
                 return U0
             
