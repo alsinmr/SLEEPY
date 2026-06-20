@@ -26,6 +26,9 @@ class LiouvillianAvg(Liouvillian):
             return self.L(0)
         return np.zeros(self.L(0).shape,dtype=self.L(0).dtype)
         
+    @property
+    def static(self):
+        return True
             
     
 class LFrf():
@@ -72,7 +75,8 @@ class LFrf():
         
         # assert len(np.unique(self.expsys.Nucs[self.v_index]))==1,"Currently, only one Lab Frame rf field supported"
         if not(self.L.static):
-            assert self.Dt==self.taur,"Currently, only implemented for one rotor period (seq.Dt should equal taur)"
+            pass
+            # assert self.Dt==self.taur,"Currently, only implemented for one rotor period (seq.Dt should equal taur)"
         
     
     #%% Initialize the sequence
@@ -152,6 +156,7 @@ class LFrf():
     @L0.setter
     def L0(self,L):
         self._L0=L
+        self._seq[self.current]=None
 
     @property
     def v(self):
@@ -263,7 +268,7 @@ class LFrf():
             s_index+=self.v_index
             
             U0=self.seq.U(t0=t0)
-            # return U0
+
             if np.all(s_index):  #We're finished. Return propagator
                 return U0
             

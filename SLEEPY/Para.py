@@ -22,6 +22,9 @@ from copy import copy
 New attempt at parallel processing including shared memory and a cache for
 propagators
 """
+
+
+
 def StepCalculator(t0,Dt,dt):
     tf=t0+Dt
     # n0=int(np.round(t0/dt,2))
@@ -39,6 +42,15 @@ def StepCalculator(t0,Dt,dt):
     return n0,nf,tm1,tp1
 
 class ParallelManager():
+    @staticmethod
+    def Pool(pool=[]):
+        if not(Defaults['parallel']):return None
+        if len(pool):return pool[0]
+        cpu_count= Defaults['ncores'] if isinstance(Defaults['ncores'],int) else mp.cpu_count()
+        pool.append(mp.Pool(processes=cpu_count))
+        return pool[0]
+        
+        
     def __init__(self,L,t0,Dt):
         self.L=L
         self.LrelaxOS=L.LrelaxOS if L.LrelaxOS.active else None
@@ -164,7 +176,6 @@ class ParallelManager():
             return np.ceil(len(self)/self.cpu_count).astype(int)
         
         return np.ceil(len(self)//(self.cpu_count*3)).astype(int)
-        
     
     def __call__(self):
         if self.L.static:
@@ -174,7 +185,8 @@ class ParallelManager():
         
         X=self.setup
         if Defaults['parallel'] and (len(X[0])==2 or X[0][2] is None):
-            with mp.Pool(processes=self.cpu_count) as pool:
+            # with mp.Pool(processes=self.cpu_count) as pool:
+                pool=self.Pool()
                 U=pool.map(fun,X,chunksize = self.chunk_size)
         else:
             U=[fun(X0) for X0 in X]
