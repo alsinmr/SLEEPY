@@ -133,7 +133,7 @@ def loadDefaults():
                 
 loadDefaults()
 
-del(f,line,file,print_version_info)
+del(f,line,file,print_version_info,key)
 
     
     
