@@ -16,6 +16,7 @@ except:
     
 from . import Defaults
 from copy import copy
+import atexit
 
 
 """
@@ -42,13 +43,7 @@ def StepCalculator(t0,Dt,dt):
     return n0,nf,tm1,tp1
 
 class ParallelManager():
-    @staticmethod
-    def Pool(pool=[]):
-        if not(Defaults['parallel']):return None
-        if len(pool):return pool[0]
-        cpu_count= Defaults['ncores'] if isinstance(Defaults['ncores'],int) else mp.cpu_count()
-        pool.append(mp.Pool(processes=cpu_count))
-        return pool[0]
+
         
         
     def __init__(self,L,t0,Dt):
@@ -74,6 +69,22 @@ class ParallelManager():
         
         self._index=-1
         
+    @staticmethod
+    def Pool(pool=[]):
+        if not(Defaults['parallel']):return None
+        if len(pool):return pool[0]
+        cpu_count= Defaults['ncores'] if isinstance(Defaults['ncores'],int) else mp.cpu_count()
+        pool.append(mp.Pool(processes=cpu_count))
+        
+        def cleanup():
+            print('Closing pool...')
+            pool[0].close()
+            pool[0].join()
+        print('checkpoint')    
+        atexit.register(cleanup)
+        
+        return pool[0]
+    
     
     def __getitem__(self,i):
         out=copy(self)

@@ -573,6 +573,8 @@ except:
     except:
         SM=False
 
+
+import atexit
     
 class PropCache():
     def __init__(self,L):
@@ -713,7 +715,7 @@ class PropCache():
         return self
     
     def __del__(self,*args):
-        for sm in [*self._sm0,*self._sm1]:
+        for sm in [*self._sm0,*self._sm1,self.sm2]:
             if sm is None:continue
             sm.unlink()
         
