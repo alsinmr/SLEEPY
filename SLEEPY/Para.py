@@ -80,7 +80,6 @@ class ParallelManager():
             print('Closing pool...')
             pool[0].close()
             pool[0].join()
-        print('checkpoint')    
         atexit.register(cleanup)
         
         return pool[0]
