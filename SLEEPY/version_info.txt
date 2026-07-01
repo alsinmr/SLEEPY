@@ -1,3 +1,33 @@
+VERSION 1.1.3a
+SLEEPY 1.1.3a is a minor update from version 1.1.2
+    We add the ability to irradiate multiple spins in the lab frame. Note that
+    this is not currently on the main branch, and work continues. We want first 
+    the ability to specify that irradition for one type of spin is applied to
+    all spins. For example, if we have a 100 kHz field on 15N, this is actually
+    a ~1 GHz field on 1H, although far off resonance. We also would like to 
+    eventually be able to use sequences directly in the lab frame, including
+    time-dependent fields, but this also remains to be implemented.
+    
+    We are also tracking down some bugs apparently in the parallelization. 
+    Currently, if both 'parallel' and 'cache' are activated in the defaults,
+    shared memory objects are created to store propagators for steps in the
+    rotor period. These may be recycled by other elements of the powder 
+    average, with the Gamma-Compute algorithm (Hohwy et al. JMR 1999, 136). 
+    Therefore, we have been placing these in shared memory. Unfortunately, at
+    least the file descriptors for that shared memory are not getting cleaned
+    up properly. Part of the issue is that we were passing the shared memory
+    object, rather than the string reference to the shared memory to every
+    process, preventing us from closing the shared memory object in the
+    process. Now, we are passing only the string, so the that we can properly 
+    close the memory in each process. Still, there seems to be a problem that 
+    the main process is not properly terminating the shared memory if the 
+    Liouvillian is simply being overwritten. This may cause errors when looping
+    over many jobs. A temporary fix is to run sl.SMclose() which will close all
+    shared memory. In the longer term, expect shared memory to no longer be 
+    persistent with a Liouvillian, and rather be created only when a propagator
+    is to be created.
+    
+
 VERSION 1.1.2
 SLEEPY 1.1.2 is a minor update from version 1.1.1
     This version introduces the Combine motion functionality, which lets one

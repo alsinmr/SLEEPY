@@ -8,11 +8,18 @@ Created on Wed Feb  7 11:10:03 2024
 
 import numpy as np
 from scipy.linalg import expm
-import sys
 try:
     import multiprocess as mp
+    try:
+        from multiprocess.shared_memory import SharedMemory
+    except:
+        pass
 except:
     import multiprocessing as mp
+    try:
+        from multiprocessing.shared_memory import SharedMemory
+    except:
+        pass
     
 from . import Defaults
 from copy import copy
@@ -43,9 +50,6 @@ def StepCalculator(t0,Dt,dt):
     return n0,nf,tm1,tp1
 
 class ParallelManager():
-
-        
-        
     def __init__(self,L,t0,Dt):
         self.L=L
         self.LrelaxOS=L.LrelaxOS if L.LrelaxOS.active else None
@@ -139,21 +143,21 @@ class ParallelManager():
     @property
     def sm0(self):
         if self.parallel and self.cache:
-            return self.PropCache.sm0
+            return self.PropCache.sm0.name
         elif self.cache:
             return self.PropCache.calc_index
     
     @property
     def sm1(self):
         if self.parallel and self.cache:
-            return self.PropCache.sm1
+            return self.PropCache.sm1.name
         elif self.cache:
             return self.PropCache.U
         
     @property
     def sm2(self):
         if self.parallel and self.cache:
-            return self.PropCache.sm2
+            return self.PropCache.sm2.name
         else:
             return self.PropCache.cache_count
     
@@ -214,7 +218,10 @@ def prop(X):
     if sm0 is None:
         ci=None
         cache_count=[0,0]
-    elif hasattr(sm0,'buf'):
+    elif isinstance(sm0,str):
+        sm0=SharedMemory(sm0)
+        sm1=SharedMemory(sm1)
+        sm2=SharedMemory(sm2)
         ci=np.ndarray(SZ[:2],dtype=bool,buffer=sm0.buf)
         Ucache=np.ndarray(SZ,dtype=Defaults['ctype'],buffer=sm1.buf)
         cache_count=np.ndarray(2,dtype='uint64',buffer=sm2.buf)
@@ -256,6 +263,11 @@ def prop(X):
         L=np.sum([Ln0[m+l]*(ph**(-m)) for m in range(-l,l+1)],axis=0)+Lrf+LrelaxOS(nf)
         U=expm(L*tp1)@U
         cache_count[0]+=1
+    
+    if hasattr(sm0,'buf'):
+        sm0.close()
+        sm1.close()
+        sm2.close()
     
     return U
 

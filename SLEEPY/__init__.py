@@ -20,6 +20,19 @@ Constants={'h':_h,  #Planck constant, Js
            'mu0':1.256637e-6  #Permeability of vacuum [T^2m^3/J]
            }
 
+SMlist=[]
+
+def SMclose():
+    for k in range(len(SMlist)):
+        sm=SMlist.pop()
+        try:
+            sm.close()
+            sm.unlink()
+        except:
+            print(f'Shared memory object {k} already unlinked')
+        
+        
+
 #%% Load version info
 version_info=''
 previous_version_info={}

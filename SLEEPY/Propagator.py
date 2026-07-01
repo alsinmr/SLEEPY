@@ -192,9 +192,8 @@ class Propagator():
     def calcU(self):
         """
         We have the option when generating U, to not actually calculate its value
-        until an operation requiring U is performed. This is potentially useful
-        since operations rho*U do not actually require ever calculating U
-        explicitely. This function calculates and stores U.
+        until an operation requiring U is performed. This function calculates 
+        and stores U.
         
         Note that this function runs when self.U is a dictionary instead of
         a list, with keys t, v1, phase, and voff. Once run, U is replaced by
@@ -573,9 +572,9 @@ except:
     except:
         SM=False
 
+import os
+from . import SMlist
 
-import atexit
-    
 class PropCache():
     def __init__(self,L):
         """
@@ -600,9 +599,11 @@ class PropCache():
         self._sm0=[]
         self._sm1=[]
         
+        print(len(os.listdir("/dev/fd")))
         
         if Defaults['parallel'] and self.shared_memory:
             self.sm2=SharedMemory(create=True,size=16)
+            SMlist.append(self.sm2)
             self.cache_count=np.ndarray(shape=2,dtype='uint64',buffer=self.sm2.buf)
         else:
             self.sm2=None
@@ -618,7 +619,11 @@ class PropCache():
         self._calc_index=[]
         for sm in [*self._sm0,*self._sm1]:
             if sm is None:continue
-            sm.unlink()
+            sm.close()
+            try:
+                sm.unlink()
+            except:
+                pass
         self._sm0=[]
         self._sm1=[]
         self.cache_count[:]=0
@@ -704,6 +709,8 @@ class PropCache():
             if Defaults['parallel'] and self.shared_memory:
                 self.sm0=SharedMemory(create=True,size=np.prod(self.SZ[:2]))
                 self.sm1=SharedMemory(create=True,size=self.nbytes)
+                SMlist.append(self.sm0)
+                SMlist.append(self.sm1)
                 self.calc_index=np.ndarray(shape=self.SZ[:2],dtype=bool,buffer=self.sm0.buf)
                 self.U=np.ndarray(shape=self.SZ,dtype=Defaults['ctype'],buffer=self.sm1.buf)
             else:
@@ -715,9 +722,21 @@ class PropCache():
         return self
     
     def __del__(self,*args):
+        self.unlink()
+        
+
+    def unlink(self):
         for sm in [*self._sm0,*self._sm1,self.sm2]:
             if sm is None:continue
-            sm.unlink()
+            sm.close()
+            try:
+                sm.unlink()
+            except:
+                pass
+        self._sm0=[]
+        self._sm1=[]
+        self.sm2=None
+
         
     
     #%% Return propagators

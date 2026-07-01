@@ -94,8 +94,7 @@ class Liouvillian():
         for H in self.H:
             if H.components[-1]==4:self.components=[l0 for l0 in range(-4,5)]
         self.l=self.components[-1]
-        
-    
+
     @property
     def kex(self):
         return self._kex
