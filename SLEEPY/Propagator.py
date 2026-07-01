@@ -599,8 +599,6 @@ class PropCache():
         self._sm0=[]
         self._sm1=[]
         
-        print(len(os.listdir("/dev/fd")))
-        
         if Defaults['parallel'] and self.shared_memory:
             self.sm2=SharedMemory(create=True,size=16)
             SMlist.append(self.sm2)
