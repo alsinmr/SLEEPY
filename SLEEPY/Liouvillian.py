@@ -760,8 +760,10 @@ class Liouvillian():
                     U=[L0.U(t0=t0,Dt=Dt,calc_now=calc_now).U for L0 in self]
                     return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic,phase_accum=ph_acc)
                 else:
+                    self._PropCache.shared_memory=True  #Activate shared memory
                     pm=ParallelManager(L=self,t0=t0,Dt=Dt)
                     U=pm()
+                    self._PropCache.shared_memory=False #Deactivate shared memory
                     return Propagator(U=U,t0=t0,tf=tf,taur=self.taur,L=self,isotropic=self.isotropic,phase_accum=ph_acc)
         else:
             dct=dict()

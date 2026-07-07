@@ -216,6 +216,7 @@ class Propagator():
             
             ini_fields=copy(L.fields)
     
+            L._PropCache.hold=True # Force the shared memory to be open and stay open
             U=L.Ueye(t[0])
             for m,(ta,tb) in enumerate(zip(t[:-1],t[1:])):
                 for k,(v1,phase,voff) in enumerate(zip(dct['v1'],dct['phase'],dct['voff'])):
@@ -223,6 +224,8 @@ class Propagator():
                 U0=self.L.U(t0=ta,Dt=tb-ta,calc_now=True)
                 U=U0*U
                 
+            L._PropCache.hold=False #Cancel shared memory
+
             L.fields.update(ini_fields)
             
             self.U=U.U
@@ -576,6 +579,12 @@ import os
 from . import SMlist
 
 class PropCache():
+    """
+    The propagator cache will store propagators for steps in the rotor cycle.
+    If Defaults['cache'] is set to True, then caches for the requested field
+    strength will be automatically created as they are requested from the
+    propagator cache.
+    """
     def __init__(self,L):
         """
         Stores propagators that may be later recycled.
@@ -592,21 +601,25 @@ class PropCache():
         None.
 
         """
-        self.shared_memory=SM
+        # self.shared_memory=SM
+        self._shared_memory=False
 
         
         self.L=L
         self._sm0=[]
         self._sm1=[]
-        
-        if Defaults['parallel'] and self.shared_memory:
-            self.sm2=SharedMemory(create=True,size=16)
-            SMlist.append(self.sm2)
-            self.cache_count=np.ndarray(shape=2,dtype='uint64',buffer=self.sm2.buf)
-        else:
-            self.sm2=None
-            self.cache_count=np.ndarray(shape=2,dtype='uint64')
+        self._sm2=None
+        self.cache_count=np.ndarray(shape=2,dtype='uint64')
         self.cache_count[:]=0
+        self._hold=False #Will keep cache in shared memory when True
+        
+        # if Defaults['parallel'] and self.shared_memory:
+        #     self.sm2=SharedMemory(create=True,size=16)
+        #     SMlist.append(self.sm2)
+        #     self.cache_count=np.ndarray(shape=2,dtype='uint64',buffer=self.sm2.buf)
+        # else:
+        #     self.sm2=None
+        #     self.cache_count=np.ndarray(shape=2,dtype='uint64')
         
         self.reset()
         
@@ -641,8 +654,8 @@ class PropCache():
     
     @property
     def field_index(self):
-        if self.field not in self.fields:
-            self.add_field()
+        # if self.field not in self.fields:
+        self.add_field()
         return self.fields.index(self.field)
     
     @property
@@ -675,6 +688,57 @@ class PropCache():
     @sm1.setter
     def sm1(self,sm1):
         self._sm1.append(sm1)
+        
+    @property
+    def sm2(self):
+        if not(Defaults['parallel'] and self.shared_memory):
+            return None
+        if self._sm2 is None:
+            self._sm2=SharedMemory(create=True,size=16)
+            SMlist.append(self._sm2)
+            cc=self.cache_count
+            self.cache_count=np.ndarray(shape=2,dtype='uint64',buffer=self._sm2.buf)
+            self.cache_count[:]=cc
+                
+        return self._sm2
+    
+    @property
+    def shared_memory(self):
+        if not(SM):return False
+        return self._shared_memory
+    @shared_memory.setter
+    def shared_memory(self,value):
+        if not(value):self.close_shared
+        self._shared_memory=bool(value)
+        
+    @property
+    def hold(self):
+        return self._hold
+    @hold.setter
+    def hold(self,value):
+        self.shared_memory=value
+        self._hold=value
+        
+    def close_shared(self):
+        if self.hold:return
+        if not(Defaults['parallel'] and self.shared_memory):return
+        
+        for k,(sm0,sm1,U) in enumerate(zip(self._sm0,self._sm1,self._U)):
+            if sm0 is not None:
+                self._U[k]=np.array(U)
+                sm0.close()
+                sm0.unlink()
+                SMlist.pop(SMlist.index(sm0))
+                sm1.close()
+                sm1.unlink()
+                SMlist.pop(SMlist.index(sm1))
+                self._sm0[k]=None
+                self._sm0[k]=None
+        self.cache_count=np.array(self.cache_count)
+        self.sm2.close()
+        self.sm2.unlink()
+        SMlist.pop(SMlist.index(self.sm2))
+        self._sm2=None
     
     
     @property
@@ -700,8 +764,8 @@ class PropCache():
     #%% Add field + data management
     def add_field(self):
         if not(self.cache):return
-        if self.field not in self.fields:
-            if len(self.field)>=Defaults['MaxPropCache']:return
+        if self.field not in self.fields:  #Add new field to the cache
+            if len(self.fields)>=Defaults['MaxPropCache']:return
             
             self.fields.append(self.field)
             if Defaults['parallel'] and self.shared_memory:
@@ -715,7 +779,20 @@ class PropCache():
                 self.sm0=None
                 self.sm1=None
                 self.calc_index=np.zeros(self.SZ[:2],dtype=bool)
-                self.U=np.zeros(self.SZ,dtype=Defaults['ctype'])    
+                self.U=np.zeros(self.SZ,dtype=Defaults['ctype'])
+        elif Defaults['parallel'] and self.shared_memory: #Reopen field in shared memory
+            i=self.fields.index(self.field)
+            if self._sm0[i] is None:
+                self._sm0[i]=SharedMemory(create=True,size=np.prod(self.SZ[:2]))
+                self._sm1[i]=SharedMemory(create=True,size=self.nbytes)
+                ci=self._calc_index[i]
+                self._calc_index[i]=np.ndarray(shape=self.SZ[:2],dtype=bool,buffer=self._sm0[i].buf)
+                self._calc_index[i][:]=ci
+                U=self._U[i]
+                self._U[i]=np.ndarray(shape=self.SZ,dtype=Defaults['ctype'],buffer=self._sm1[i].buf)
+                self._U[i][:]=U
+        self.sm2  #Reactivates sm2
+            
                 
         return self
     
@@ -733,7 +810,7 @@ class PropCache():
                 pass
         self._sm0=[]
         self._sm1=[]
-        self.sm2=None
+        self._sm2=None
 
         
     
