@@ -1285,6 +1285,8 @@ class Rho():
         else:
             # Op/=np.abs(np.trace(Op.T.conj()@Op))
             Op=Op.reshape(Op.size)
+            if Op.size==self.L.shape[0]:
+                return Op
             pop=self.L.ex_pop
             # d,v=np.linalg.eig(self.L.kex)
             # pop=v[:,np.argmax(d)]    #We need to make sure we start at equilibrium
