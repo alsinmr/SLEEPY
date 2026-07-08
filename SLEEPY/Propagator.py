@@ -628,13 +628,13 @@ class PropCache():
         self.fields=[]
         self._U=[]
         self._calc_index=[]
-        for sm in [*self._sm0,*self._sm1]:
-            if sm is None:continue
-            sm.close()
-            try:
-                sm.unlink()
-            except:
-                pass
+        # for sm in [*self._sm0,*self._sm1]:
+        #     if sm is None:continue
+        #     sm.close()
+        #     try:
+        #         sm.unlink()
+        #     except:
+        #         pass
         self._sm0=[]
         self._sm1=[]
         self.cache_count[:]=0
@@ -704,11 +704,13 @@ class PropCache():
     
     @property
     def shared_memory(self):
-        if not(SM):return False
-        return self._shared_memory
+        if SM:
+            return self._shared_memory
+        return False
+    
     @shared_memory.setter
     def shared_memory(self,value):
-        if not(value):self.close_shared
+        if not(value):self.close_shared()
         self._shared_memory=bool(value)
         
     @property
@@ -716,12 +718,12 @@ class PropCache():
         return self._hold
     @hold.setter
     def hold(self,value):
-        self.shared_memory=value
         self._hold=value
+        self.shared_memory=value
         
     def close_shared(self):
         if self.hold:return
-        if not(Defaults['parallel'] and self.shared_memory):return
+        if not(Defaults['parallel']):return
         
         for k,(sm0,sm1,U) in enumerate(zip(self._sm0,self._sm1,self._U)):
             if sm0 is not None:
@@ -733,11 +735,12 @@ class PropCache():
                 sm1.unlink()
                 SMlist.pop(SMlist.index(sm1))
                 self._sm0[k]=None
-                self._sm0[k]=None
+                self._sm1[k]=None
         self.cache_count=np.array(self.cache_count)
-        self.sm2.close()
-        self.sm2.unlink()
-        SMlist.pop(SMlist.index(self.sm2))
+        if self._sm2 is not None:
+            self._sm2.close()
+            self._sm2.unlink()
+            SMlist.pop(SMlist.index(self._sm2))
         self._sm2=None
     
     
@@ -785,6 +788,8 @@ class PropCache():
             if self._sm0[i] is None:
                 self._sm0[i]=SharedMemory(create=True,size=np.prod(self.SZ[:2]))
                 self._sm1[i]=SharedMemory(create=True,size=self.nbytes)
+                SMlist.append(self.sm0)
+                SMlist.append(self.sm1)
                 ci=self._calc_index[i]
                 self._calc_index[i]=np.ndarray(shape=self.SZ[:2],dtype=bool,buffer=self._sm0[i].buf)
                 self._calc_index[i][:]=ci
