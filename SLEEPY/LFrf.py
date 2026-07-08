@@ -7,6 +7,8 @@ from .plot_tools import use_zoom
 from .ExpSys import ExpSys
 from .Liouvillian import Liouvillian
 from scipy.linalg import logm
+from .Para import StepCalculator
+from . import Defaults
 
 class LiouvillianAvg(Liouvillian):
     """
@@ -72,12 +74,36 @@ class LFrf():
         self._seq=[None for _ in range(self.L.expsys.nspins)]
         self._L0=None
         self._ex0=None
+        self._Dt=None
+        self._tdepend_dict=None
+        self.Dt=self._seq0.Dt
+        self.irradiate_all_spins=False
+        
         
         # assert len(np.unique(self.expsys.Nucs[self.v_index]))==1,"Currently, only one Lab Frame rf field supported"
         if not(self.L.static):
             pass
             # assert self.Dt==self.taur,"Currently, only implemented for one rotor period (seq.Dt should equal taur)"
         
+    def __len__(self):
+        return self._tdepend_dict['t'].__len__()-1
+        
+    def __getitem__(self,i):
+        self._index=i%len(self)
+        return self
+        
+    def __next__(self):
+        self._index+=1
+        if self._index==len(self):
+            self._index=-1           
+            raise StopIteration
+        else:
+            return self[self._index]
+    
+    def __iter__(self):
+        self._index=-1
+        return self
+    
     
     #%% Initialize the sequence
     @property
@@ -93,20 +119,34 @@ class LFrf():
     #%% Properties extracted from seq0
     @property
     def v1(self):
-        return self._seq0.v1[:,self._index]
+        return self._tdepend_dict['v1'][:,self._index]
     @property
     def voff(self):
-        return self._seq0.voff[:,self._index]
+        return self._tdepend_dict['voff'][:,self._index]
     @property
     def phase(self):
-        return self._seq0.phase[:,self._index]
+        return self._tdepend_dict['phase'][:,self._index]
+    @property
+    def t(self):
+        return self._tdepend_dict['t'][self._index]
+    @property
+    def dt(self):
+        return np.diff(self._tdepend_dict['t'][self._index:self._index+2])[0]
+        
     @property
     def Dt(self):
-        return self._seq0.Dt
+        return self._Dt
+    
+    @Dt.setter
+    def Dt(self,Dt):
+        "Determines how long the propagator should be"
+        "Responsible for setup of the time dependence"
+        self._tdepend_dict=self.seq0.U(Dt=Dt).U
+        self._Dt=Dt
+    
     @property
     def L(self):
         return self._seq0.L
-    
     
     #%% Various properties from expsys
     @property
@@ -173,7 +213,9 @@ class LFrf():
         i : np.array (boolean)
 
         """
-        if self.v1[self.current]==0:return np.zeros(self.nspins,dtype=bool)
+        # Current is the spin currently being irradiated
+        
+        if not(np.any(self._tdepend_dict['v1'][self.current])):return np.zeros(self.nspins,dtype=bool)
         i=self.v0[self.current]==self.v0
         i=np.logical_and(i,self.v1==self.v1[self.current])
         i=np.logical_and(i,self.voff==self.voff[self.current])
@@ -217,7 +259,7 @@ class LFrf():
                         v1*=np.pi/4
                         phase=np.pi*(v1<0)+np.pi/2+self.phase[k]
                         v1=np.abs(v1)
-                        seq.add_channel(k,t=t,v1=v1,phase=phase)
+                        
                     else:
                         v1=2*self.v1[k]*np.cos(2*np.pi*t*self.v[k])
                         FT=self.FT(v1=v1)[1][0]
@@ -226,7 +268,15 @@ class LFrf():
                         v1*=sc
                         phase=np.pi*(v1<0)+np.arctan2(FT[i].imag,FT[i].real)+self.phase[k]
                         v1=np.abs(v1)
+                        
+                    if self.irradiate_all_spins:
+                        for m,v0 in enumerate(self.v0):
+                            if not(self.LF[m]):continue  #We have to skip spins if they're not in the lab frame
+                            seq.add_channel(m,t=t,v1=v1*v0/self.v0[self.current],phase=phase)
+                    else:
                         seq.add_channel(k,t=t,v1=v1,phase=phase)
+                        
+
                 elif first and not(self.LF[k]):
                     # We'll add the rotating frame fields at the first step
                     seq.add_channel(k,t=t,v1=self.v1[k],phase=self.phase[k],voff=self.voff[k])
@@ -243,7 +293,8 @@ class LFrf():
         Parameters
         ----------
         step : int, optional
-            DESCRIPTION. The default is None.
+            Step in the rotor cycle (gamma angle). Required for spinning 
+            experiments. The default is None (static/solution).
 
         Returns
         -------
@@ -253,7 +304,9 @@ class LFrf():
         """
 
         self.L0=None
-        s_index=np.logical_or(np.logical_not(self.LF),np.logical_not(self.v1))
+        
+        v1=np.any(self._tdepend_dict['v1'],axis=1)
+        s_index=np.logical_or(np.logical_not(self.LF),np.logical_not(v1))
         
         if not(self.L.static):
             assert step is not None,"step required except for static measurements"
@@ -262,7 +315,7 @@ class LFrf():
         else:
             t0=0
             
-        for k in np.argsort(np.abs(self.expsys.v0))[::-1]:  #Sweep over all remaining spins
+        for k in np.argsort(np.abs(self.expsys.v0))[::-1]:  #Sweep over all LF spins
             if s_index[k]:continue
             self.current=k
             s_index+=self.v_index
@@ -275,11 +328,36 @@ class LFrf():
             # Update L0 (this will update seq)
             self.L0=self.Lavg(U0)  #Store averaged Liouvillian into L0
         
-    def Ustep(self,step:int=None):
+    def Ustep(self,step:int=None,dt:float=None):
+        """
+        Returns the propagator for one step of the rotor cycle, by raising
+        U0 to the correct power. May also perform a partial step by 
+        defining dt (dt defaults to taur/n_gamma)
+
+        Parameters
+        ----------
+        step : int, optional
+            Step in the rotor cycle (gamma angle). Required for spinning 
+            experiments. The default is None (static/solution).
+        dt : float, optional
+            Length of the desired propagator. Defaults to the length of one
+            step in the rotor cycle (taur/n_gamma) or the length of the sequence
+            for static experiments
+
+        Returns
+        -------
+        U : TYPE
+            DESCRIPTION.
+
+        """
         
         U0=self.U0(step)
             
-        p=self.Dt/U0.Dt if self.L.static else self.taur/self.n_gamma/U0.Dt
+        if dt is None:
+            p=self.Dt/U0.Dt if self.L.static else self.taur/self.n_gamma/U0.Dt
+        else:
+            assert self.L.static or dt<=self.L.dt,'dt in Ustep cannot exceed one rotor step (taur/n_gamma)'
+            p=dt/U0.Dt
         
         warnings.filterwarnings("ignore", 
             message="Power of a propagator should only be used if the propagator length is an integer multiple of rotor periods")
@@ -319,17 +397,31 @@ class LFrf():
         return LiouvillianAvg(*self.ex0,Lavg=Lavg)
         
     
-    def U(self,progress:bool=True):
+    def U(self,progress:bool=None):
+        
+        if progress is None:
+            progress=Defaults['verbose']
         
         if self._U is None:
             if progress:
                 ProgressBar(0,self.n_gamma,"LF calculation:",suffix="complete",decimals=0,length=30)
             
             U=self.L.Ueye()
-            for k in range(self.n_gamma):
-                U=self.Ustep(k)*U
-                if progress:
-                    ProgressBar(k+1,self.n_gamma,"LF calculation:",suffix="complete",decimals=0,length=30)
+            for X in self:
+                if self.L.static:
+                    n0,nf,tm1,tp1=0,1,self.dt,0
+                else:
+                    n0,nf,tm1,tp1=StepCalculator(t0=self.t,Dt=self.dt,dt=self.L.dt)
+                U=X.Ustep(n0,dt=tm1)*U
+                for k in range(n0+1,nf):
+                    U=X.Ustep(k)*U
+                    if progress:
+                        ProgressBar(k+1,self.n_gamma,"LF calculation:",suffix="complete",decimals=0,length=30)
+                if tp1>1e-10:
+                    U=X.Ustep(nf,dt=tp1)*U
+                    
+                ProgressBar(nf+1,self.n_gamma,"LF calculation:",suffix="complete",decimals=0,length=30)
+
             self._U=U
         return self._U
     
