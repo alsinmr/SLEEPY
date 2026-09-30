@@ -128,7 +128,11 @@ class Propagator():
                 dabs=np.abs(d) 
                 i=dabs>1
                 d[i]/=dabs[i]
-                if self.L.Peq and not self.reduced:
+                if self.L.Peq and not self.reduced and self.Dt!=0:
+                    # This adjustment breaks if we have a delta pulse
+                    # That makes sense, because there cannot be relaxation
+                    # We can avoiding this by checking the length, which is 0 for a delta pulse
+                    
                     # This approach is not valid for some reduced matrices....
                     
                     # We do this because there does indeed need to be an equilibrium
@@ -168,6 +172,7 @@ class Propagator():
                     
                     # n=self.L.H[0].shape[0]
                     # Force the equilibrium value to exist.
+                    # pass
                     i=np.argmax(np.abs(d))
                     d[i]=1.
                     # i=np.argsort(d.real)[-n:]
