@@ -192,7 +192,7 @@ class Rho():
         if unique.size<len(self._taxis): #1-2 duplicate values
             return 3
         diff=np.diff(unique)
-        if diff.min()*(1+1e-10)>diff.max():   #Uniform spacing within error
+        if diff.min()*(1+1e-9)>diff.max():   #Uniform spacing within error
             return 1
         return 2
     
