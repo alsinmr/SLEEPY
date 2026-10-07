@@ -317,14 +317,14 @@ class Sequence():
                     if k==0:
                         ch=True
                         a.text(t0*1e6,.3*a.get_ylim()[1],f'{self.phase[s,k]*180/np.pi:.0f}'+r'$^\circ$')
-                        a.text(t0*1e6,.1*a.get_ylim()[1],f'{self.voff[s,k]/1e3:.0f} kHz')
+                        a.text(t0*1e6,.1*a.get_ylim()[1],f'{self.voff[s,k]/1e3:.3g} kHz')
                     else:
                         if self.phase[s,k]!=self.phase[s,k-1]:
                             ch=True
                             a.text(t0*1e6,.3*a.get_ylim()[1],f'{self.phase[s,k]*180/np.pi:.0f}'+r'$^\circ$')
                         if self.voff[s,k]!=self.voff[s,k-1]:
                             ch=True
-                            a.text(t0*1e6,.1*a.get_ylim()[1],f'{self.voff[s,k]/1e3:.0f} kHz')
+                            a.text(t0*1e6,.1*a.get_ylim()[1],f'{self.voff[s,k]/1e3:.3g} kHz')
                     if ch:
                         a.plot([t0*1e6,t0*1e6],a.get_ylim(),linestyle=':',color='grey')
                             

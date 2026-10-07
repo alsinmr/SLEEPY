@@ -433,17 +433,72 @@ class Rho():
         Idm=np.zeros((self.Ipwd.shape[1],self.Ipwd.shape[0],self.Ipwd.shape[2]),dtype=self.Ipwd.dtype)
         for k,detect in enumerate(self._detect):
             detect=detect.astype(bool)
-            q=np.ones(len(self.t_axis),dtype=ctype)
+            
+            
+            # The phase accumulation for all non-zero elements of the detection matrix
+            # needs to be the same. We check that here
+            
+            ph_acc0=np.zeros([detect.sum(),len(self.t_axis)])
             for i,(ph_acc,co0) in enumerate(zip(self.phase_accum,co)):
-                if self.expsys.LF[i]:  #Add phase from LF rotation if necessary
-                    ph_acc+=self.expsys.v0[i]*2*np.pi*(self.t_axis-t0)
-                if np.unique(co0[detect]).__len__()==1:
-                    q*=np.exp(1j*ph_acc*co0[detect][0])
-                # elif np.unique(np.abs(co0[detect])).__len__()==1:
-                #     q*=np.exp(1j*ph_acc*np.abs(co0[detect][0]))
-                else:
-                    warnings.warn(f'Inconsistent coherence orders in detection matrix {k}, downmixing aborted for this matrix')
-                    break
+                ph_acc0+=np.atleast_2d(co0[detect]).T*np.atleast_2d(ph_acc)
+                if self.expsys.LF[i]:
+                    ph_acc0-=np.atleast_2d(co0[detect]).T*np.atleast_2d(self.expsys.v0[i]*2*np.pi*(self.t_axis-t0))
+                    
+            if np.max(np.abs(ph_acc0-ph_acc0.mean(0))%(2*np.pi))<1e-6:
+                q=np.exp(-1j*ph_acc0.mean(0))
+            else:
+                warnings.warn(f'Inconsistent phase accumulation in detection matrix {k},downmixing aborted for this matrix')
+                q=np.ones(len(self.t_axis),dtype=ctype)
+            
+            # ix=None
+            # LFx=None
+            # cox=np.zeros(detect.sum())
+            # pax=None
+            # abort=True
+            
+            # for i,(ph_acc,co0) in enumerate(zip(self.phase_accum,co)):
+            #     cox+=co0[detect] 
+            #     if np.max(np.abs(co0[detect]))==0:continue #All coherence orders for this spin are zero. No downmixing applied. Continue to next spin
+                
+            #     if ix is None:
+            #         LFx=self.expsys.LF[i]
+            #         pax=ph_acc
+            #         ix=i
+            #     elif LFx!=self.expsys.LF[i]:
+            #         warnings.warn(f'Mixed lab frame/rotating frame in detection matrix {k}, downmixing aborted for this matrix')
+            #         break
+            #     elif np.any(np.abs(pax-ph_acc)>1e-6):
+            #         warnings.warn(f'Different phase accumulation for spins in detection matrix {k}, downmixing aborted for this matrix')
+            #         break
+            # else:
+            #     abort=False
+            
+            # if abort:
+            #     break
+            
+            # if len(np.unique(cox))>1:
+            #     warnings.warn(f'Inconsistent coherence orders in detection matrix {k}, downmixing aborted for this matrix')
+            #     break
+            # else:
+            #     cox=cox[0]
+            
+            # if ix is not None:
+            #     if LFx:
+            #         pax-=self.expsys.v0[ix]*2*np.pi*(self.t_axis-t0)
+            #     q=np.exp(-1j*pax*cox)
+            
+            
+                
+            # # for i,(ph_acc,co0) in enumerate(zip(self.phase_accum,co)):    
+            # #     if self.expsys.LF[i]:  #Add phase from LF rotation if necessary
+            # #         ph_acc-=self.expsys.v0[i]*2*np.pi*(self.t_axis-t0)
+            # #     if np.unique(co0[detect]).__len__()==1:
+            # #         q*=np.exp(-1j*ph_acc*co0[detect][0])
+            # #     # elif np.unique(np.abs(co0[detect])).__len__()==1:
+            # #     #     q*=np.exp(1j*ph_acc*np.abs(co0[detect][0]))
+            # #     else:
+            # #         warnings.warn(f'Inconsistent coherence orders in detection matrix {k}, downmixing aborted for this matrix')
+            # #         break
             
             Ipwd=self.Ipwd[:,k]
             if baseline:
@@ -864,7 +919,7 @@ class Rho():
             return self
         
         self._taxis.append(self.t)
-        self._phase_accum.append(self._phase_accum0)
+        self._phase_accum.append(copy(self._phase_accum0))
         for k,rho in enumerate(self._rho):
             for m,det in enumerate(self._detect):
                 self._Ipwd[k][m].append((rho*det).sum())

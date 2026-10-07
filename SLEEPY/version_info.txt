@@ -7,9 +7,21 @@ SLEEPY 1.1.3 is a minor update from version 1.1.2
     there should not be a 1 for a delta pulse, since it anyway has zero 
     length. Thus, enforcement of the 1 for a delta pulse has been removed. 
     (It is unlikely you encountered this error, unless you were raising delta
-    pulses to a power– also not a particularly efficient way of obtaining new
-    delta pulses)
-
+    pulses to a power, which is, btw, not a particularly efficient way of 
+    obtaining new delta pulses)
+    
+    Corrected sequence plotting, where offsets were shown in kHz without any 
+    decimal places (so, e.g. a 150 Hz offset would be shown as 0 kHz). Now
+    shows up to 3 decimal places, i.e. to the nearest Hz.
+    
+    Made downmixing behavior more general. Previously, we had verified consistent
+    spin orders for all non-zero elements of the detection matrix. Now we 
+    check for consistent phase accumulation on all elements, and also correctly
+    deal with multiple spins of the same nucleus. This affects downmixing from
+    the lab frame and downmixing due to fields applied off resonance, when
+    multiple nuclei of the same type are involved.
+    
+    
 VERSION 1.1.2
 SLEEPY 1.1.2 is a minor update from version 1.1.1
     This version introduces the Combine motion functionality, which lets one
